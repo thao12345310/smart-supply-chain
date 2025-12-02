@@ -7,14 +7,17 @@ import java.util.List;
 
 @Entity
 @Table(name = "delivery_plan")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class DeliveryPlan {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
     private String code;
-
     private LocalDate createdDate;
     private String description;
     private String status; // Created, InProgress, Completed
@@ -24,7 +27,4 @@ public class DeliveryPlan {
 
     @OneToMany(mappedBy = "deliveryPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DeliveryPlanShipper> shippers;
-
-    @OneToMany(mappedBy = "deliveryPlan", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<DeliveryTripRoute> trips;
 }

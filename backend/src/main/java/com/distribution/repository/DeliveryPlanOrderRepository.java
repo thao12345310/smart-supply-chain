@@ -1,6 +1,7 @@
 package com.distribution.repository;
 
-import com.distribution.model.DeliveryPlanOrder;
+import com.distribution.model.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DeliveryPlanOrderRepository extends JpaRepository<DeliveryPlanOrder, Long> {}
+

@@ -1,6 +1,16 @@
 package com.distribution.repository;
 
-import com.distribution.model.DeliveryPlanShipper;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.distribution.model.*;
 
-public interface DeliveryPlanShipperRepository extends JpaRepository<DeliveryPlanShipper, Long> {}
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface DeliveryPlanShipperRepository extends JpaRepository<DeliveryPlanShipper, Long> {
+
+    @Query("SELECT dps FROM DeliveryPlanShipper dps WHERE dps.deliveryPlan.id = :deliveryPlanId")
+    List<DeliveryPlanShipper> findByDeliveryPlanId(@Param("deliveryPlanId") Long id);
+}
+

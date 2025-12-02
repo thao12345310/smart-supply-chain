@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:6001/distribution_db
+    username: postgres
+    password: 123
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+server:
+  port: 8080
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
