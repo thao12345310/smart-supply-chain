@@ -26,8 +26,8 @@ public class PurchaseOrder {
     private String status;
     private BigDecimal shippingCost;
 
-    private LocalDateTime deliveryDate;
-    private LocalDateTime expectedDate;
+    private LocalDateTime afterDate;
+    private LocalDateTime beforeDate;
     private LocalDate createdDate;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -188,7 +188,7 @@ export default function PurchaseOrderForm({ onSave }) {
           >
             <Select placeholder="Select supplier">
               {suppliers.map((s) => (
-                <Select.Option key={s.id} value={s.id}>
+                <Select.Option value={s.id} key={s.id}>
                   {s.name}
                 </Select.Option>
               ))}
@@ -202,7 +202,7 @@ export default function PurchaseOrderForm({ onSave }) {
           >
             <Select placeholder="Select warehouse">
               {warehouses.map((w) => (
-                <Select.Option key={w.id} value={w.id}>
+                <Select.Option value={w.id} key={w.id}>
                   {w.name}
                 </Select.Option>
               ))}
@@ -245,7 +245,7 @@ export default function PurchaseOrderForm({ onSave }) {
           }
         >
           {products.map((p) => (
-            <Select.Option key={p.id} value={p.id}>
+            <Select.Option value={p.id} key={p.id}>
               {p.code} - {p.name}
             </Select.Option>
           ))}

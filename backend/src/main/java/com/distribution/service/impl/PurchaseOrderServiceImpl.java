@@ -35,7 +35,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         return PurchaseOrderDTO.builder()
                 .id(po.getId())
                 .code(po.getCode())
-                .orderDate(po.getExpectedDate())
+                .afterDate(po.getAfterDate())
+                .beforeDate(po.getBeforeDate())
                 .status(po.getStatus())
                 .supplierId(po.getSupplier() != null ? po.getSupplier().getId() : null)
                 .supplierName(po.getSupplier() != null ? po.getSupplier().getName() : null)
@@ -50,7 +51,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         PurchaseOrder po = PurchaseOrder.builder()
                 .id(dto.getId())
                 .code(dto.getCode())
-                .expectedDate(dto.getOrderDate())
+                .afterDate(dto.getAfterDate())
+                .beforeDate(dto.getBeforeDate())
                 .status(dto.getStatus())
                 .supplier(supplier)
                 .build();
@@ -84,7 +86,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
 
         po.setCode(dto.getCode());
-        po.setExpectedDate(dto.getOrderDate());
+        po.setAfterDate(dto.getAfterDate());
+        po.setBeforeDate(dto.getBeforeDate());
         po.setStatus(dto.getStatus());
         po.setSupplier(
                 supplierRepo.findById(dto.getSupplierId())
