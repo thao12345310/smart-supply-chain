@@ -1,0 +1,19 @@
+package com.distribution.exception;
+
+/**
+ * Exception for resource not found errors
+ */
+public class ResourceNotFoundException extends BusinessException {
+    
+    public ResourceNotFoundException(String resourceName, Long id) {
+        super(String.format("%s not found with id: %d", resourceName, id), "NOT_FOUND");
+    }
+    
+    public ResourceNotFoundException(String resourceName, String identifier) {
+        super(String.format("%s not found: %s", resourceName, identifier), "NOT_FOUND");
+    }
+    
+    public ResourceNotFoundException(String message) {
+        super(message, "NOT_FOUND");
+    }
+}

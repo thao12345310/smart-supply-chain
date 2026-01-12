@@ -1,116 +1,191 @@
 package com.distribution.controller;
 
+import com.distribution.dto.ApiResponse;
+import com.distribution.dto.ApprovalRequestDTO;
 import com.distribution.dto.PurchaseOrderDTO;
-import com.distribution.dto.PurchaseOrderItemDTO;
-import com.distribution.model.*;
-import com.distribution.repository.*;
+import com.distribution.model.enums.PurchaseOrderStatus;
+import com.distribution.service.PurchaseOrderService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * REST Controller for Purchase Order operations
+ * 
+ * Endpoints:
+ * - CRUD operations for Purchase Orders
+ * - Approval/Rejection workflow
+ * - Status-based queries
+ * 
+ * Role Requirements (to be enforced by security layer):
+ * - Create/Update/Delete: ROLE_PURCHASING_STAFF, ROLE_PURCHASING_MANAGER, ROLE_ADMIN
+ * - Approve/Reject: ROLE_PURCHASING_MANAGER, ROLE_ACCOUNTANT, ROLE_ADMIN
+ * - View: All authenticated users
+ */
 @RestController
 @RequestMapping("/api/purchase-orders")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
+@Tag(name = "Purchase Order", description = "Purchase Order Management APIs")
 public class PurchaseOrderController {
 
-    private final PurchaseOrderRepository orderRepo;
-    private final SupplierRepository supplierRepo;
-    private final WarehouseRepository warehouseRepo;
-    private final ProductRepository productRepo;
+    private final PurchaseOrderService purchaseOrderService;
 
-    // 🔹 Lấy toàn bộ danh sách PO
+    // ==================== CRUD Operations ====================
+
     @GetMapping
-    public ResponseEntity<List<PurchaseOrder>> all() {
-        return ResponseEntity.ok(orderRepo.findAll());
+    @Operation(summary = "Get all Purchase Orders", description = "Retrieve all purchase orders")
+    public ResponseEntity<ApiResponse<List<PurchaseOrderDTO>>> getAll() {
+        List<PurchaseOrderDTO> orders = purchaseOrderService.getAll();
+        return ResponseEntity.ok(ApiResponse.success(orders, "Retrieved " + orders.size() + " purchase orders"));
     }
 
-    // 🔹 Lấy 1 PO cụ thể (kèm items)
     @GetMapping("/{id}")
-    public ResponseEntity<PurchaseOrder> get(@PathVariable Long id) {
-        return ResponseEntity.of(orderRepo.findById(id));
+    @Operation(summary = "Get Purchase Order by ID", description = "Retrieve a specific purchase order with all items")
+    public ResponseEntity<ApiResponse<PurchaseOrderDTO>> getById(
+            @Parameter(description = "Purchase Order ID") @PathVariable Long id) {
+        PurchaseOrderDTO order = purchaseOrderService.getById(id);
+        return ResponseEntity.ok(ApiResponse.success(order));
     }
 
-    // 🔹 Tạo mới đơn hàng (header + items)
+    @GetMapping("/code/{code}")
+    @Operation(summary = "Get Purchase Order by Code", description = "Retrieve a purchase order by its code")
+    public ResponseEntity<ApiResponse<PurchaseOrderDTO>> getByCode(
+            @Parameter(description = "Purchase Order Code") @PathVariable String code) {
+        PurchaseOrderDTO order = purchaseOrderService.getByCode(code);
+        return ResponseEntity.ok(ApiResponse.success(order));
+    }
+
     @PostMapping
-    public ResponseEntity<PurchaseOrder> create(@RequestBody PurchaseOrderDTO dto) {
-        Supplier supplier = supplierRepo.findById(dto.getSupplierId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
-        Warehouse warehouse = warehouseRepo.findById(dto.getWarehouseId())
-                .orElseThrow(() -> new RuntimeException("Warehouse not found"));
-
-        PurchaseOrder po = new PurchaseOrder();
-        po.setCode("PO-" + System.currentTimeMillis());
-        po.setSupplier(supplier);
-        po.setWarehouse(warehouse);
-        po.setCreatedDate(LocalDate.now());
-        po.setOrderName(dto.getOrderName());
-        po.setShippingCost(dto.getShippingCost() != null ? dto.getShippingCost() : BigDecimal.ZERO);
-        po.setTaxType(dto.getTaxType());
-        
-        // Set deliveryDate
-        if (dto.getAfterDate() != null) {
-            po.setAfterDate(dto.getAfterDate());
-        }
-
-        if (dto.getBeforeDate() != null) {
-            po.setBeforeDate(dto.getBeforeDate());
-        }
-
-        po.setStatus("Created");    
-
-        // Tạo items từ DTO
-        List<PurchaseOrderItem> items = new ArrayList<>();
-        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
-            for (PurchaseOrderItemDTO itemDto : dto.getItems()) {
-                Product product = productRepo.findById(itemDto.getProductId())
-                        .orElseThrow(() -> new RuntimeException("Product not found"));
-                
-                PurchaseOrderItem item = PurchaseOrderItem.builder()
-                        .product(product)
-                        .purchaseOrder(po)
-                        .unit(itemDto.getUnit())
-                        .quantity(itemDto.getQuantity())
-                        .unitPrice(itemDto.getUnitPrice())
-                        .costBeforeTax(itemDto.getCostBeforeTax())
-                        .amountBeforeTax(itemDto.getUnitPrice() != null && itemDto.getQuantity() != null
-                                ? itemDto.getUnitPrice().multiply(BigDecimal.valueOf(itemDto.getQuantity()))
-                                : BigDecimal.ZERO)
-                        .build();
-                items.add(item);
-            }
-        }
-        po.setItems(items);
-
-        PurchaseOrder saved = orderRepo.save(po);
-        return ResponseEntity.ok(saved);
+    @Operation(summary = "Create Purchase Order", 
+               description = "Create a new purchase order. Initial status will be ORDER_OPEN")
+    public ResponseEntity<ApiResponse<PurchaseOrderDTO>> create(
+            @Valid @RequestBody PurchaseOrderDTO dto) {
+        PurchaseOrderDTO created = purchaseOrderService.create(dto);
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(ApiResponse.success(created, "Purchase Order created successfully"));
     }
 
-    // 🔹 Cập nhật trạng thái PO
     @PutMapping("/{id}")
-    public ResponseEntity<PurchaseOrder> update(@PathVariable Long id, @RequestBody PurchaseOrder payload) {
-        PurchaseOrder po = orderRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
-
-        po.setStatus(payload.getStatus());
-        po.setOrderName(payload.getOrderName());
-        po.setShippingCost(payload.getShippingCost());
-        po.setTaxType(payload.getTaxType());
-
-        PurchaseOrder saved = orderRepo.save(po);
-        return ResponseEntity.ok(saved);
+    @Operation(summary = "Update Purchase Order", 
+               description = "Update an existing purchase order. Only allowed when status is ORDER_OPEN")
+    public ResponseEntity<ApiResponse<PurchaseOrderDTO>> update(
+            @Parameter(description = "Purchase Order ID") @PathVariable Long id,
+            @Valid @RequestBody PurchaseOrderDTO dto) {
+        PurchaseOrderDTO updated = purchaseOrderService.update(id, dto);
+        return ResponseEntity.ok(ApiResponse.success(updated, "Purchase Order updated successfully"));
     }
 
-    // 🔹 Xóa đơn hàng
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        orderRepo.deleteById(id);
-        return ResponseEntity.noContent().build();
+    @Operation(summary = "Delete Purchase Order", 
+               description = "Delete a purchase order. Only allowed when status is ORDER_OPEN")
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @Parameter(description = "Purchase Order ID") @PathVariable Long id) {
+        purchaseOrderService.delete(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Purchase Order deleted successfully"));
+    }
+
+    // ==================== Approval Workflow ====================
+
+    @PostMapping("/{id}/approval")
+    @Operation(summary = "Process Approval", 
+               description = "Approve or reject a purchase order. Requires PURCHASING_MANAGER or ACCOUNTANT role")
+    public ResponseEntity<ApiResponse<PurchaseOrderDTO>> processApproval(
+            @Parameter(description = "Purchase Order ID") @PathVariable Long id,
+            @Valid @RequestBody ApprovalRequestDTO approvalRequest) {
+        PurchaseOrderDTO result = purchaseOrderService.processApproval(id, approvalRequest);
+        String message = approvalRequest.isApproval() 
+            ? "Purchase Order approved successfully" 
+            : "Purchase Order rejected";
+        return ResponseEntity.ok(ApiResponse.success(result, message));
+    }
+
+    @PutMapping("/{id}/approve")
+    @Operation(summary = "Approve Purchase Order", 
+               description = "Approve a purchase order. Requires PURCHASING_MANAGER or ACCOUNTANT role")
+    public ResponseEntity<ApiResponse<PurchaseOrderDTO>> approve(
+            @Parameter(description = "Purchase Order ID") @PathVariable Long id,
+            @RequestParam(required = false) Long approvedBy) {
+        PurchaseOrderDTO result = purchaseOrderService.approve(id, approvedBy);
+        return ResponseEntity.ok(ApiResponse.success(result, "Purchase Order approved successfully"));
+    }
+
+    @PutMapping("/{id}/reject")
+    @Operation(summary = "Reject Purchase Order", 
+               description = "Reject a purchase order. Requires PURCHASING_MANAGER or ACCOUNTANT role")
+    public ResponseEntity<ApiResponse<PurchaseOrderDTO>> reject(
+            @Parameter(description = "Purchase Order ID") @PathVariable Long id,
+            @RequestParam(required = false) Long rejectedBy,
+            @RequestParam(required = false) String reason) {
+        PurchaseOrderDTO result = purchaseOrderService.reject(id, rejectedBy, reason);
+        return ResponseEntity.ok(ApiResponse.success(result, "Purchase Order rejected"));
+    }
+
+    @PutMapping("/{id}/cancel")
+    @Operation(summary = "Cancel Purchase Order", 
+               description = "Cancel a purchase order. Only allowed for OPEN or APPROVED status")
+    public ResponseEntity<ApiResponse<PurchaseOrderDTO>> cancel(
+            @Parameter(description = "Purchase Order ID") @PathVariable Long id,
+            @RequestParam(required = false) String reason) {
+        PurchaseOrderDTO result = purchaseOrderService.cancel(id, reason);
+        return ResponseEntity.ok(ApiResponse.success(result, "Purchase Order cancelled"));
+    }
+
+    // ==================== Query Operations ====================
+
+    @GetMapping("/status/{status}")
+    @Operation(summary = "Get Purchase Orders by Status", 
+               description = "Retrieve all purchase orders with the specified status")
+    public ResponseEntity<ApiResponse<List<PurchaseOrderDTO>>> getByStatus(
+            @Parameter(description = "Purchase Order Status") @PathVariable PurchaseOrderStatus status) {
+        List<PurchaseOrderDTO> orders = purchaseOrderService.getByStatus(status);
+        return ResponseEntity.ok(ApiResponse.success(orders, "Retrieved " + orders.size() + " purchase orders"));
+    }
+
+    @GetMapping("/pending-approval")
+    @Operation(summary = "Get Pending Approval", 
+               description = "Retrieve all purchase orders pending approval (ORDER_OPEN status)")
+    public ResponseEntity<ApiResponse<List<PurchaseOrderDTO>>> getPendingApproval() {
+        List<PurchaseOrderDTO> orders = purchaseOrderService.getPendingApproval();
+        return ResponseEntity.ok(ApiResponse.success(orders, "Retrieved " + orders.size() + " pending approvals"));
+    }
+
+    @GetMapping("/ready-for-receipt")
+    @Operation(summary = "Get Ready for Goods Receipt", 
+               description = "Retrieve all purchase orders ready for goods receipt (APPROVED or PARTIALLY_RECEIVED)")
+    public ResponseEntity<ApiResponse<List<PurchaseOrderDTO>>> getReadyForGoodsReceipt() {
+        List<PurchaseOrderDTO> orders = purchaseOrderService.getReadyForGoodsReceipt();
+        return ResponseEntity.ok(ApiResponse.success(orders, "Retrieved " + orders.size() + " orders ready for receipt"));
+    }
+
+    @GetMapping("/supplier/{supplierId}")
+    @Operation(summary = "Get Purchase Orders by Supplier", 
+               description = "Retrieve all purchase orders for a specific supplier")
+    public ResponseEntity<ApiResponse<List<PurchaseOrderDTO>>> getBySupplierId(
+            @Parameter(description = "Supplier ID") @PathVariable Long supplierId) {
+        List<PurchaseOrderDTO> orders = purchaseOrderService.getBySupplierId(supplierId);
+        return ResponseEntity.ok(ApiResponse.success(orders, "Retrieved " + orders.size() + " purchase orders"));
+    }
+
+    @GetMapping("/date-range")
+    @Operation(summary = "Get Purchase Orders by Date Range", 
+               description = "Retrieve all purchase orders created within the specified date range")
+    public ResponseEntity<ApiResponse<List<PurchaseOrderDTO>>> getByDateRange(
+            @Parameter(description = "Start date (yyyy-MM-dd)") 
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @Parameter(description = "End date (yyyy-MM-dd)") 
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        List<PurchaseOrderDTO> orders = purchaseOrderService.getByDateRange(startDate, endDate);
+        return ResponseEntity.ok(ApiResponse.success(orders, "Retrieved " + orders.size() + " purchase orders"));
     }
 }
