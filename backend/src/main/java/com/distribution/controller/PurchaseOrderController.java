@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -66,6 +67,7 @@ public class PurchaseOrderController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('PURCHASE_STAFF', 'PURCHASE_MANAGER', 'ADMIN')")
     @Operation(summary = "Create Purchase Order", 
                description = "Create a new purchase order. Initial status will be ORDER_OPEN")
     public ResponseEntity<ApiResponse<PurchaseOrderDTO>> create(
@@ -77,6 +79,7 @@ public class PurchaseOrderController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PURCHASE_STAFF', 'PURCHASE_MANAGER', 'ADMIN')")
     @Operation(summary = "Update Purchase Order", 
                description = "Update an existing purchase order. Only allowed when status is ORDER_OPEN")
     public ResponseEntity<ApiResponse<PurchaseOrderDTO>> update(
@@ -87,6 +90,7 @@ public class PurchaseOrderController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PURCHASE_MANAGER', 'ADMIN')")
     @Operation(summary = "Delete Purchase Order", 
                description = "Delete a purchase order. Only allowed when status is ORDER_OPEN")
     public ResponseEntity<ApiResponse<Void>> delete(
@@ -98,6 +102,7 @@ public class PurchaseOrderController {
     // ==================== Approval Workflow ====================
 
     @PostMapping("/{id}/approval")
+    @PreAuthorize("hasAnyRole('PURCHASE_MANAGER', 'ACCOUNTANT', 'ADMIN')")
     @Operation(summary = "Process Approval", 
                description = "Approve or reject a purchase order. Requires PURCHASING_MANAGER or ACCOUNTANT role")
     public ResponseEntity<ApiResponse<PurchaseOrderDTO>> processApproval(
@@ -111,6 +116,7 @@ public class PurchaseOrderController {
     }
 
     @PutMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('PURCHASE_MANAGER', 'ACCOUNTANT', 'ADMIN')")
     @Operation(summary = "Approve Purchase Order", 
                description = "Approve a purchase order. Requires PURCHASING_MANAGER or ACCOUNTANT role")
     public ResponseEntity<ApiResponse<PurchaseOrderDTO>> approve(
@@ -121,6 +127,7 @@ public class PurchaseOrderController {
     }
 
     @PutMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('PURCHASE_MANAGER', 'ACCOUNTANT', 'ADMIN')")
     @Operation(summary = "Reject Purchase Order", 
                description = "Reject a purchase order. Requires PURCHASING_MANAGER or ACCOUNTANT role")
     public ResponseEntity<ApiResponse<PurchaseOrderDTO>> reject(

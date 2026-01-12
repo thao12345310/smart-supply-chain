@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -66,6 +67,7 @@ public class SalesOrderController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SALES_STAFF', 'SALES_MANAGER', 'ADMIN')")
     @Operation(summary = "Create Sales Order", 
                description = "Create a new sales order. Initial status will be ORDER_OPEN")
     public ResponseEntity<ApiResponse<SalesOrderDTO>> create(
@@ -77,6 +79,7 @@ public class SalesOrderController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SALES_STAFF', 'SALES_MANAGER', 'ADMIN')")
     @Operation(summary = "Update Sales Order", 
                description = "Update an existing sales order. Only allowed when status is ORDER_OPEN")
     public ResponseEntity<ApiResponse<SalesOrderDTO>> update(
@@ -87,6 +90,7 @@ public class SalesOrderController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SALES_MANAGER', 'ADMIN')")
     @Operation(summary = "Delete Sales Order", 
                description = "Delete a sales order. Only allowed when status is ORDER_OPEN")
     public ResponseEntity<ApiResponse<Void>> delete(
@@ -98,6 +102,7 @@ public class SalesOrderController {
     // ==================== Approval Workflow ====================
 
     @PostMapping("/{id}/approval")
+    @PreAuthorize("hasAnyRole('SALES_MANAGER', 'ACCOUNTANT', 'ADMIN')")
     @Operation(summary = "Process Approval", 
                description = "Approve or reject a sales order. Requires SALES_MANAGER or ACCOUNTANT role")
     public ResponseEntity<ApiResponse<SalesOrderDTO>> processApproval(
@@ -111,6 +116,7 @@ public class SalesOrderController {
     }
 
     @PutMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('SALES_MANAGER', 'ACCOUNTANT', 'ADMIN')")
     @Operation(summary = "Approve Sales Order", 
                description = "Approve a sales order. Reserves inventory. Requires SALES_MANAGER or ACCOUNTANT role")
     public ResponseEntity<ApiResponse<SalesOrderDTO>> approve(
@@ -121,6 +127,7 @@ public class SalesOrderController {
     }
 
     @PutMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('SALES_MANAGER', 'ACCOUNTANT', 'ADMIN')")
     @Operation(summary = "Reject Sales Order", 
                description = "Reject a sales order. Requires SALES_MANAGER or ACCOUNTANT role")
     public ResponseEntity<ApiResponse<SalesOrderDTO>> reject(

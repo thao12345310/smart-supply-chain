@@ -93,7 +93,7 @@ public class DeliveryPlanController {
         DeliveryTripRoute trip = DeliveryTripRoute.builder()
                 .code("TRIP-" + System.currentTimeMillis())
                 .shipperName("AutoShipper")
-                .status("Created")
+                .status(DeliveryTripRoute.TripStatus.CREATED)
                 .deliveryPlan(plan)
                 .build();
         tripRepo.save(trip);

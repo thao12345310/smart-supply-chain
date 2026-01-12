@@ -16,3 +16,10 @@ server:
 app:
   cors:
     allowed-origins: http://localhost:5173
+  jwt:
+    # Secret key for signing JWT tokens (min 32 characters for HS256)
+    secret: distribution-logistics-jwt-secret-key-2024-very-secure
+    # Access token expiration: 24 hours (in milliseconds)
+    expiration-ms: 86400000
+    # Refresh token expiration: 7 days (in milliseconds)
+    refresh-expiration-ms: 604800000
