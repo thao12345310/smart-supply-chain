@@ -207,6 +207,71 @@ public class InventoryServiceImpl implements InventoryService {
         return inventoryRepo.getTotalAvailableQuantityByProductId(productId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Integer getAvailableQuantity(Long productId, Long warehouseId) {
+        return inventoryRepo.findByProductIdAndWarehouseId(productId, warehouseId)
+            .map(Inventory::getQuantityAvailable)
+            .orElse(0);
+    }
+
+    @Override
+    public void reserveInventory(Long productId, Long warehouseId, Integer quantity) {
+        reserveStock(productId, warehouseId, quantity);
+    }
+
+    @Override
+    public void releaseReservedInventory(Long productId, Long warehouseId, Integer quantity) {
+        try {
+            releaseReservedStock(productId, warehouseId, quantity);
+        } catch (Exception e) {
+            logger.warn("Could not release reserved inventory for product {} at warehouse {}: {}", 
+                productId, warehouseId, e.getMessage());
+        }
+    }
+
+    @Override
+    public void decreaseInventory(Long productId, Long warehouseId, Integer quantity,
+                                  String referenceType, Long referenceId, String referenceCode) {
+        logger.info("Decreasing inventory: productId={}, warehouseId={}, quantity={}, ref={}-{}", 
+            productId, warehouseId, quantity, referenceType, referenceId);
+
+        // Get inventory with pessimistic lock
+        Inventory inventory = inventoryRepo.findByProductIdAndWarehouseIdForUpdate(productId, warehouseId)
+            .orElseThrow(() -> new InventoryException(
+                String.format("No inventory found for product %d at warehouse %d", productId, warehouseId)));
+
+        // Validate sufficient stock
+        if (inventory.getQuantityOnHand() < quantity) {
+            throw InventoryException.insufficientStock(
+                inventory.getProduct().getName(), 
+                inventory.getQuantityOnHand(), 
+                quantity
+            );
+        }
+
+        // Record quantity before update
+        Integer quantityBefore = inventory.getQuantityOnHand();
+
+        // Decrease stock (on-hand only, available is managed by reservation)
+        inventory.setQuantityOnHand(inventory.getQuantityOnHand() - quantity);
+        inventory.setQuantityAvailable(inventory.getQuantityOnHand() - inventory.getQuantityReserved());
+        inventory.setLastIssuedDate(java.time.LocalDateTime.now());
+
+        // Save inventory
+        Inventory saved = inventoryRepo.save(inventory);
+
+        // Create transaction record
+        createTransaction(
+            productId, warehouseId, TransactionType.ISSUE, quantity, inventory.getAverageCost(),
+            quantityBefore, saved.getQuantityOnHand(),
+            referenceType, referenceId, referenceCode, null,
+            "Stock issued for " + referenceType
+        );
+
+        logger.info("Inventory decreased successfully. New quantity: {}", saved.getQuantityOnHand());
+    }
+
     // Helper methods
     private Inventory createInventory(Long productId, Long warehouseId) {
         Product product = productRepo.findById(productId)

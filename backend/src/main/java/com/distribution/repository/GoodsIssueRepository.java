@@ -1,0 +1,49 @@
+package com.distribution.repository;
+
+import com.distribution.model.GoodsIssue;
+import com.distribution.model.enums.GoodsIssueStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface GoodsIssueRepository extends JpaRepository<GoodsIssue, Long> {
+    
+    Optional<GoodsIssue> findByCode(String code);
+    
+    List<GoodsIssue> findByStatus(GoodsIssueStatus status);
+    
+    List<GoodsIssue> findBySalesOrderId(Long salesOrderId);
+    
+    List<GoodsIssue> findByWarehouseId(Long warehouseId);
+    
+    @Query("SELECT gi FROM GoodsIssue gi WHERE gi.issueDate BETWEEN :startDate AND :endDate ORDER BY gi.issueDate DESC")
+    List<GoodsIssue> findByDateRange(LocalDate startDate, LocalDate endDate);
+    
+    @Query("SELECT gi FROM GoodsIssue gi WHERE gi.status = 'DRAFT' ORDER BY gi.createdAt DESC")
+    List<GoodsIssue> findDraft();
+    
+    @Query("SELECT gi FROM GoodsIssue gi WHERE gi.status = 'CONFIRMED' ORDER BY gi.confirmedDate DESC")
+    List<GoodsIssue> findConfirmed();
+    
+    @Query("SELECT gi FROM GoodsIssue gi LEFT JOIN FETCH gi.items WHERE gi.id = :id")
+    Optional<GoodsIssue> findByIdWithItems(Long id);
+    
+    @Query("SELECT gi FROM GoodsIssue gi LEFT JOIN FETCH gi.items LEFT JOIN FETCH gi.invoice WHERE gi.id = :id")
+    Optional<GoodsIssue> findByIdWithItemsAndInvoice(Long id);
+    
+    @Query("SELECT COUNT(gi) FROM GoodsIssue gi WHERE gi.status = :status")
+    long countByStatus(GoodsIssueStatus status);
+    
+    @Query("SELECT gi FROM GoodsIssue gi WHERE " +
+           "LOWER(gi.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(gi.salesOrder.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(gi.trackingNumber) LIKE LOWER(CONCAT('%', :search, '%'))")
+    List<GoodsIssue> search(String search);
+    
+    boolean existsByCode(String code);
+}

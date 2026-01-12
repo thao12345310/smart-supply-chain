@@ -87,4 +87,29 @@ public interface InventoryService {
      * Get total available quantity for a product across all warehouses
      */
     Integer getTotalAvailableQuantity(Long productId);
+    
+    /**
+     * Get available quantity for a product at a specific warehouse
+     * Available = On Hand - Reserved
+     */
+    Integer getAvailableQuantity(Long productId, Long warehouseId);
+    
+    /**
+     * Reserve inventory for a sales order
+     * Increases reserved quantity, decreases available quantity
+     */
+    void reserveInventory(Long productId, Long warehouseId, Integer quantity);
+    
+    /**
+     * Release reserved inventory (when order is cancelled or goods are issued)
+     * Decreases reserved quantity, increases available quantity
+     */
+    void releaseReservedInventory(Long productId, Long warehouseId, Integer quantity);
+    
+    /**
+     * Decrease inventory when goods are issued
+     * Reduces on-hand quantity and creates transaction record
+     */
+    void decreaseInventory(Long productId, Long warehouseId, Integer quantity,
+                           String referenceType, Long referenceId, String referenceCode);
 }

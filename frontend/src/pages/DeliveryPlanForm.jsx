@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Modal, Form, Input, Select } from "antd";
+import { Modal, Form, Input, Select, DatePicker } from "antd";
 
 export default function DeliveryPlanForm({ open, onCancel, onSave, plan }) {
   const [form] = Form.useForm();
@@ -7,7 +7,7 @@ export default function DeliveryPlanForm({ open, onCancel, onSave, plan }) {
   useEffect(() => {
     if (plan) form.setFieldsValue(plan);
     else form.resetFields();
-  }, [plan]);
+  }, [plan, open]);
 
   const handleOk = () => {
     form.validateFields().then((values) => {
@@ -17,28 +17,39 @@ export default function DeliveryPlanForm({ open, onCancel, onSave, plan }) {
 
   return (
     <Modal
-      title={plan ? "Edit Delivery Plan" : "Add Delivery Plan"}
+      title={plan ? "Sửa đợt giao hàng" : "Tạo đợt giao hàng"}
       open={open}
       onOk={handleOk}
       onCancel={onCancel}
-      okText="Save"
+      okText="Lưu"
+      cancelText="Hủy"
+      width={600}
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="Code"
+          label="Mã đợt giao"
           name="code"
-          rules={[{ required: true, message: "Please enter code" }]}
+          rules={[{ required: true, message: "Vui lòng nhập mã đợt giao" }]}
         >
-          <Input />
+          <Input placeholder="VD: DGH-2026-001" />
         </Form.Item>
-        <Form.Item label="Description" name="description">
-          <Input.TextArea rows={2} />
+        <Form.Item label="Ngày giao dự kiến" name="plannedDate">
+          <DatePicker 
+            style={{ width: "100%" }} 
+            format="DD/MM/YYYY"
+            placeholder="Chọn ngày giao"
+          />
         </Form.Item>
-        <Form.Item label="Status" name="status" initialValue="Created">
+        <Form.Item label="Mô tả" name="description">
+          <Input.TextArea rows={3} placeholder="Mô tả đợt giao hàng" />
+        </Form.Item>
+        <Form.Item label="Trạng thái" name="status" initialValue="DRAFT">
           <Select>
-            <Select.Option value="Created">Created</Select.Option>
-            <Select.Option value="InProgress">InProgress</Select.Option>
-            <Select.Option value="Completed">Completed</Select.Option>
+            <Select.Option value="DRAFT">Nháp</Select.Option>
+            <Select.Option value="PENDING">Chờ xử lý</Select.Option>
+            <Select.Option value="IN_PROGRESS">Đang giao</Select.Option>
+            <Select.Option value="COMPLETED">Hoàn thành</Select.Option>
+            <Select.Option value="CANCELLED">Đã hủy</Select.Option>
           </Select>
         </Form.Item>
       </Form>

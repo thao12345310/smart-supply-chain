@@ -9,9 +9,12 @@ import {
   AppstoreOutlined,
   TruckOutlined,
   DashboardOutlined,
+  DollarOutlined,
+  FileTextOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 
-// Import pages
+// Import pages - Purchasing Module
 import ProductList from "./pages/ProductList";
 import SupplierList from "./pages/SupplierList";
 import PurchaseOrderList from "./pages/PurchaseOrderList";
@@ -21,6 +24,17 @@ import GoodsReceiptDetail from "./pages/GoodsReceiptDetail";
 import InventoryList from "./pages/InventoryList";
 import DeliveryPlanList from "./pages/DeliveryPlanList";
 import DeliveryPlanDetail from "./pages/DeliveryPlanDetail";
+
+// Import pages - Sales Module
+import CustomerList from "./pages/CustomerList";
+import SalesOrderList from "./pages/SalesOrderList";
+import SalesOrderForm from "./pages/SalesOrderForm";
+import SalesOrderDetail from "./pages/SalesOrderDetail";
+import GoodsIssueList from "./pages/GoodsIssueList";
+import GoodsIssueForm from "./pages/GoodsIssueForm";
+import GoodsIssueDetail from "./pages/GoodsIssueDetail";
+import SalesInvoiceList from "./pages/SalesInvoiceList";
+import SalesInvoiceDetail from "./pages/SalesInvoiceDetail";
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -39,6 +53,10 @@ function MainLayout({ children }) {
     if (path.includes('/products')) return 'products';
     if (path.includes('/suppliers')) return 'suppliers';
     if (path.includes('/delivery-plans')) return 'delivery-plans';
+    if (path.includes('/customers')) return 'customers';
+    if (path.includes('/sales-orders')) return 'sales-orders';
+    if (path.includes('/goods-issues')) return 'goods-issues';
+    if (path.includes('/sales-invoices')) return 'sales-invoices';
     if (path === '/') return 'dashboard';
     return 'dashboard';
   };
@@ -52,6 +70,28 @@ function MainLayout({ children }) {
     },
     {
       type: 'divider',
+    },
+    {
+      key: 'sales',
+      icon: <DollarOutlined />,
+      label: 'Bán hàng',
+      children: [
+        {
+          key: 'sales-orders',
+          label: 'Đơn bán hàng',
+          onClick: () => navigate('/sales-orders'),
+        },
+        {
+          key: 'goods-issues',
+          label: 'Phiếu xuất kho',
+          onClick: () => navigate('/goods-issues'),
+        },
+        {
+          key: 'sales-invoices',
+          label: 'Hóa đơn',
+          onClick: () => navigate('/sales-invoices'),
+        },
+      ],
     },
     {
       key: 'purchasing',
@@ -96,6 +136,11 @@ function MainLayout({ children }) {
           key: 'suppliers',
           label: 'Nhà cung cấp',
           onClick: () => navigate('/suppliers'),
+        },
+        {
+          key: 'customers',
+          label: 'Khách hàng',
+          onClick: () => navigate('/customers'),
         },
       ],
     },
@@ -145,7 +190,7 @@ function MainLayout({ children }) {
         <Menu
           mode="inline"
           selectedKeys={[getSelectedKey()]}
-          defaultOpenKeys={['purchasing', 'warehouse', 'master-data']}
+          defaultOpenKeys={['sales', 'purchasing', 'warehouse', 'master-data']}
           style={{ borderRight: 0, paddingTop: 8 }}
           items={menuItems}
         />
@@ -176,6 +221,25 @@ function Dashboard() {
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        {/* Sales Orders Card */}
+        <div
+          onClick={() => navigate('/sales-orders')}
+          style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: 12,
+            padding: 24,
+            cursor: 'pointer',
+            color: 'white',
+            transition: 'transform 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <DollarOutlined style={{ fontSize: 32, marginBottom: 12 }} />
+          <div style={{ fontSize: 18, fontWeight: 600 }}>Đơn bán hàng</div>
+          <div style={{ opacity: 0.8 }}>Quản lý đơn hàng bán ra</div>
+        </div>
+
         {/* Purchase Orders Card */}
         <div
           onClick={() => navigate('/purchase-orders')}
@@ -195,11 +259,11 @@ function Dashboard() {
           <div style={{ opacity: 0.8 }}>Quản lý đơn hàng mua từ nhà cung cấp</div>
         </div>
 
-        {/* Goods Receipt Card */}
+        {/* Goods Issue Card */}
         <div
-          onClick={() => navigate('/goods-receipts')}
+          onClick={() => navigate('/goods-issues')}
           style={{
-            background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
             borderRadius: 12,
             padding: 24,
             cursor: 'pointer',
@@ -209,9 +273,28 @@ function Dashboard() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
-          <InboxOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Phiếu nhập kho</div>
-          <div style={{ opacity: 0.8 }}>Nhập hàng và cập nhật tồn kho</div>
+          <TruckOutlined style={{ fontSize: 32, marginBottom: 12 }} />
+          <div style={{ fontSize: 18, fontWeight: 600 }}>Xuất kho</div>
+          <div style={{ opacity: 0.8 }}>Quản lý phiếu xuất kho giao hàng</div>
+        </div>
+
+        {/* Sales Invoices Card */}
+        <div
+          onClick={() => navigate('/sales-invoices')}
+          style={{
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+            borderRadius: 12,
+            padding: 24,
+            cursor: 'pointer',
+            color: 'white',
+            transition: 'transform 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <FileTextOutlined style={{ fontSize: 32, marginBottom: 12 }} />
+          <div style={{ fontSize: 18, fontWeight: 600 }}>Hóa đơn</div>
+          <div style={{ opacity: 0.8 }}>Quản lý hóa đơn và thanh toán</div>
         </div>
 
         {/* Inventory Card */}
@@ -233,11 +316,11 @@ function Dashboard() {
           <div style={{ opacity: 0.8 }}>Theo dõi số lượng tồn kho</div>
         </div>
 
-        {/* Products Card */}
+        {/* Customers Card */}
         <div
-          onClick={() => navigate('/products')}
+          onClick={() => navigate('/customers')}
           style={{
-            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
             borderRadius: 12,
             padding: 24,
             cursor: 'pointer',
@@ -247,47 +330,9 @@ function Dashboard() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
-          <AppstoreOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Sản phẩm</div>
-          <div style={{ opacity: 0.8 }}>Quản lý danh mục sản phẩm</div>
-        </div>
-
-        {/* Suppliers Card */}
-        <div
-          onClick={() => navigate('/suppliers')}
-          style={{
-            background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-            borderRadius: 12,
-            padding: 24,
-            cursor: 'pointer',
-            color: 'white',
-            transition: 'transform 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          <TeamOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Nhà cung cấp</div>
-          <div style={{ opacity: 0.8 }}>Quản lý nhà cung cấp</div>
-        </div>
-
-        {/* Delivery Card */}
-        <div
-          onClick={() => navigate('/delivery-plans')}
-          style={{
-            background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-            borderRadius: 12,
-            padding: 24,
-            cursor: 'pointer',
-            color: '#333',
-            transition: 'transform 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          <TruckOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Giao hàng</div>
-          <div style={{ opacity: 0.8 }}>Kế hoạch và theo dõi giao hàng</div>
+          <UserOutlined style={{ fontSize: 32, marginBottom: 12 }} />
+          <div style={{ fontSize: 18, fontWeight: 600 }}>Khách hàng</div>
+          <div style={{ opacity: 0.8 }}>Quản lý thông tin khách hàng</div>
         </div>
       </div>
     </div>
@@ -302,6 +347,25 @@ export default function App() {
         <Routes>
           {/* Dashboard */}
           <Route path="/" element={<Dashboard />} />
+
+          {/* Sales Orders */}
+          <Route path="/sales-orders" element={<SalesOrderList />} />
+          <Route path="/sales-orders/new" element={<SalesOrderForm />} />
+          <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
+          <Route path="/sales-orders/:id/edit" element={<SalesOrderForm />} />
+
+          {/* Goods Issues */}
+          <Route path="/goods-issues" element={<GoodsIssueList />} />
+          <Route path="/goods-issues/new" element={<GoodsIssueForm />} />
+          <Route path="/goods-issues/:id" element={<GoodsIssueDetail />} />
+          <Route path="/goods-issues/:id/edit" element={<GoodsIssueForm />} />
+
+          {/* Sales Invoices */}
+          <Route path="/sales-invoices" element={<SalesInvoiceList />} />
+          <Route path="/sales-invoices/:id" element={<SalesInvoiceDetail />} />
+
+          {/* Customers */}
+          <Route path="/customers" element={<CustomerList />} />
 
           {/* Purchase Orders */}
           <Route path="/purchase-orders" element={<PurchaseOrderList />} />
@@ -328,3 +392,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+

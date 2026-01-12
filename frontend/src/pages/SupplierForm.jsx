@@ -1,13 +1,20 @@
 import React, { useEffect } from "react";
-import { Modal, Form, Input } from "antd";
+import { Modal, Form, Input, Switch } from "antd";
 
 export default function SupplierForm({ open, onCancel, onSave, supplier }) {
   const [form] = Form.useForm();
 
   useEffect(() => {
-    if (supplier) form.setFieldsValue(supplier);
-    else form.resetFields();
-  }, [supplier]);
+    if (supplier) {
+      form.setFieldsValue({
+        ...supplier,
+        active: supplier.active !== false,
+      });
+    } else {
+      form.resetFields();
+      form.setFieldsValue({ active: true });
+    }
+  }, [supplier, open]);
 
   const handleOk = () => {
     form
@@ -20,38 +27,43 @@ export default function SupplierForm({ open, onCancel, onSave, supplier }) {
 
   return (
     <Modal
-      title={supplier ? "Edit Supplier" : "Add Supplier"}
+      title={supplier ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"}
       open={open}
       onOk={handleOk}
       onCancel={onCancel}
-      okText="Save"
+      okText="Lưu"
+      cancelText="Hủy"
+      width={600}
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="Code"
+          label="Mã nhà cung cấp"
           name="code"
-          rules={[{ required: true, message: "Please enter code" }]}
+          rules={[{ required: true, message: "Vui lòng nhập mã nhà cung cấp" }]}
         >
-          <Input />
+          <Input placeholder="VD: NCC001" />
         </Form.Item>
         <Form.Item
-          label="Name"
+          label="Tên nhà cung cấp"
           name="name"
-          rules={[{ required: true, message: "Please enter name" }]}
+          rules={[{ required: true, message: "Vui lòng nhập tên nhà cung cấp" }]}
         >
-          <Input />
+          <Input placeholder="Nhập tên nhà cung cấp" />
         </Form.Item>
-        <Form.Item label="Contact Name" name="contactName">
-          <Input />
+        <Form.Item label="Người liên hệ" name="contactName">
+          <Input placeholder="Tên người liên hệ" />
         </Form.Item>
-        <Form.Item label="Phone" name="phone">
-          <Input />
+        <Form.Item label="Điện thoại" name="phone">
+          <Input placeholder="Số điện thoại" />
         </Form.Item>
         <Form.Item label="Email" name="email">
-          <Input />
+          <Input placeholder="Địa chỉ email" />
         </Form.Item>
-        <Form.Item label="Address" name="address">
-          <Input />
+        <Form.Item label="Địa chỉ" name="address">
+          <Input.TextArea rows={2} placeholder="Địa chỉ nhà cung cấp" />
+        </Form.Item>
+        <Form.Item label="Hoạt động" name="active" valuePropName="checked">
+          <Switch checkedChildren="Có" unCheckedChildren="Không" />
         </Form.Item>
       </Form>
     </Modal>

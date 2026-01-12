@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, message } from "antd";
+import { Table, Button, Modal, message, Tag, Card, Space, Input, Row, Col, Statistic } from "antd";
+import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import api from "../services/api";
 import ProductForm from "./ProductForm";
 
@@ -8,14 +9,15 @@ export default function ProductList() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null);
   const [open, setOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
       const res = await api.get("/products");
-      setProducts(res.data);
+      setProducts(res.data || []);
     } catch {
-      message.error("Failed to fetch products");
+      message.error("Không thể tải danh sách sản phẩm");
     } finally {
       setLoading(false);
     }
@@ -30,21 +32,27 @@ export default function ProductList() {
     setOpen(true);
   };
 
-  const handleEdit = (product) => {
+  const handleEdit = (product, e) => {
+    e?.stopPropagation();
     setEditing(product);
     setOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (id, e) => {
+    e?.stopPropagation();
     Modal.confirm({
-      title: "Delete this product?",
+      title: "Xác nhận xóa sản phẩm?",
+      content: "Bạn có chắc muốn xóa sản phẩm này?",
+      okText: "Xóa",
+      cancelText: "Hủy",
+      okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await api.delete(`/products/${id}`);
-          message.success("Deleted successfully");
+          message.success("Xóa sản phẩm thành công");
           fetchProducts();
         } catch {
-          message.error("Delete failed");
+          message.error("Không thể xóa sản phẩm");
         }
       },
     });
@@ -54,59 +62,173 @@ export default function ProductList() {
     try {
       if (editing) {
         await api.put(`/products/${editing.id}`, data);
-        message.success("Updated successfully");
+        message.success("Cập nhật thành công");
       } else {
         await api.post("/products", data);
-        message.success("Added successfully");
+        message.success("Thêm sản phẩm thành công");
       }
       setOpen(false);
+      setEditing(null);
       fetchProducts();
     } catch {
-      message.error("Save failed");
+      message.error("Lưu thất bại");
     }
   };
 
+  const filteredProducts = products.filter(item => {
+    if (!searchText) return true;
+    const search = searchText.toLowerCase();
+    return (
+      (item.name || "").toLowerCase().includes(search) ||
+      (item.code || "").toLowerCase().includes(search)
+    );
+  });
+
   const columns = [
-    { title: "Code", dataIndex: "code" },
-    { title: "Name", dataIndex: "name" },
+    { 
+      title: "Mã SP", 
+      dataIndex: "code",
+      width: 120,
+      render: (text) => <strong>{text || "-"}</strong>,
+    },
+    { 
+      title: "Tên sản phẩm", 
+      dataIndex: "name",
+      ellipsis: true,
+    },
     {
-      title: "Supplier",
+      title: "Nhà cung cấp",
+      width: 180,
+      ellipsis: true,
       render: (_, record) => (record.supplier ? record.supplier.name : "—"),
     },
-    { title: "Description", dataIndex: "description" },
-    { title: "Unit", dataIndex: "unit" },
-    { title: "Price", dataIndex: "price" },
+    { 
+      title: "Mô tả", 
+      dataIndex: "description",
+      ellipsis: true,
+    },
+    { 
+      title: "ĐVT", 
+      dataIndex: "unit",
+      width: 80,
+    },
+    { 
+      title: "Giá bán", 
+      dataIndex: "price",
+      width: 130,
+      align: "right",
+      render: (val) => val ? `${val.toLocaleString("vi-VN")} ₫` : "-",
+    },
     {
-      title: "Actions",
+      title: "Trạng thái",
+      dataIndex: "active",
+      width: 100,
+      render: (active) => (
+        <Tag color={active !== false ? "green" : "default"}>
+          {active !== false ? "Hoạt động" : "Ngừng"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Thao tác",
+      width: 150,
       render: (_, record) => (
-        <>
-          <Button type="link" onClick={() => handleEdit(record)}>
-            Edit
+        <Space size="small">
+          <Button 
+            size="small" 
+            icon={<EditOutlined />}
+            onClick={(e) => handleEdit(record, e)}
+          >
+            Sửa
           </Button>
-          <Button type="link" danger onClick={() => handleDelete(record.id)}>
-            Delete
+          <Button 
+            size="small" 
+            danger 
+            icon={<DeleteOutlined />}
+            onClick={(e) => handleDelete(record.id, e)}
+          >
+            Xóa
           </Button>
-        </>
+        </Space>
       ),
     },
   ];
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>Product Management</h2>
-      <Button type="primary" onClick={handleAdd} style={{ marginBottom: 12 }}>
-        Add Product
-      </Button>
+      {/* Statistics Cards */}
+      <Row gutter={16} style={{ marginBottom: 20 }}>
+        <Col span={8}>
+          <Card>
+            <Statistic title="Tổng sản phẩm" value={products.length} />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <Statistic 
+              title="Đang hoạt động" 
+              value={products.filter(p => p.active !== false).length} 
+              valueStyle={{ color: '#52c41a' }}
+            />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <Statistic 
+              title="Ngừng kinh doanh" 
+              value={products.filter(p => p.active === false).length} 
+              valueStyle={{ color: '#999' }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+        }}
+      >
+        <h2 style={{ margin: 0 }}>Quản lý sản phẩm</h2>
+        <Space>
+          <Input
+            placeholder="Tìm sản phẩm..."
+            prefix={<SearchOutlined />}
+            style={{ width: 250 }}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            allowClear
+          />
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            Thêm sản phẩm
+          </Button>
+        </Space>
+      </div>
+
+      {/* Table */}
       <Table
-        dataSource={products}
+        dataSource={filteredProducts}
         columns={columns}
         rowKey="id"
         loading={loading}
-        pagination={false}
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showTotal: (total) => `Tổng ${total} sản phẩm`,
+        }}
+        scroll={{ x: 1000 }}
       />
+
+      {/* Form Modal */}
       <ProductForm
         open={open}
-        onCancel={() => setOpen(false)}
+        onCancel={() => {
+          setOpen(false);
+          setEditing(null);
+        }}
         onSave={handleSave}
         product={editing}
       />

@@ -1,0 +1,467 @@
+package com.distribution.service.impl;
+
+import com.distribution.dto.GoodsIssueDTO;
+import com.distribution.dto.GoodsIssueItemDTO;
+import com.distribution.dto.SalesInvoiceDTO;
+import com.distribution.exception.BusinessException;
+import com.distribution.exception.ResourceNotFoundException;
+import com.distribution.model.*;
+import com.distribution.model.enums.GoodsIssueStatus;
+import com.distribution.model.enums.SalesInvoiceStatus;
+import com.distribution.repository.*;
+import com.distribution.service.GoodsIssueService;
+import com.distribution.service.InventoryService;
+import com.distribution.service.SalesOrderService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional
+public class GoodsIssueServiceImpl implements GoodsIssueService {
+
+    private final GoodsIssueRepository goodsIssueRepository;
+    private final GoodsIssueItemRepository goodsIssueItemRepository;
+    private final SalesOrderRepository salesOrderRepository;
+    private final SalesOrderItemRepository salesOrderItemRepository;
+    private final DeliveryAddressRepository deliveryAddressRepository;
+    private final WarehouseRepository warehouseRepository;
+    private final ProductRepository productRepository;
+    private final SalesInvoiceRepository salesInvoiceRepository;
+    private final InventoryService inventoryService;
+    private final SalesOrderService salesOrderService;
+
+    @Override
+    public GoodsIssueDTO create(GoodsIssueDTO dto) {
+        log.info("Creating goods issue for sales order: {}", dto.getSalesOrderId());
+        
+        // Generate code if not provided
+        if (dto.getCode() == null || dto.getCode().isBlank()) {
+            dto.setCode(GoodsIssue.generateCode());
+        }
+        
+        // Check for duplicate code
+        if (goodsIssueRepository.existsByCode(dto.getCode())) {
+            throw new BusinessException("Goods Issue with code " + dto.getCode() + " already exists");
+        }
+        
+        // Validate sales order
+        SalesOrder salesOrder = salesOrderRepository.findByIdWithItems(dto.getSalesOrderId())
+            .orElseThrow(() -> new ResourceNotFoundException("Sales Order not found with ID: " + dto.getSalesOrderId()));
+        
+        if (!salesOrder.getStatus().canIssueGoods()) {
+            throw new BusinessException("Cannot create Goods Issue for Sales Order in status: " + salesOrder.getStatus());
+        }
+        
+        // Build goods issue
+        GoodsIssue goodsIssue = GoodsIssue.builder()
+            .code(dto.getCode())
+            .status(GoodsIssueStatus.DRAFT)
+            .issueDate(dto.getIssueDate() != null ? dto.getIssueDate() : LocalDate.now())
+            .salesOrder(salesOrder)
+            .deliveryNoteNumber(dto.getDeliveryNoteNumber())
+            .shippingMethod(dto.getShippingMethod())
+            .trackingNumber(dto.getTrackingNumber())
+            .carrierName(dto.getCarrierName())
+            .notes(dto.getNotes())
+            .createdBy(dto.getCreatedBy())
+            .items(new ArrayList<>())
+            .build();
+        
+        // Set warehouse (default to SO warehouse)
+        if (dto.getWarehouseId() != null) {
+            Warehouse warehouse = warehouseRepository.findById(dto.getWarehouseId())
+                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
+            goodsIssue.setWarehouse(warehouse);
+        } else if (salesOrder.getWarehouse() != null) {
+            goodsIssue.setWarehouse(salesOrder.getWarehouse());
+        }
+        
+        // Set delivery address (default to SO delivery address)
+        if (dto.getDeliveryAddressId() != null) {
+            DeliveryAddress address = deliveryAddressRepository.findById(dto.getDeliveryAddressId())
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery address not found"));
+            goodsIssue.setDeliveryAddress(address);
+        } else if (salesOrder.getDeliveryAddress() != null) {
+            goodsIssue.setDeliveryAddress(salesOrder.getDeliveryAddress());
+        }
+        
+        // Add items
+        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
+            for (GoodsIssueItemDTO itemDto : dto.getItems()) {
+                GoodsIssueItem item = createItem(itemDto, salesOrder);
+                goodsIssue.addItem(item);
+            }
+        }
+        
+        goodsIssue.recalculateTotal();
+        goodsIssue = goodsIssueRepository.save(goodsIssue);
+        
+        log.info("Goods Issue created with ID: {} and code: {}", goodsIssue.getId(), goodsIssue.getCode());
+        return mapToDTO(goodsIssue);
+    }
+
+    @Override
+    public GoodsIssueDTO update(Long id, GoodsIssueDTO dto) {
+        log.info("Updating goods issue ID: {}", id);
+        
+        GoodsIssue goodsIssue = goodsIssueRepository.findByIdWithItems(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Goods Issue not found with ID: " + id));
+        
+        if (goodsIssue.getStatus() != GoodsIssueStatus.DRAFT) {
+            throw new BusinessException("Can only update Goods Issue in DRAFT status");
+        }
+        
+        // Update fields
+        goodsIssue.setIssueDate(dto.getIssueDate());
+        goodsIssue.setDeliveryNoteNumber(dto.getDeliveryNoteNumber());
+        goodsIssue.setShippingMethod(dto.getShippingMethod());
+        goodsIssue.setTrackingNumber(dto.getTrackingNumber());
+        goodsIssue.setCarrierName(dto.getCarrierName());
+        goodsIssue.setNotes(dto.getNotes());
+        
+        // Update items
+        if (dto.getItems() != null) {
+            goodsIssue.getItems().clear();
+            SalesOrder salesOrder = goodsIssue.getSalesOrder();
+            for (GoodsIssueItemDTO itemDto : dto.getItems()) {
+                GoodsIssueItem item = createItem(itemDto, salesOrder);
+                goodsIssue.addItem(item);
+            }
+        }
+        
+        goodsIssue.recalculateTotal();
+        goodsIssue = goodsIssueRepository.save(goodsIssue);
+        
+        return mapToDTO(goodsIssue);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GoodsIssueDTO getById(Long id) {
+        GoodsIssue goodsIssue = goodsIssueRepository.findByIdWithItemsAndInvoice(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Goods Issue not found with ID: " + id));
+        return mapToDTO(goodsIssue);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GoodsIssueDTO getByCode(String code) {
+        GoodsIssue goodsIssue = goodsIssueRepository.findByCode(code)
+            .orElseThrow(() -> new ResourceNotFoundException("Goods Issue not found with code: " + code));
+        return mapToDTO(goodsIssue);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GoodsIssueDTO> getAll() {
+        return goodsIssueRepository.findAll().stream()
+            .map(this::mapToDTO)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GoodsIssueDTO> getByStatus(GoodsIssueStatus status) {
+        return goodsIssueRepository.findByStatus(status).stream()
+            .map(this::mapToDTO)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GoodsIssueDTO> getBySalesOrderId(Long salesOrderId) {
+        return goodsIssueRepository.findBySalesOrderId(salesOrderId).stream()
+            .map(this::mapToDTO)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GoodsIssueDTO> getByDateRange(LocalDate startDate, LocalDate endDate) {
+        return goodsIssueRepository.findByDateRange(startDate, endDate).stream()
+            .map(this::mapToDTO)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GoodsIssueDTO> getDraft() {
+        return goodsIssueRepository.findDraft().stream()
+            .map(this::mapToDTO)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GoodsIssueDTO> search(String query) {
+        return goodsIssueRepository.search(query).stream()
+            .map(this::mapToDTO)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public void delete(Long id) {
+        log.info("Deleting goods issue ID: {}", id);
+        
+        GoodsIssue goodsIssue = goodsIssueRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Goods Issue not found with ID: " + id));
+        
+        if (goodsIssue.getStatus() != GoodsIssueStatus.DRAFT) {
+            throw new BusinessException("Can only delete Goods Issue in DRAFT status");
+        }
+        
+        goodsIssueRepository.delete(goodsIssue);
+    }
+
+    @Override
+    public GoodsIssueDTO confirm(Long id, Long confirmedBy) {
+        log.info("Confirming goods issue ID: {}", id);
+        
+        GoodsIssue goodsIssue = goodsIssueRepository.findByIdWithItems(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Goods Issue not found with ID: " + id));
+        
+        if (!goodsIssue.getStatus().canConfirm()) {
+            throw new BusinessException("Goods Issue cannot be confirmed from status: " + goodsIssue.getStatus());
+        }
+        
+        SalesOrder salesOrder = goodsIssue.getSalesOrder();
+        Long warehouseId = goodsIssue.getWarehouse() != null ? goodsIssue.getWarehouse().getId() : null;
+        
+        // Validate inventory and issue each item
+        for (GoodsIssueItem item : goodsIssue.getItems()) {
+            // Check available inventory
+            if (warehouseId != null) {
+                Integer available = inventoryService.getAvailableQuantity(item.getProduct().getId(), warehouseId);
+                if (available < item.getIssuedQuantity()) {
+                    throw new BusinessException("Insufficient inventory for product: " + item.getProduct().getName() +
+                        ". Available: " + available + ", Requested: " + item.getIssuedQuantity());
+                }
+            }
+            
+            // Validate against SO remaining quantity
+            SalesOrderItem soItem = item.getSalesOrderItem();
+            int remainingToDeliver = soItem.getQuantity() - soItem.getDeliveredQuantity();
+            if (item.getIssuedQuantity() > remainingToDeliver) {
+                throw new BusinessException("Issue quantity exceeds remaining quantity for product: " + 
+                    item.getProduct().getName() + ". Remaining: " + remainingToDeliver);
+            }
+        }
+        
+        // Process inventory and update SO items
+        for (GoodsIssueItem item : goodsIssue.getItems()) {
+            // Decrease inventory
+            if (warehouseId != null) {
+                inventoryService.decreaseInventory(
+                    item.getProduct().getId(), 
+                    warehouseId, 
+                    item.getIssuedQuantity(),
+                    "GOODS_ISSUE",
+                    goodsIssue.getId(),
+                    goodsIssue.getCode()
+                );
+                
+                // Release reservation
+                inventoryService.releaseReservedInventory(
+                    item.getProduct().getId(), 
+                    warehouseId, 
+                    item.getIssuedQuantity()
+                );
+            }
+            
+            // Update SO item delivered quantity
+            SalesOrderItem soItem = item.getSalesOrderItem();
+            soItem.addDeliveredQuantity(item.getIssuedQuantity());
+            salesOrderItemRepository.save(soItem);
+        }
+        
+        // Update goods issue status
+        goodsIssue.setStatus(GoodsIssueStatus.CONFIRMED);
+        goodsIssue.setConfirmedDate(LocalDateTime.now());
+        goodsIssue.setConfirmedBy(confirmedBy);
+        
+        goodsIssue = goodsIssueRepository.save(goodsIssue);
+        
+        // Create invoice
+        createInvoice(goodsIssue);
+        
+        // Update SO status
+        salesOrderService.updateDeliveryStatus(salesOrder.getId());
+        
+        log.info("Goods Issue {} confirmed", goodsIssue.getCode());
+        return mapToDTO(goodsIssue);
+    }
+
+    @Override
+    public GoodsIssueDTO cancel(Long id) {
+        log.info("Cancelling goods issue ID: {}", id);
+        
+        GoodsIssue goodsIssue = goodsIssueRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Goods Issue not found with ID: " + id));
+        
+        if (!goodsIssue.getStatus().canCancel()) {
+            throw new BusinessException("Goods Issue cannot be cancelled from status: " + goodsIssue.getStatus());
+        }
+        
+        goodsIssue.setStatus(GoodsIssueStatus.CANCELLED);
+        goodsIssue = goodsIssueRepository.save(goodsIssue);
+        
+        log.info("Goods Issue {} cancelled", goodsIssue.getCode());
+        return mapToDTO(goodsIssue);
+    }
+
+    // Helper methods
+
+    private GoodsIssueItem createItem(GoodsIssueItemDTO dto, SalesOrder salesOrder) {
+        // Find the SO item
+        SalesOrderItem soItem = salesOrderItemRepository.findById(dto.getSalesOrderItemId())
+            .orElseThrow(() -> new ResourceNotFoundException("Sales Order Item not found with ID: " + dto.getSalesOrderItemId()));
+        
+        // Validate quantity
+        int remainingToDeliver = soItem.getQuantity() - soItem.getDeliveredQuantity();
+        if (dto.getIssuedQuantity() > remainingToDeliver) {
+            throw new BusinessException("Issue quantity (" + dto.getIssuedQuantity() + 
+                ") exceeds remaining quantity (" + remainingToDeliver + ") for product: " + soItem.getProduct().getName());
+        }
+        
+        return GoodsIssueItem.builder()
+            .salesOrderItem(soItem)
+            .product(soItem.getProduct())
+            .orderedQuantity(soItem.getQuantity())
+            .issuedQuantity(dto.getIssuedQuantity())
+            .unitPrice(soItem.getUnitPrice())
+            .unit(soItem.getUnit())
+            .batchNumber(dto.getBatchNumber())
+            .expiryDate(dto.getExpiryDate())
+            .notes(dto.getNotes())
+            .build();
+    }
+
+    private void createInvoice(GoodsIssue goodsIssue) {
+        log.info("Creating invoice for goods issue: {}", goodsIssue.getCode());
+        
+        SalesOrder salesOrder = goodsIssue.getSalesOrder();
+        
+        SalesInvoice invoice = SalesInvoice.builder()
+            .code(SalesInvoice.generateCode())
+            .status(SalesInvoiceStatus.DRAFT)
+            .invoiceDate(LocalDate.now())
+            .dueDate(LocalDate.now().plusDays(salesOrder.getCustomer().getPaymentTerms()))
+            .salesOrder(salesOrder)
+            .goodsIssue(goodsIssue)
+            .customer(salesOrder.getCustomer())
+            .subtotal(goodsIssue.getTotalAmount())
+            .totalAmount(goodsIssue.getTotalAmount())
+            .paidAmount(BigDecimal.ZERO)
+            .remainingAmount(goodsIssue.getTotalAmount())
+            .createdBy(goodsIssue.getConfirmedBy())
+            .items(new ArrayList<>())
+            .build();
+        
+        // Create invoice items from GI items
+        for (GoodsIssueItem giItem : goodsIssue.getItems()) {
+            SalesInvoiceItem invItem = SalesInvoiceItem.builder()
+                .product(giItem.getProduct())
+                .goodsIssueItem(giItem)
+                .description(giItem.getProduct().getName())
+                .quantity(giItem.getIssuedQuantity())
+                .unit(giItem.getUnit())
+                .unitPrice(giItem.getUnitPrice())
+                .totalAmount(giItem.getTotalAmount())
+                .build();
+            invoice.addItem(invItem);
+        }
+        
+        invoice.calculateTotal();
+        salesInvoiceRepository.save(invoice);
+        
+        log.info("Invoice created with code: {}", invoice.getCode());
+    }
+
+    private GoodsIssueDTO mapToDTO(GoodsIssue goodsIssue) {
+        GoodsIssueDTO dto = GoodsIssueDTO.builder()
+            .id(goodsIssue.getId())
+            .code(goodsIssue.getCode())
+            .status(goodsIssue.getStatus())
+            .issueDate(goodsIssue.getIssueDate())
+            .confirmedDate(goodsIssue.getConfirmedDate())
+            .deliveryNoteNumber(goodsIssue.getDeliveryNoteNumber())
+            .totalAmount(goodsIssue.getTotalAmount())
+            .shippingMethod(goodsIssue.getShippingMethod())
+            .trackingNumber(goodsIssue.getTrackingNumber())
+            .carrierName(goodsIssue.getCarrierName())
+            .notes(goodsIssue.getNotes())
+            .createdBy(goodsIssue.getCreatedBy())
+            .confirmedBy(goodsIssue.getConfirmedBy())
+            .createdAt(goodsIssue.getCreatedAt())
+            .build();
+        
+        // Sales Order info
+        if (goodsIssue.getSalesOrder() != null) {
+            dto.setSalesOrderId(goodsIssue.getSalesOrder().getId());
+            dto.setSalesOrderCode(goodsIssue.getSalesOrder().getCode());
+            dto.setCustomerId(goodsIssue.getSalesOrder().getCustomer().getId());
+            dto.setCustomerName(goodsIssue.getSalesOrder().getCustomer().getName());
+        }
+        
+        // Warehouse
+        if (goodsIssue.getWarehouse() != null) {
+            dto.setWarehouseId(goodsIssue.getWarehouse().getId());
+            dto.setWarehouseName(goodsIssue.getWarehouse().getName());
+            dto.setWarehouseCode(goodsIssue.getWarehouse().getCode());
+        }
+        
+        // Delivery address
+        if (goodsIssue.getDeliveryAddress() != null) {
+            dto.setDeliveryAddressId(goodsIssue.getDeliveryAddress().getId());
+            dto.setDeliveryAddressText(goodsIssue.getDeliveryAddress().getFullAddress());
+        }
+        
+        // Items
+        if (goodsIssue.getItems() != null) {
+            dto.setItems(goodsIssue.getItems().stream()
+                .map(this::mapItemToDTO)
+                .collect(Collectors.toList()));
+        }
+        
+        dto.computeFields();
+        return dto;
+    }
+
+    private GoodsIssueItemDTO mapItemToDTO(GoodsIssueItem item) {
+        GoodsIssueItemDTO dto = GoodsIssueItemDTO.builder()
+            .id(item.getId())
+            .goodsIssueId(item.getGoodsIssue().getId())
+            .salesOrderItemId(item.getSalesOrderItem().getId())
+            .productId(item.getProduct().getId())
+            .productCode(item.getProduct().getCode())
+            .productName(item.getProduct().getName())
+            .orderedQuantity(item.getOrderedQuantity())
+            .issuedQuantity(item.getIssuedQuantity())
+            .unitPrice(item.getUnitPrice())
+            .totalAmount(item.getTotalAmount())
+            .unit(item.getUnit())
+            .batchNumber(item.getBatchNumber())
+            .expiryDate(item.getExpiryDate())
+            .notes(item.getNotes())
+            .build();
+        
+        // Calculate remaining
+        SalesOrderItem soItem = item.getSalesOrderItem();
+        dto.setPreviouslyDeliveredQuantity(soItem.getDeliveredQuantity() - item.getIssuedQuantity());
+        dto.setRemainingQuantity(soItem.getQuantity() - soItem.getDeliveredQuantity());
+        dto.setMaxAllowedQuantity(soItem.getQuantity() - (soItem.getDeliveredQuantity() - item.getIssuedQuantity()));
+        
+        return dto;
+    }
+}

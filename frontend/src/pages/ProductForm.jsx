@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Form, Input, InputNumber, Select, message } from "antd";
+import { Modal, Form, Input, InputNumber, Select, message, Switch } from "antd";
 import api from "../services/api";
 
 export default function ProductForm({ open, onCancel, onSave, product }) {
@@ -9,9 +9,9 @@ export default function ProductForm({ open, onCancel, onSave, product }) {
   const fetchSuppliers = async () => {
     try {
       const res = await api.get("/suppliers");
-      setSuppliers(res.data);
+      setSuppliers(res.data || []);
     } catch {
-      message.error("Failed to load suppliers");
+      message.error("Không thể tải danh sách nhà cung cấp");
     }
   };
 
@@ -24,11 +24,13 @@ export default function ProductForm({ open, onCancel, onSave, product }) {
       form.setFieldsValue({
         ...product,
         supplierId: product.supplier?.id,
+        active: product.active !== false,
       });
     } else {
       form.resetFields();
+      form.setFieldsValue({ active: true });
     }
-  }, [product]);
+  }, [product, open]);
 
   const handleOk = () => {
     form.validateFields().then((values) => {
@@ -42,45 +44,55 @@ export default function ProductForm({ open, onCancel, onSave, product }) {
 
   return (
     <Modal
-      title={product ? "Edit Product" : "Add Product"}
+      title={product ? "Sửa sản phẩm" : "Thêm sản phẩm"}
       open={open}
       onOk={handleOk}
       onCancel={onCancel}
-      okText="Save"
+      okText="Lưu"
+      cancelText="Hủy"
+      width={600}
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="Code"
+          label="Mã sản phẩm"
           name="code"
-          rules={[{ required: true, message: "Please enter code" }]}
+          rules={[{ required: true, message: "Vui lòng nhập mã sản phẩm" }]}
         >
-          <Input />
+          <Input placeholder="VD: SP001" />
         </Form.Item>
         <Form.Item
-          label="Name"
+          label="Tên sản phẩm"
           name="name"
-          rules={[{ required: true, message: "Please enter product name" }]}
+          rules={[{ required: true, message: "Vui lòng nhập tên sản phẩm" }]}
         >
-          <Input />
+          <Input placeholder="Nhập tên sản phẩm" />
         </Form.Item>
-        <Form.Item label="Description" name="description">
-          <Input />
+        <Form.Item label="Mô tả" name="description">
+          <Input.TextArea rows={3} placeholder="Mô tả sản phẩm" />
         </Form.Item>
-        <Form.Item label="Unit" name="unit">
-          <Input placeholder="e.g. piece, box, kg" />
+        <Form.Item label="Đơn vị tính" name="unit">
+          <Input placeholder="VD: Cái, Hộp, Kg" />
         </Form.Item>
-        <Form.Item label="Price" name="price">
-          <InputNumber min={0} style={{ width: "100%" }} />
+        <Form.Item label="Giá bán" name="price">
+          <InputNumber 
+            min={0} 
+            style={{ width: "100%" }} 
+            formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+            parser={(val) => val.replace(/\,/g, '')}
+            placeholder="Nhập giá bán"
+          />
         </Form.Item>
-
-        <Form.Item label="Supplier" name="supplierId">
-          <Select placeholder="Select supplier">
+        <Form.Item label="Nhà cung cấp" name="supplierId">
+          <Select placeholder="Chọn nhà cung cấp" allowClear>
             {suppliers.map((s) => (
               <Select.Option key={s.id} value={s.id}>
-                {s.name}
+                {s.code} - {s.name}
               </Select.Option>
             ))}
           </Select>
+        </Form.Item>
+        <Form.Item label="Hoạt động" name="active" valuePropName="checked">
+          <Switch checkedChildren="Có" unCheckedChildren="Không" />
         </Form.Item>
       </Form>
     </Modal>
