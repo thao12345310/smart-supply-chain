@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:6001/distribution_db
+    url: jdbc:postgresql://localhost:5432/distribution_db
     username: postgres
     password: 123
   jpa:
@@ -15,7 +15,7 @@ server:
 
 app:
   cors:
-    allowed-origins: http://localhost:5173
+    allowed-origins: http://localhost:517
   jwt:
     # Secret key for signing JWT tokens (min 32 characters for HS256)
     secret: distribution-logistics-jwt-secret-key-2024-very-secure
