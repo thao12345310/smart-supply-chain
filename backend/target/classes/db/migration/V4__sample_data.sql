@@ -1113,7 +1113,7 @@ BEGIN
     RETURNING id INTO v_so_id;
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p10, 'Cái', 80, 80, 720000, 10, 57600000, 5760000, 63360000),
-           (v_so_id, v_p7,  'Cái', 60, 60, 360000, 10, 21600000, 2160000, 23760000));
+           (v_so_id, v_p7,  'Cái', 60, 60, 360000, 10, 21600000, 2160000, 23760000);
 
     INSERT INTO sales_order (code, order_name, status, order_date, expected_delivery_date, approved_date, completed_date, total_amount, tax_amount, grand_total, payment_status, created_by, approved_by, customer_id, delivery_address_id, warehouse_id)
     VALUES ('SO-2026-018','Linh kiện cơ khí T2/2026','ORDER_COMPLETED','2026-02-14','2026-03-04','2026-02-15 09:30:00','2026-03-05 15:00:00', 88000000, 8800000, 96800000,'PAID', v_ss_id, v_sm_id, v_c1, v_da1, v_wh1)
@@ -1130,14 +1130,14 @@ BEGIN
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p6, 'Cái', 3, 3, 50000000, 10, 150000000, 15000000, 165000000),
            (v_so_id, v_p7, 'Cái', 50, 50, 360000, 10, 18000000, 1800000, 19800000),
-           (v_so_id, v_p25,'Cái', 10, 10, 360000, 10, 3600000, 360000, 3960000));
+           (v_so_id, v_p25,'Cái', 10, 10, 360000, 10, 3600000, 360000, 3960000);
 
     INSERT INTO sales_order (code, order_name, status, order_date, expected_delivery_date, approved_date, completed_date, total_amount, tax_amount, grand_total, payment_status, created_by, approved_by, customer_id, delivery_address_id, warehouse_id)
     VALUES ('SO-2026-020','Nhựa Đà Nẵng - vật tư T2/2026','ORDER_COMPLETED','2026-02-18','2026-03-08','2026-02-19 09:00:00','2026-03-09 14:00:00', 65000000, 6500000, 71500000,'PAID', v_ss_id, v_sm_id, v_c14, v_da14, v_wh2)
     RETURNING id INTO v_so_id;
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p10, 'Cái', 50, 50, 720000, 10, 36000000, 3600000, 39600000),
-           (v_so_id, v_p8,  'Bao', 60, 60, 310000, 10, 18600000, 1860000, 20460000));
+           (v_so_id, v_p8,  'Bao', 60, 60, 310000, 10, 18600000, 1860000, 20460000);
 
     -- == THÁNG 3/2026 - 10 đơn ==
 
@@ -1169,7 +1169,7 @@ BEGIN
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p6, 'Cái', 2, 0, 50000000, 10, 100000000, 10000000, 110000000),
            (v_so_id, v_p8, 'Bao', 150, 0, 310000, 10, 46500000, 4650000, 51150000),
-           (v_so_id, v_p9, 'Can', 30, 0, 390000, 10, 11700000, 1170000, 12870000));
+           (v_so_id, v_p9, 'Can', 30, 0, 390000, 10, 11700000, 1170000, 12870000);
 
     INSERT INTO sales_order (code, order_name, status, order_date, expected_delivery_date, approved_date, completed_date, total_amount, tax_amount, grand_total, payment_status, created_by, approved_by, customer_id, delivery_address_id, warehouse_id)
     VALUES ('SO-2026-025','Inox T3/2026 - Cơ khí Tân Thành','ORDER_APPROVED','2026-03-08','2026-03-28','2026-03-09 10:00:00', NULL, 155000000, 15500000, 170500000,'UNPAID', v_ss_id, v_sm_id, v_c7, v_da7, v_wh1)
@@ -1177,14 +1177,14 @@ BEGIN
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p14, 'Cây', 80, 0, 1100000, 10, 88000000, 8800000, 96800000),
            (v_so_id, v_p7,  'Cái', 30, 0, 360000, 10, 10800000, 1080000, 11880000),
-           (v_so_id, v_p20, 'Cái', 100, 0, 95000, 10, 9500000, 950000, 10450000));
+           (v_so_id, v_p20, 'Cái', 100, 0, 95000, 10, 9500000, 950000, 10450000);
 
     INSERT INTO sales_order (code, order_name, status, order_date, expected_delivery_date, approved_date, completed_date, total_amount, tax_amount, grand_total, payment_status, created_by, approved_by, customer_id, delivery_address_id, warehouse_id)
     VALUES ('SO-2026-026','Dây điện T3/2026 - Long Hậu','ORDER_APPROVED','2026-03-09','2026-03-29','2026-03-10 09:00:00', NULL, 102500000, 10250000, 112750000,'UNPAID', v_ss_id, v_sm_id, v_c15, v_da15, v_wh1)
     RETURNING id INTO v_so_id;
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p16, 'Cuộn', 3, 0, 20500000, 10, 61500000, 6150000, 67650000),
-           (v_so_id, v_p17, 'Cái', 40, 0, 950000, 10, 38000000, 3800000, 41800000));
+           (v_so_id, v_p17, 'Cái', 40, 0, 950000, 10, 38000000, 3800000, 41800000);
 
     INSERT INTO sales_order (code, order_name, status, order_date, expected_delivery_date, approved_date, completed_date, total_amount, tax_amount, grand_total, payment_status, created_by, approved_by, customer_id, delivery_address_id, warehouse_id)
     VALUES ('SO-2026-027','Vật tư THACO T3/2026','ORDER_APPROVED','2026-03-10','2026-03-28','2026-03-11 09:30:00', NULL, 118000000, 11800000, 129800000,'UNPAID', v_ss_id, v_sm_id, v_c11, v_da11, v_wh1)
@@ -1192,14 +1192,14 @@ BEGIN
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p20, 'Cái', 250, 0, 95000, 10, 23750000, 2375000, 26125000),
            (v_so_id, v_p18, 'Cái', 200, 0, 105000, 10, 21000000, 2100000, 23100000),
-           (v_so_id, v_p12, 'Cây', 150, 0, 320000, 10, 48000000, 4800000, 52800000));
+           (v_so_id, v_p12, 'Cây', 150, 0, 320000, 10, 48000000, 4800000, 52800000);
 
     INSERT INTO sales_order (code, order_name, status, order_date, expected_delivery_date, approved_date, completed_date, total_amount, tax_amount, grand_total, payment_status, created_by, approved_by, customer_id, delivery_address_id, warehouse_id)
     VALUES ('SO-2026-028','Bao bì giấy T3/2026','ORDER_OPEN','2026-03-12','2026-04-01', NULL, NULL, 95000000, 9500000, 104500000,'UNPAID', v_ss_id, NULL, v_c10, v_da10, v_wh1)
     RETURNING id INTO v_so_id;
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p10, 'Cái', 80, 0, 720000, 10, 57600000, 5760000, 63360000),
-           (v_so_id, v_p8,  'Bao', 80, 0, 310000, 10, 24800000, 2480000, 27280000));
+           (v_so_id, v_p8,  'Bao', 80, 0, 310000, 10, 24800000, 2480000, 27280000);
 
     INSERT INTO sales_order (code, order_name, status, order_date, expected_delivery_date, approved_date, completed_date, total_amount, tax_amount, grand_total, payment_status, created_by, approved_by, customer_id, delivery_address_id, warehouse_id)
     VALUES ('SO-2026-029','Imexpharm dược - thiết bị T3/2026','ORDER_OPEN','2026-03-13','2026-04-02', NULL, NULL, 85000000, 8500000, 93500000,'UNPAID', v_ss_id, NULL, v_c8, v_da8, v_wh1)
@@ -1207,14 +1207,14 @@ BEGIN
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p16, 'Cuộn', 2, 0, 20500000, 10, 41000000, 4100000, 45100000),
            (v_so_id, v_p17, 'Cái', 20, 0, 950000, 10, 19000000, 1900000, 20900000),
-           (v_so_id, v_p25, 'Cái', 12, 0, 360000, 10, 4320000, 432000, 4752000));
+           (v_so_id, v_p25, 'Cái', 12, 0, 360000, 10, 4320000, 432000, 4752000);
 
     INSERT INTO sales_order (code, order_name, status, order_date, expected_delivery_date, approved_date, completed_date, total_amount, tax_amount, grand_total, payment_status, created_by, approved_by, customer_id, delivery_address_id, warehouse_id)
     VALUES ('SO-2026-030','Vật tư tổng hợp Nhựa ĐN T3/2026','ORDER_OPEN','2026-03-14','2026-04-03', NULL, NULL, 72000000, 7200000, 79200000,'UNPAID', v_ss_id, NULL, v_c2, v_da2, v_wh2)
     RETURNING id INTO v_so_id;
     INSERT INTO sales_order_item (sales_order_id, product_id, unit, quantity, delivered_quantity, unit_price, tax_percent, amount_before_tax, tax_amount, total_amount)
     VALUES (v_so_id, v_p10, 'Cái', 60, 0, 720000, 10, 43200000, 4320000, 47520000),
-           (v_so_id, v_p9,  'Can', 40, 0, 390000, 10, 15600000, 1560000, 17160000));
+           (v_so_id, v_p9,  'Can', 40, 0, 390000, 10, 15600000, 1560000, 17160000);
 
 END $$;
 

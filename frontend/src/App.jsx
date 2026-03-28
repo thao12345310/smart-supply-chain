@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Layout, Menu, Typography, Space, Badge } from "antd";
 import {
   ShoppingCartOutlined,
@@ -35,9 +35,26 @@ import GoodsIssueForm from "./pages/GoodsIssueForm";
 import GoodsIssueDetail from "./pages/GoodsIssueDetail";
 import SalesInvoiceList from "./pages/SalesInvoiceList";
 import SalesInvoiceDetail from "./pages/SalesInvoiceDetail";
+import LoginPage from "./pages/LoginPage";
+import { authApi } from "./services/api";
 
 const { Header, Sider, Content } = Layout;
-const { Title } = Typography;
+const { Title, Text } = Typography;
+
+/**
+ * Protected Route Component
+ * Redirects to login if user is not authenticated
+ */
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem('token');
+  const location = useLocation();
+
+  if (!token) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+}
 
 // Main Layout Component with Sidebar Navigation
 function MainLayout({ children }) {
@@ -156,6 +173,16 @@ function MainLayout({ children }) {
         },
       ],
     },
+    {
+      key: 'logout',
+      icon: <UserOutlined />,
+      label: 'Đăng xuất',
+      onClick: () => {
+        authApi.logout();
+        navigate('/login');
+      },
+      danger: true,
+    },
   ];
 
   return (
@@ -183,8 +210,59 @@ function MainLayout({ children }) {
             <ShopOutlined style={{ marginRight: 8 }} />
             DMS
           </Title>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 12 }}>
             Distribution Management
+          </div>
+          
+          {/* User Info Section */}
+          <div style={{ 
+            marginTop: 16, 
+            paddingTop: 16, 
+            borderTop: '1px solid rgba(255,255,255,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12
+          }}>
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white'
+            }}>
+              <UserOutlined />
+            </div>
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ 
+                color: 'white', 
+                fontSize: 14, 
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis'
+              }}>
+                {(() => {
+                  try {
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    return user.fullName || user.username || 'Guest';
+                  } catch (e) { return 'Guest'; }
+                })()}
+              </div>
+              <div style={{ 
+                color: 'rgba(255,255,255,0.7)', 
+                fontSize: 11,
+                textTransform: 'uppercase'
+              }}>
+                {(() => {
+                  try {
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    return (user.roles || []).map(r => r.replace('ROLE_', '')).join(', ') || 'No Role';
+                  } catch (e) { return ''; }
+                })()}
+              </div>
+            </div>
           </div>
         </div>
         <Menu
@@ -343,52 +421,179 @@ function Dashboard() {
 export default function App() {
   return (
     <BrowserRouter>
-      <MainLayout>
-        <Routes>
-          {/* Dashboard */}
-          <Route path="/" element={<Dashboard />} />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<LoginPage />} />
 
-          {/* Sales Orders */}
-          <Route path="/sales-orders" element={<SalesOrderList />} />
-          <Route path="/sales-orders/new" element={<SalesOrderForm />} />
-          <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
-          <Route path="/sales-orders/:id/edit" element={<SalesOrderForm />} />
+        {/* Protected Routes */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Dashboard />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
 
-          {/* Goods Issues */}
-          <Route path="/goods-issues" element={<GoodsIssueList />} />
-          <Route path="/goods-issues/new" element={<GoodsIssueForm />} />
-          <Route path="/goods-issues/:id" element={<GoodsIssueDetail />} />
-          <Route path="/goods-issues/:id/edit" element={<GoodsIssueForm />} />
+        {/* Sales Orders */}
+        <Route path="/sales-orders" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <SalesOrderList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/sales-orders/new" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <SalesOrderForm />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/sales-orders/:id" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <SalesOrderDetail />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/sales-orders/:id/edit" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <SalesOrderForm />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
 
-          {/* Sales Invoices */}
-          <Route path="/sales-invoices" element={<SalesInvoiceList />} />
-          <Route path="/sales-invoices/:id" element={<SalesInvoiceDetail />} />
+        {/* Goods Issues */}
+        <Route path="/goods-issues" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <GoodsIssueList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/goods-issues/new" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <GoodsIssueForm />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/goods-issues/:id" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <GoodsIssueDetail />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/goods-issues/:id/edit" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <GoodsIssueForm />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
 
-          {/* Customers */}
-          <Route path="/customers" element={<CustomerList />} />
+        {/* Sales Invoices */}
+        <Route path="/sales-invoices" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <SalesInvoiceList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/sales-invoices/:id" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <SalesInvoiceDetail />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
 
-          {/* Purchase Orders */}
-          <Route path="/purchase-orders" element={<PurchaseOrderList />} />
-          <Route path="/purchase-orders/:id" element={<PurchaseOrderDetail />} />
+        {/* Customers */}
+        <Route path="/customers" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <CustomerList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
 
-          {/* Goods Receipts */}
-          <Route path="/goods-receipts" element={<GoodsReceiptList />} />
-          <Route path="/goods-receipts/:id" element={<GoodsReceiptDetail />} />
+        {/* Purchase Orders */}
+        <Route path="/purchase-orders" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PurchaseOrderList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/purchase-orders/:id" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PurchaseOrderDetail />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
 
-          {/* Inventory */}
-          <Route path="/inventory" element={<InventoryList />} />
+        {/* Goods Receipts */}
+        <Route path="/goods-receipts" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <GoodsReceiptList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/goods-receipts/:id" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <GoodsReceiptDetail />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
 
-          {/* Products */}
-          <Route path="/products" element={<ProductList />} />
+        {/* Inventory */}
+        <Route path="/inventory" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <InventoryList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
 
-          {/* Suppliers */}
-          <Route path="/suppliers" element={<SupplierList />} />
+        {/* Products */}
+        <Route path="/products" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <ProductList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
 
-          {/* Delivery */}
-          <Route path="/delivery-plans" element={<DeliveryPlanList />} />
-          <Route path="/delivery-plans/:id" element={<DeliveryPlanDetail />} />
-        </Routes>
-      </MainLayout>
+        {/* Suppliers */}
+        <Route path="/suppliers" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <SupplierList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+
+        {/* Delivery */}
+        <Route path="/delivery-plans" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <DeliveryPlanList />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/delivery-plans/:id" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <DeliveryPlanDetail />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+      </Routes>
     </BrowserRouter>
   );
 }

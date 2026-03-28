@@ -10,12 +10,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
 server:
   port: 8080
 
 app:
   cors:
-    allowed-origins: http://localhost:517
+    allowed-origins: http://localhost:5173
   jwt:
     # Secret key for signing JWT tokens (min 32 characters for HS256)
     secret: distribution-logistics-jwt-secret-key-2024-very-secure

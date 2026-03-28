@@ -63,7 +63,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // ==================== Public Endpoints ====================
                 // Swagger UI and API docs
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                 
                 // Health check
                 .requestMatchers("/actuator/**").permitAll()
@@ -219,13 +219,13 @@ public class SecurityConfig {
                 .requestMatchers("/api/warehouses/**").hasAnyRole("WAREHOUSE_STAFF", "ADMIN")
                 
                 // ==================== Invoice Endpoints ====================
-                .requestMatchers(HttpMethod.GET, "/api/invoices/**")
+                .requestMatchers(HttpMethod.GET, "/api/sales-invoices/**")
                     .hasAnyRole("SALES_STAFF", "SALES_MANAGER", "ACCOUNTANT", "ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/invoices/**")
+                .requestMatchers(HttpMethod.POST, "/api/sales-invoices/**")
                     .hasAnyRole("SALES_STAFF", "SALES_MANAGER", "ACCOUNTANT", "ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/invoices/**")
+                .requestMatchers(HttpMethod.PUT, "/api/sales-invoices/**")
                     .hasAnyRole("SALES_MANAGER", "ACCOUNTANT", "ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/invoices/**")
+                .requestMatchers(HttpMethod.DELETE, "/api/sales-invoices/**")
                     .hasAnyRole("ACCOUNTANT", "ADMIN")
                 
                 // ==================== Default Rule ====================

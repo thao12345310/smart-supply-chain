@@ -1,4 +1,5 @@
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/security/SecurityAnnotations.java
+/Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/config/OpenApiConfig.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/repository/PurchaseOrderRepository.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/model/DeliveryPlan.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/repository/DeliveryTripRouteItemRepository.java

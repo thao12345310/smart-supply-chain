@@ -9,6 +9,18 @@ const api = axios.create({
   },
 });
 
+// Request interceptor to attach JWT token to every request
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response interceptor to handle API response format
 api.interceptors.response.use(
   (response) => {
@@ -24,12 +36,43 @@ api.interceptors.response.use(
   },
   (error) => {
     // Handle error responses
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Token might be invalid or expired
+      if (window.location.pathname !== '/login') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Redirect to login only if not already there
+        // Actually, we should probably let the component handle the redirect if using a React context
+      }
+    }
+    
     if (error.response?.data?.message) {
       error.message = error.response.data.message;
     }
     return Promise.reject(error);
   }
 );
+
+// ==================== Authentication API ====================
+export const authApi = {
+  // Login user
+  login: (data) => api.post('/auth/login', data),
+  
+  // Register user
+  register: (data) => api.post('/auth/register', data),
+  
+  // Refresh token
+  refresh: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
+  
+  // Get current user
+  getCurrentUser: () => api.get('/auth/me'),
+  
+  // Logout (mostly client-side)
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  },
+};
 
 // ==================== Purchase Order API ====================
 export const purchaseOrderApi = {
