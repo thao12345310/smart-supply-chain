@@ -13,6 +13,7 @@ import {
 import { purchaseOrderApi, goodsReceiptApi } from "../services/api";
 import dayjs from "dayjs";
 import GoodsReceiptForm from "./GoodsReceiptForm";
+import { ROLES, hasAnyRole } from "../services/roleService";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -254,10 +255,10 @@ export default function PurchaseOrderDetail() {
   }
 
   const statusConfig = STATUS_CONFIG[po.status] || { color: "default", label: po.status };
-  const canApprove = po.status === "ORDER_OPEN";
-  const canReceiveGoods = po.status === "ORDER_APPROVED" || po.status === "ORDER_PARTIALLY_RECEIVED";
-  const canEdit = po.status === "ORDER_OPEN";
-  const canCancel = po.status === "ORDER_OPEN" || po.status === "ORDER_APPROVED";
+  const canApprove = po.status === "ORDER_OPEN" && hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT]);
+  const canReceiveGoods = (po.status === "ORDER_APPROVED" || po.status === "ORDER_PARTIALLY_RECEIVED") && hasAnyRole([ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]);
+  const canEdit = po.status === "ORDER_OPEN" && hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF]);
+  const canCancel = (po.status === "ORDER_OPEN" || po.status === "ORDER_APPROVED") && hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER]);
   const receivedPercentage = po.receivedPercentage || 0;
 
   const tabItems = [
@@ -436,7 +437,10 @@ export default function PurchaseOrderDetail() {
       label: "Lịch sử",
       children: <div style={{ textAlign: "center", padding: 40, color: "#999" }}>Đang cập nhật...</div>,
     },
-  ];
+  ].filter(item => {
+    if (item.key === "2") return hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.WAREHOUSE_STAFF]);
+    return true;
+  });
 
   return (
     <div style={{ padding: 20 }}>

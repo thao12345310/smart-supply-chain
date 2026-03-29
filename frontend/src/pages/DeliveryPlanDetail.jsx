@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined, PlusOutlined, DeleteOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import api from "../services/api";
 import dayjs from "dayjs";
+import { ROLES, hasAnyRole } from "../services/roleService";
 
 // Status configuration
 const STATUS_CONFIG = {
@@ -273,14 +274,16 @@ export default function DeliveryPlanDetail() {
             label: `Vận đơn (${orders.length})`,
             children: (
               <>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleAddOrder}
-                  style={{ marginBottom: 16 }}
-                >
-                  Thêm vận đơn
-                </Button>
+                {hasAnyRole([ROLES.ADMIN, ROLES.DELIVERY_ADMIN]) && (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={handleAddOrder}
+                    style={{ marginBottom: 16 }}
+                  >
+                    Thêm vận đơn
+                  </Button>
+                )}
                 <Table
                   dataSource={orders}
                   columns={orderColumns}
@@ -296,14 +299,16 @@ export default function DeliveryPlanDetail() {
             label: `Nhân viên GH (${shippers.length})`,
             children: (
               <>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleAddShipper}
-                  style={{ marginBottom: 16 }}
-                >
-                  Thêm nhân viên
-                </Button>
+                {hasAnyRole([ROLES.ADMIN, ROLES.DELIVERY_ADMIN]) && (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={handleAddShipper}
+                    style={{ marginBottom: 16 }}
+                  >
+                    Thêm nhân viên
+                  </Button>
+                )}
                 <Table
                   dataSource={shippers}
                   columns={shipperColumns}
@@ -319,16 +324,18 @@ export default function DeliveryPlanDetail() {
             label: `Chuyến xe (${trips.length})`,
             children: (
               <>
-                <Space style={{ marginBottom: 16 }}>
-                  <Button
-                    type="primary"
-                    icon={<ThunderboltOutlined />}
-                    onClick={handleGenerateTrips}
-                  >
-                    Tự động phân chuyến
-                  </Button>
-                  <Button icon={<PlusOutlined />}>Thêm thủ công</Button>
-                </Space>
+                {hasAnyRole([ROLES.ADMIN, ROLES.DELIVERY_ADMIN]) && (
+                  <Space style={{ marginBottom: 16 }}>
+                    <Button
+                      type="primary"
+                      icon={<ThunderboltOutlined />}
+                      onClick={handleGenerateTrips}
+                    >
+                      Tự động phân chuyến
+                    </Button>
+                    <Button icon={<PlusOutlined />}>Thêm thủ công</Button>
+                  </Space>
+                )}
                 <Table
                   dataSource={trips}
                   columns={tripColumns}

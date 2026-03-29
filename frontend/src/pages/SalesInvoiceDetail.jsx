@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { salesInvoiceApi } from '../services/api';
+import { ROLES, hasAnyRole } from '../services/roleService';
 
 /**
  * Sales Invoice Detail - Chi tiết Hóa đơn bán hàng
@@ -181,7 +182,7 @@ export default function SalesInvoiceDetail() {
         
         {/* Nút hành động */}
         <div style={{ display: 'flex', gap: '12px' }}>
-          {invoice.status === 'DRAFT' && (
+          {invoice.status === 'DRAFT' && hasAnyRole([ROLES.ADMIN, ROLES.ACCOUNTANT, ROLES.SALES_MANAGER]) && (
             <>
               <button
                 style={{ ...buttonStyle, backgroundColor: '#10b981', color: 'white' }}
@@ -201,16 +202,18 @@ export default function SalesInvoiceDetail() {
           )}
           {(invoice.status === 'ISSUED' || invoice.status === 'PARTIALLY_PAID' || invoice.status === 'OVERDUE') && (
             <>
-              <button
-                style={{ ...buttonStyle, backgroundColor: '#4f46e5', color: 'white' }}
-                onClick={() => {
-                  setPaymentAmount(invoice.remainingAmount || 0);
-                  setShowPaymentModal(true);
-                }}
-              >
-                Ghi nhận thanh toán
-              </button>
-              {(invoice.paidAmount || 0) === 0 && (
+              {hasAnyRole([ROLES.ADMIN, ROLES.ACCOUNTANT]) && (
+                <button
+                  style={{ ...buttonStyle, backgroundColor: '#4f46e5', color: 'white' }}
+                  onClick={() => {
+                    setPaymentAmount(invoice.remainingAmount || 0);
+                    setShowPaymentModal(true);
+                  }}
+                >
+                  Ghi nhận thanh toán
+                </button>
+              )}
+              {(invoice.paidAmount || 0) === 0 && hasAnyRole([ROLES.ADMIN, ROLES.ACCOUNTANT]) && (
                 <button
                   style={{ ...buttonStyle, backgroundColor: '#ef4444', color: 'white' }}
                   onClick={handleCancel}

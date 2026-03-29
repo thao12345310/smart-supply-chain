@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { salesOrderApi, goodsIssueApi } from '../services/api';
+import { ROLES, hasAnyRole } from '../services/roleService';
 
 /**
  * Sales Order Detail - Chi tiết Đơn bán hàng
@@ -182,43 +183,53 @@ export default function SalesOrderDetail() {
         <div style={{ display: 'flex', gap: '12px' }}>
           {order.status === 'ORDER_OPEN' && (
             <>
-              <button
-                style={{ ...buttonStyle, backgroundColor: '#10b981', color: 'white' }}
-                onClick={handleApprove}
-                disabled={actionLoading}
-              >
-                ✓ Duyệt
-              </button>
-              <button
-                style={{ ...buttonStyle, backgroundColor: '#ef4444', color: 'white' }}
-                onClick={handleReject}
-                disabled={actionLoading}
-              >
-                ✗ Từ chối
-              </button>
-              <button
-                style={{ ...buttonStyle, backgroundColor: '#4f46e5', color: 'white' }}
-                onClick={() => navigate(`/sales-orders/${id}/edit`)}
-              >
-                Sửa
-              </button>
+              {hasAnyRole([ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.ACCOUNTANT]) && (
+                <>
+                  <button
+                    style={{ ...buttonStyle, backgroundColor: '#10b981', color: 'white' }}
+                    onClick={handleApprove}
+                    disabled={actionLoading}
+                  >
+                    ✓ Duyệt
+                  </button>
+                  <button
+                    style={{ ...buttonStyle, backgroundColor: '#ef4444', color: 'white' }}
+                    onClick={handleReject}
+                    disabled={actionLoading}
+                  >
+                    ✗ Từ chối
+                  </button>
+                </>
+              )}
+              {hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF]) && (
+                <button
+                  style={{ ...buttonStyle, backgroundColor: '#4f46e5', color: 'white' }}
+                  onClick={() => navigate(`/sales-orders/${id}/edit`)}
+                >
+                  Sửa
+                </button>
+              )}
             </>
           )}
           {(order.status === 'ORDER_APPROVED' || order.status === 'ORDER_PARTIALLY_DELIVERED') && (
             <>
-              <button
-                style={{ ...buttonStyle, backgroundColor: '#4f46e5', color: 'white' }}
-                onClick={() => navigate(`/goods-issues/new?salesOrderId=${id}`)}
-              >
-                + Tạo phiếu xuất
-              </button>
-              <button
-                style={{ ...buttonStyle, backgroundColor: '#f59e0b', color: 'white' }}
-                onClick={handleCancel}
-                disabled={actionLoading}
-              >
-                Hủy đơn
-              </button>
+              {hasAnyRole([ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]) && (
+                <button
+                  style={{ ...buttonStyle, backgroundColor: '#4f46e5', color: 'white' }}
+                  onClick={() => navigate(`/goods-issues/new?salesOrderId=${id}`)}
+                >
+                  + Tạo phiếu xuất
+                </button>
+              )}
+              {hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER]) && (
+                <button
+                  style={{ ...buttonStyle, backgroundColor: '#f59e0b', color: 'white' }}
+                  onClick={handleCancel}
+                  disabled={actionLoading}
+                >
+                  Hủy đơn
+                </button>
+              )}
             </>
           )}
         </div>
@@ -341,65 +352,67 @@ export default function SalesOrderDetail() {
       </div>
 
       {/* Danh sách phiếu xuất */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#111827' }}>
-          Phiếu xuất kho ({goodsIssues.length})
-        </h2>
-        {goodsIssues.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-            Chưa có phiếu xuất kho nào.
-          </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-            <thead>
-              <tr>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>Mã</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>Ngày xuất</th>
-                <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>Trạng thái</th>
-                <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>Số lượng</th>
-                <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #e5e7eb' }}>Giá trị</th>
-                <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {goodsIssues.map((gi) => (
-                <tr key={gi.id}>
-                  <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
-                    <span style={{ fontWeight: '600', color: '#4f46e5' }}>{gi.code}</span>
-                  </td>
-                  <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>{formatDate(gi.issueDate)}</td>
-                  <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '4px 12px',
-                      borderRadius: '9999px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      backgroundColor: gi.status === 'CONFIRMED' ? '#d1fae5' : '#fef3c7',
-                      color: gi.status === 'CONFIRMED' ? '#065f46' : '#92400e',
-                    }}>
-                      {gi.status === 'CONFIRMED' ? 'Đã xác nhận' : gi.status === 'DRAFT' ? 'Nháp' : gi.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
-                    {gi.totalIssuedQuantity || 0}
-                  </td>
-                  <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right' }}>
-                    {formatCurrency(gi.totalAmount)}
-                  </td>
-                  <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
-                    <button
-                      style={{ ...buttonStyle, padding: '6px 12px', backgroundColor: '#f3f4f6', color: '#374151' }}
-                      onClick={() => navigate(`/goods-issues/${gi.id}`)}
-                    >
-                      Xem
-                    </button>
-                  </td>
+      {hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER, ROLES.WAREHOUSE_STAFF]) && (
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#111827' }}>
+            Phiếu xuất kho ({goodsIssues.length})
+          </h2>
+          {goodsIssues.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+              Chưa có phiếu xuất kho nào.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>Mã</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>Ngày xuất</th>
+                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>Trạng thái</th>
+                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>Số lượng</th>
+                  <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #e5e7eb' }}>Giá trị</th>
+                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {goodsIssues.map((gi) => (
+                  <tr key={gi.id}>
+                    <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
+                      <span style={{ fontWeight: '600', color: '#4f46e5' }}>{gi.code}</span>
+                    </td>
+                    <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>{formatDate(gi.issueDate)}</td>
+                    <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '9999px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: gi.status === 'CONFIRMED' ? '#d1fae5' : '#fef3c7',
+                        color: gi.status === 'CONFIRMED' ? '#065f46' : '#92400e',
+                      }}>
+                        {gi.status === 'CONFIRMED' ? 'Đã xác nhận' : gi.status === 'DRAFT' ? 'Nháp' : gi.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
+                      {gi.totalIssuedQuantity || 0}
+                    </td>
+                    <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right' }}>
+                      {formatCurrency(gi.totalAmount)}
+                    </td>
+                    <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
+                      <button
+                        style={{ ...buttonStyle, padding: '6px 12px', backgroundColor: '#f3f4f6', color: '#374151' }}
+                        onClick={() => navigate(`/goods-issues/${gi.id}`)}
+                      >
+                        Xem
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Ghi chú */}
       {order.notes && (

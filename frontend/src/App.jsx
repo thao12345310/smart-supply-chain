@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
-import { Layout, Menu, Typography, Space, Badge } from "antd";
+import { Layout, Menu, Typography, Space, Badge, Card, Row, Col, Statistic, Result, Button as AntButton } from "antd";
 import {
   ShoppingCartOutlined,
   InboxOutlined,
@@ -12,6 +12,8 @@ import {
   DollarOutlined,
   FileTextOutlined,
   UserOutlined,
+  CreditCardOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 
 // Import pages - Purchasing Module
@@ -37,6 +39,7 @@ import SalesInvoiceList from "./pages/SalesInvoiceList";
 import SalesInvoiceDetail from "./pages/SalesInvoiceDetail";
 import LoginPage from "./pages/LoginPage";
 import { authApi } from "./services/api";
+import { ROLES, hasAnyRole } from "./services/roleService";
 
 const { Header, Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -51,6 +54,21 @@ function ProtectedRoute({ children }) {
 
   if (!token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+}
+
+/**
+ * Role-Based Protected Route
+ * Checks if user has required roles
+ */
+function RoleProtectedRoute({ roles = [], children }) {
+  const isAuthorized = hasAnyRole(roles);
+
+  if (!isAuthorized) {
+    // Silently redirect to home/dashboard instead of showing 403
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -88,49 +106,60 @@ function MainLayout({ children }) {
     {
       type: 'divider',
     },
+    // Sales Module
     {
       key: 'sales',
       icon: <DollarOutlined />,
       label: 'Bán hàng',
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER, ROLES.WAREHOUSE_STAFF, ROLES.ACCOUNTANT]),
       children: [
         {
           key: 'sales-orders',
           label: 'Đơn bán hàng',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER, ROLES.WAREHOUSE_STAFF, ROLES.ACCOUNTANT]),
           onClick: () => navigate('/sales-orders'),
         },
         {
           key: 'goods-issues',
           label: 'Phiếu xuất kho',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER, ROLES.WAREHOUSE_STAFF]),
           onClick: () => navigate('/goods-issues'),
         },
         {
           key: 'sales-invoices',
-          label: 'Hóa đơn',
+          label: 'Hóa đơn & Thanh toán',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.ACCOUNTANT]),
           onClick: () => navigate('/sales-invoices'),
         },
-      ],
+      ].filter(item => !item.hidden),
     },
+    // Purchasing Module
     {
       key: 'purchasing',
       icon: <ShoppingCartOutlined />,
       label: 'Mua hàng',
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.WAREHOUSE_STAFF, ROLES.ACCOUNTANT]),
       children: [
         {
           key: 'purchase-orders',
           label: 'Đơn mua hàng',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.WAREHOUSE_STAFF, ROLES.ACCOUNTANT]),
           onClick: () => navigate('/purchase-orders'),
         },
         {
           key: 'goods-receipts',
           label: 'Phiếu nhập kho',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.WAREHOUSE_STAFF]),
           onClick: () => navigate('/goods-receipts'),
         },
-      ],
+      ].filter(item => !item.hidden),
     },
+    // Warehouse & Inventory
     {
       key: 'warehouse',
       icon: <InboxOutlined />,
       label: 'Kho hàng',
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]),
       children: [
         {
           key: 'inventory',
@@ -139,10 +168,33 @@ function MainLayout({ children }) {
         },
       ],
     },
+    // Delivery Management
+    {
+      key: 'delivery',
+      icon: <TruckOutlined />,
+      label: 'Giao hàng',
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.DELIVERY_ADMIN, ROLES.SHIPPER]),
+      children: [
+        {
+          key: 'delivery-plans',
+          label: 'Kế hoạch giao hàng',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.DELIVERY_ADMIN]),
+          onClick: () => navigate('/delivery-plans'),
+        },
+        {
+          key: 'assigned-trips',
+          label: 'Chuyến giao hàng',
+          hidden: !hasAnyRole([ROLES.SHIPPER]),
+          onClick: () => navigate('/delivery-plans'), // Reusing or adding a trip page later
+        },
+      ].filter(item => !item.hidden),
+    },
+    // Master Data
     {
       key: 'master-data',
       icon: <AppstoreOutlined />,
       label: 'Danh mục',
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]),
       children: [
         {
           key: 'products',
@@ -162,18 +214,6 @@ function MainLayout({ children }) {
       ],
     },
     {
-      key: 'delivery',
-      icon: <TruckOutlined />,
-      label: 'Giao hàng',
-      children: [
-        {
-          key: 'delivery-plans',
-          label: 'Kế hoạch giao hàng',
-          onClick: () => navigate('/delivery-plans'),
-        },
-      ],
-    },
-    {
       key: 'logout',
       icon: <UserOutlined />,
       label: 'Đăng xuất',
@@ -183,7 +223,7 @@ function MainLayout({ children }) {
       },
       danger: true,
     },
-  ];
+  ].filter(item => !item.hidden);
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -268,7 +308,7 @@ function MainLayout({ children }) {
         <Menu
           mode="inline"
           selectedKeys={[getSelectedKey()]}
-          defaultOpenKeys={['sales', 'purchasing', 'warehouse', 'master-data']}
+          defaultOpenKeys={['sales', 'purchasing', 'warehouse', 'master-data', 'delivery']}
           style={{ borderRight: 0, paddingTop: 8 }}
           items={menuItems}
         />
@@ -290,128 +330,152 @@ function MainLayout({ children }) {
 // Dashboard Component
 function Dashboard() {
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const roles = user.roles || [];
+
+  const getDashboardTitle = () => {
+    if (roles.includes(ROLES.ADMIN)) return "Bảng điều khiển quản trị";
+    if (roles.includes(ROLES.PURCHASE_STAFF)) return "Quản lý mua hàng";
+    if (roles.includes(ROLES.WAREHOUSE_STAFF)) return "Điều hành kho hàng";
+    if (roles.includes(ROLES.SALES_STAFF)) return "Quản lý kinh doanh";
+    if (roles.includes(ROLES.ACCOUNTANT)) return "Phân tích tài chính";
+    if (roles.includes(ROLES.DELIVERY_ADMIN)) return "Điều hành vận chuyển";
+    if (roles.includes(ROLES.SHIPPER)) return "Chuyến giao hàng của tôi";
+    return "Hệ thống quản lý phân phối";
+  };
+
+  const cards = [
+    // Purchasing Cards
+    {
+      title: "Đơn mua hàng",
+      desc: "Quản lý đơn hàng mua từ nhà cung cấp",
+      icon: <ShoppingCartOutlined />,
+      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      path: "/purchase-orders",
+      roles: [ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT]
+    },
+    {
+      title: "Phiếu nhập kho",
+      desc: "Nhập hàng vào kho từ đơn PO",
+      icon: <InboxOutlined />,
+      color: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+      path: "/goods-receipts",
+      roles: [ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_MANAGER]
+    },
+    // Sales Cards
+    {
+      title: "Đơn bán hàng",
+      desc: "Quản lý đơn khách hàng đặt",
+      icon: <DollarOutlined />,
+      color: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      path: "/sales-orders",
+      roles: [ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER, ROLES.ACCOUNTANT]
+    },
+    {
+      title: "Phiếu xuất kho",
+      desc: "Xuất hàng giao cho khách hàng",
+      icon: <TruckOutlined />,
+      color: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+      path: "/goods-issues",
+      roles: [ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.SALES_MANAGER]
+    },
+    // Accounting Cards
+    {
+      title: "Hóa đơn & Thanh toán",
+      desc: "Quản lý công nợ và thanh toán",
+      icon: <FileTextOutlined />,
+      color: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+      path: "/sales-invoices",
+      roles: [ROLES.ADMIN, ROLES.ACCOUNTANT, ROLES.SALES_MANAGER]
+    },
+    // Delivery Cards
+    {
+      title: "Kế hoạch giao hàng",
+      desc: "Điều phối vận chuyển và giao hàng",
+      icon: <TruckOutlined />,
+      color: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+      path: "/delivery-plans",
+      roles: [ROLES.ADMIN, ROLES.DELIVERY_ADMIN]
+    },
+    {
+      title: "Chuyến giao hàng",
+      desc: "Xem chuyến giao được phân công",
+      icon: <HistoryOutlined />,
+      color: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+      path: "/delivery-plans", // Tạm thời dẫn vào đây
+      roles: [ROLES.SHIPPER]
+    },
+    // Inventory
+    {
+      title: "Tồn kho",
+      desc: "Kiểm tra số lượng sản phẩm trong kho",
+      icon: <AppstoreOutlined />,
+      color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      path: "/inventory",
+      roles: [ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]
+    },
+    // Master Data
+    {
+      title: "Khách hàng",
+      desc: "Thông tin đối tác khách hàng",
+      icon: <UserOutlined />,
+      color: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+      path: "/customers",
+      roles: [ROLES.ADMIN, ROLES.SALES_STAFF]
+    },
+  ].filter(card => card.roles.some(r => roles.includes(r)) || roles.includes(ROLES.ADMIN));
 
   return (
     <div style={{ padding: 24 }}>
-      <Title level={2}>Hệ thống quản lý phân phối</Title>
+      <Title level={2}>{getDashboardTitle()}</Title>
       <p style={{ color: '#666', marginBottom: 24 }}>
-        Chào mừng bạn đến với hệ thống quản lý phân phối. Chọn module từ menu bên trái để bắt đầu.
+        Chào mừng <strong>{user.fullName || user.username}</strong>. Chúc bạn một ngày làm việc hiệu quả!
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        {/* Sales Orders Card */}
-        <div
-          onClick={() => navigate('/sales-orders')}
-          style={{
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            borderRadius: 12,
-            padding: 24,
-            cursor: 'pointer',
-            color: 'white',
-            transition: 'transform 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          <DollarOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Đơn bán hàng</div>
-          <div style={{ opacity: 0.8 }}>Quản lý đơn hàng bán ra</div>
-        </div>
-
-        {/* Purchase Orders Card */}
-        <div
-          onClick={() => navigate('/purchase-orders')}
-          style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: 12,
-            padding: 24,
-            cursor: 'pointer',
-            color: 'white',
-            transition: 'transform 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          <ShoppingCartOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Đơn mua hàng</div>
-          <div style={{ opacity: 0.8 }}>Quản lý đơn hàng mua từ nhà cung cấp</div>
-        </div>
-
-        {/* Goods Issue Card */}
-        <div
-          onClick={() => navigate('/goods-issues')}
-          style={{
-            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-            borderRadius: 12,
-            padding: 24,
-            cursor: 'pointer',
-            color: 'white',
-            transition: 'transform 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          <TruckOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Xuất kho</div>
-          <div style={{ opacity: 0.8 }}>Quản lý phiếu xuất kho giao hàng</div>
-        </div>
-
-        {/* Sales Invoices Card */}
-        <div
-          onClick={() => navigate('/sales-invoices')}
-          style={{
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-            borderRadius: 12,
-            padding: 24,
-            cursor: 'pointer',
-            color: 'white',
-            transition: 'transform 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          <FileTextOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Hóa đơn</div>
-          <div style={{ opacity: 0.8 }}>Quản lý hóa đơn và thanh toán</div>
-        </div>
-
-        {/* Inventory Card */}
-        <div
-          onClick={() => navigate('/inventory')}
-          style={{
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            borderRadius: 12,
-            padding: 24,
-            cursor: 'pointer',
-            color: 'white',
-            transition: 'transform 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          <AppstoreOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Tồn kho</div>
-          <div style={{ opacity: 0.8 }}>Theo dõi số lượng tồn kho</div>
-        </div>
-
-        {/* Customers Card */}
-        <div
-          onClick={() => navigate('/customers')}
-          style={{
-            background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-            borderRadius: 12,
-            padding: 24,
-            cursor: 'pointer',
-            color: 'white',
-            transition: 'transform 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          <UserOutlined style={{ fontSize: 32, marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Khách hàng</div>
-          <div style={{ opacity: 0.8 }}>Quản lý thông tin khách hàng</div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+        {cards.map((card, idx) => (
+          <div
+            key={idx}
+            onClick={() => navigate(card.path)}
+            style={{
+              background: card.color,
+              borderRadius: 16,
+              padding: 24,
+              cursor: 'pointer',
+              color: 'white',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              height: 160,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-5px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ 
+                  background: 'rgba(255,255,255,0.2)', 
+                  padding: 10, 
+                  borderRadius: 12, 
+                  fontSize: 24,
+                  display: 'flex'
+                }}>
+                  {card.icon}
+                </div>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 12 }}>{card.title}</div>
+            </div>
+            <div style={{ opacity: 0.85, fontSize: 13 }}>{card.desc}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -437,16 +501,20 @@ export default function App() {
         {/* Sales Orders */}
         <Route path="/sales-orders" element={
           <ProtectedRoute>
-            <MainLayout>
-              <SalesOrderList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER, ROLES.ACCOUNTANT, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <SalesOrderList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/sales-orders/new" element={
           <ProtectedRoute>
-            <MainLayout>
-              <SalesOrderForm />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_STAFF]}>
+              <MainLayout>
+                <SalesOrderForm />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/sales-orders/:id" element={
@@ -458,25 +526,31 @@ export default function App() {
         } />
         <Route path="/sales-orders/:id/edit" element={
           <ProtectedRoute>
-            <MainLayout>
-              <SalesOrderForm />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_STAFF]}>
+              <MainLayout>
+                <SalesOrderForm />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
         {/* Goods Issues */}
         <Route path="/goods-issues" element={
           <ProtectedRoute>
-            <MainLayout>
-              <GoodsIssueList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.SALES_MANAGER]}>
+              <MainLayout>
+                <GoodsIssueList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/goods-issues/new" element={
           <ProtectedRoute>
-            <MainLayout>
-              <GoodsIssueForm />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <GoodsIssueForm />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/goods-issues/:id" element={
@@ -488,18 +562,22 @@ export default function App() {
         } />
         <Route path="/goods-issues/:id/edit" element={
           <ProtectedRoute>
-            <MainLayout>
-              <GoodsIssueForm />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <GoodsIssueForm />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
         {/* Sales Invoices */}
         <Route path="/sales-invoices" element={
           <ProtectedRoute>
-            <MainLayout>
-              <SalesInvoiceList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.ACCOUNTANT, ROLES.SALES_MANAGER]}>
+              <MainLayout>
+                <SalesInvoiceList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/sales-invoices/:id" element={
@@ -513,18 +591,22 @@ export default function App() {
         {/* Customers */}
         <Route path="/customers" element={
           <ProtectedRoute>
-            <MainLayout>
-              <CustomerList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER]}>
+              <MainLayout>
+                <CustomerList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
         {/* Purchase Orders */}
         <Route path="/purchase-orders" element={
           <ProtectedRoute>
-            <MainLayout>
-              <PurchaseOrderList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <PurchaseOrderList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/purchase-orders/:id" element={
@@ -538,9 +620,11 @@ export default function App() {
         {/* Goods Receipts */}
         <Route path="/goods-receipts" element={
           <ProtectedRoute>
-            <MainLayout>
-              <GoodsReceiptList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_MANAGER]}>
+              <MainLayout>
+                <GoodsReceiptList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/goods-receipts/:id" element={
@@ -554,36 +638,44 @@ export default function App() {
         {/* Inventory */}
         <Route path="/inventory" element={
           <ProtectedRoute>
-            <MainLayout>
-              <InventoryList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]}>
+              <MainLayout>
+                <InventoryList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
         {/* Products */}
         <Route path="/products" element={
           <ProtectedRoute>
-            <MainLayout>
-              <ProductList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]}>
+              <MainLayout>
+                <ProductList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
         {/* Suppliers */}
         <Route path="/suppliers" element={
           <ProtectedRoute>
-            <MainLayout>
-              <SupplierList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_STAFF]}>
+              <MainLayout>
+                <SupplierList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
         {/* Delivery */}
         <Route path="/delivery-plans" element={
           <ProtectedRoute>
-            <MainLayout>
-              <DeliveryPlanList />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN, ROLES.SHIPPER]}>
+              <MainLayout>
+                <DeliveryPlanList />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/delivery-plans/:id" element={
@@ -597,4 +689,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
