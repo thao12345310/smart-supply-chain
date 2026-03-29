@@ -36,6 +36,7 @@ public class SalesOrderItem {
     private Integer quantity;
 
     @Column(name = "delivered_quantity")
+    @Builder.Default
     private Integer deliveredQuantity = 0;
 
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 2)

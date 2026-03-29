@@ -3,6 +3,7 @@ package com.distribution.repository;
 import com.distribution.model.GoodsIssueItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -19,8 +20,8 @@ public interface GoodsIssueItemRepository extends JpaRepository<GoodsIssueItem, 
     @Query("SELECT SUM(gii.issuedQuantity) FROM GoodsIssueItem gii " +
            "WHERE gii.salesOrderItem.id = :salesOrderItemId " +
            "AND gii.goodsIssue.status = 'CONFIRMED'")
-    Integer getTotalIssuedQuantityBySalesOrderItemId(Long salesOrderItemId);
+    Integer getTotalIssuedQuantityBySalesOrderItemId(@Param("salesOrderItemId") Long salesOrderItemId);
     
     @Query("SELECT SUM(gii.issuedQuantity) FROM GoodsIssueItem gii WHERE gii.goodsIssue.id = :goodsIssueId")
-    Integer getTotalIssuedQuantityByGoodsIssueId(Long goodsIssueId);
+    Integer getTotalIssuedQuantityByGoodsIssueId(@Param("goodsIssueId") Long goodsIssueId);
 }

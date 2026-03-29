@@ -4,6 +4,7 @@ import com.distribution.model.SalesInvoice;
 import com.distribution.model.enums.SalesInvoiceStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -24,10 +25,10 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
     List<SalesInvoice> findByCustomerId(Long customerId);
     
     @Query("SELECT si FROM SalesInvoice si WHERE si.invoiceDate BETWEEN :startDate AND :endDate ORDER BY si.invoiceDate DESC")
-    List<SalesInvoice> findByDateRange(LocalDate startDate, LocalDate endDate);
+    List<SalesInvoice> findByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
     
     @Query("SELECT si FROM SalesInvoice si WHERE si.dueDate < :today AND si.status IN ('ISSUED', 'PARTIALLY_PAID') ORDER BY si.dueDate")
-    List<SalesInvoice> findOverdue(LocalDate today);
+    List<SalesInvoice> findOverdue(@Param("today") LocalDate today);
     
     @Query("SELECT si FROM SalesInvoice si WHERE si.status = 'DRAFT' ORDER BY si.createdAt DESC")
     List<SalesInvoice> findDraft();
@@ -36,19 +37,19 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
     List<SalesInvoice> findUnpaid();
     
     @Query("SELECT si FROM SalesInvoice si LEFT JOIN FETCH si.items WHERE si.id = :id")
-    Optional<SalesInvoice> findByIdWithItems(Long id);
+    Optional<SalesInvoice> findByIdWithItems(@Param("id") Long id);
     
     @Query("SELECT COUNT(si) FROM SalesInvoice si WHERE si.status = :status")
-    long countByStatus(SalesInvoiceStatus status);
+    long countByStatus(@Param("status") SalesInvoiceStatus status);
     
     @Query("SELECT SUM(si.remainingAmount) FROM SalesInvoice si WHERE si.customer.id = :customerId AND si.status IN ('ISSUED', 'PARTIALLY_PAID', 'OVERDUE')")
-    java.math.BigDecimal getTotalOutstandingByCustomerId(Long customerId);
+    java.math.BigDecimal getTotalOutstandingByCustomerId(@Param("customerId") Long customerId);
     
     @Query("SELECT si FROM SalesInvoice si WHERE " +
            "LOWER(si.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(si.salesOrder.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(si.customer.name) LIKE LOWER(CONCAT('%', :search, '%'))")
-    List<SalesInvoice> search(String search);
+    List<SalesInvoice> search(@Param("search") String search);
     
     boolean existsByCode(String code);
 }

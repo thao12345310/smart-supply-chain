@@ -9,8 +9,8 @@ import com.distribution.model.enums.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Sales Order Entity
@@ -121,15 +121,15 @@ public class SalesOrder {
 
     @OneToMany(mappedBy = "salesOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<SalesOrderItem> items = new ArrayList<>();
+    private Set<SalesOrderItem> items = new HashSet<>();
 
     @OneToMany(mappedBy = "salesOrder", cascade = CascadeType.ALL)
     @Builder.Default
-    private List<GoodsIssue> goodsIssues = new ArrayList<>();
+    private Set<GoodsIssue> goodsIssues = new HashSet<>();
 
     @OneToMany(mappedBy = "salesOrder", cascade = CascadeType.ALL)
     @Builder.Default
-    private List<SalesInvoice> invoices = new ArrayList<>();
+    private Set<SalesInvoice> invoices = new HashSet<>();
 
     // Helper methods
     @PrePersist

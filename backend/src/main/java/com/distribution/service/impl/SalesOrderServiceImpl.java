@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -71,7 +70,6 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             .notes(dto.getNotes())
             .createdBy(dto.getCreatedBy())
             .paymentStatus(PaymentStatus.UNPAID)
-            .items(new ArrayList<>())
             .build();
         
         // Set delivery address

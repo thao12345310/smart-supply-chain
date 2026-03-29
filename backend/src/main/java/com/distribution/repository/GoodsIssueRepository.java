@@ -4,6 +4,7 @@ import com.distribution.model.GoodsIssue;
 import com.distribution.model.enums.GoodsIssueStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -22,7 +23,7 @@ public interface GoodsIssueRepository extends JpaRepository<GoodsIssue, Long> {
     List<GoodsIssue> findByWarehouseId(Long warehouseId);
     
     @Query("SELECT gi FROM GoodsIssue gi WHERE gi.issueDate BETWEEN :startDate AND :endDate ORDER BY gi.issueDate DESC")
-    List<GoodsIssue> findByDateRange(LocalDate startDate, LocalDate endDate);
+    List<GoodsIssue> findByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
     
     @Query("SELECT gi FROM GoodsIssue gi WHERE gi.status = 'DRAFT' ORDER BY gi.createdAt DESC")
     List<GoodsIssue> findDraft();
@@ -31,19 +32,19 @@ public interface GoodsIssueRepository extends JpaRepository<GoodsIssue, Long> {
     List<GoodsIssue> findConfirmed();
     
     @Query("SELECT gi FROM GoodsIssue gi LEFT JOIN FETCH gi.items WHERE gi.id = :id")
-    Optional<GoodsIssue> findByIdWithItems(Long id);
+    Optional<GoodsIssue> findByIdWithItems(@Param("id") Long id);
     
     @Query("SELECT gi FROM GoodsIssue gi LEFT JOIN FETCH gi.items LEFT JOIN FETCH gi.invoice WHERE gi.id = :id")
-    Optional<GoodsIssue> findByIdWithItemsAndInvoice(Long id);
+    Optional<GoodsIssue> findByIdWithItemsAndInvoice(@Param("id") Long id);
     
     @Query("SELECT COUNT(gi) FROM GoodsIssue gi WHERE gi.status = :status")
-    long countByStatus(GoodsIssueStatus status);
+    long countByStatus(@Param("status") GoodsIssueStatus status);
     
     @Query("SELECT gi FROM GoodsIssue gi WHERE " +
            "LOWER(gi.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(gi.salesOrder.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(gi.trackingNumber) LIKE LOWER(CONCAT('%', :search, '%'))")
-    List<GoodsIssue> search(String search);
+    List<GoodsIssue> search(@Param("search") String search);
     
     boolean existsByCode(String code);
 }

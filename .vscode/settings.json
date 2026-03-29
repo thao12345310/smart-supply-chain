@@ -1,3 +1,4 @@
 {
-  "cursor.cmdk.useThemedDiffBackground2": true
+  "cursor.cmdk.useThemedDiffBackground2": true,
+  "java.compile.nullAnalysis.mode": "automatic"
 }
