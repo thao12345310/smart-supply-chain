@@ -4,6 +4,7 @@ import { PlusOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-des
 import { goodsReceiptApi } from "../services/api";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
+import { ROLES, hasAnyRole } from "../services/roleService";
 
 // Status configuration
 const STATUS_CONFIG = {
@@ -146,6 +147,7 @@ export default function GoodsReceiptList() {
     {
       title: "Thao tác",
       width: 200,
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]),
       render: (_, record) => (
         <Space size="small">
           {record.status === 'DRAFT' && (
@@ -234,7 +236,7 @@ export default function GoodsReceiptList() {
       {/* Table */}
       <Table
         dataSource={receipts}
-        columns={columns}
+        columns={columns.filter(col => !col.hidden)}
         rowKey="id"
         loading={loading}
         pagination={{

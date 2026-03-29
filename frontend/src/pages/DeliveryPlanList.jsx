@@ -4,6 +4,7 @@ import { PlusOutlined, TruckOutlined, CheckCircleOutlined, ClockCircleOutlined, 
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import dayjs from "dayjs";
+import { ROLES, hasAnyRole } from "../services/roleService";
 
 // Status configuration
 const STATUS_CONFIG = {
@@ -138,13 +139,15 @@ export default function DeliveryPlanList() {
           </Button>
           <h2 style={{ margin: 0 }}>Kế hoạch giao hàng</h2>
         </Space>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate("/delivery-plans/new")}
-        >
-          Tạo đợt giao mới
-        </Button>
+        {hasAnyRole([ROLES.ADMIN, ROLES.DELIVERY_ADMIN]) && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate("/delivery-plans/new")}
+          >
+            Tạo đợt giao mới
+          </Button>
+        )}
       </div>
 
       {/* Table */}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { salesOrderApi } from '../services/api';
+import { ROLES, hasAnyRole } from '../services/roleService';
 
 /**
  * Sales Order List Page - Danh sách Đơn bán hàng
@@ -272,14 +273,16 @@ export default function SalesOrderList() {
       {/* Header */}
       <div style={headerStyle}>
         <h1 style={titleStyle}>Đơn Bán Hàng</h1>
-        <button
-          style={buttonStyle}
-          onClick={() => navigate('/sales-orders/new')}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#4338ca'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#4f46e5'}
-        >
-          + Tạo đơn mới
-        </button>
+        {hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF]) && (
+          <button
+            style={buttonStyle}
+            onClick={() => navigate('/sales-orders/new')}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#4338ca'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#4f46e5'}
+          >
+            + Tạo đơn mới
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}

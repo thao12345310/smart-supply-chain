@@ -3,6 +3,7 @@ import { Table, Button, Modal, message, Tag, Card, Space, Input, Row, Col, Stati
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import api from "../services/api";
 import ProductForm from "./ProductForm";
+import { ROLES, hasAnyRole } from "../services/roleService";
 
 export default function ProductList() {
   const [products, setProducts] = useState([]);
@@ -132,6 +133,7 @@ export default function ProductList() {
     {
       title: "Thao tác",
       width: 150,
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF]),
       render: (_, record) => (
         <Space size="small">
           <Button 
@@ -152,7 +154,7 @@ export default function ProductList() {
         </Space>
       ),
     },
-  ];
+  ].filter(col => !col.hidden);
 
   return (
     <div style={{ padding: 20 }}>
@@ -202,9 +204,11 @@ export default function ProductList() {
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Thêm sản phẩm
-          </Button>
+          {hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF]) && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              Thêm sản phẩm
+            </Button>
+          )}
         </Space>
       </div>
 

@@ -3,6 +3,7 @@ import api from "../services/api";
 import { Table, Button, Modal, message, Tag, Card, Space, Input, Row, Col, Statistic } from "antd";
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import SupplierForm from "./SupplierForm";
+import { ROLES, hasAnyRole } from "../services/roleService";
 
 export default function SupplierList() {
   const [suppliers, setSuppliers] = useState([]);
@@ -131,6 +132,7 @@ export default function SupplierList() {
     {
       title: "Thao tác",
       width: 150,
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF]),
       render: (_, record) => (
         <Space size="small">
           <Button 
@@ -151,7 +153,7 @@ export default function SupplierList() {
         </Space>
       ),
     },
-  ];
+  ].filter(col => !col.hidden);
 
   return (
     <div style={{ padding: 20 }}>
@@ -201,9 +203,11 @@ export default function SupplierList() {
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Thêm nhà cung cấp
-          </Button>
+          {hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF]) && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              Thêm nhà cung cấp
+            </Button>
+          )}
         </Space>
       </div>
 

@@ -5,6 +5,7 @@ import { purchaseOrderApi } from "../services/api";
 import PurchaseOrderForm from "./PurchaseOrderForm";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
+import { ROLES, hasAnyRole } from "../services/roleService";
 
 // Status configuration
 const STATUS_CONFIG = {
@@ -170,6 +171,7 @@ export default function PurchaseOrderList() {
     {
       title: "Thao tác",
       width: 150,
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF]),
       render: (_, record) => (
         <Space size="small">
           <Button 
@@ -254,9 +256,11 @@ export default function PurchaseOrderList() {
             <Select.Option value="ORDER_COMPLETED">Hoàn thành</Select.Option>
             <Select.Option value="ORDER_CANCELLED">Đã hủy</Select.Option>
           </Select>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Tạo đơn hàng mới
-          </Button>
+          {hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF]) && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              Tạo đơn hàng mới
+            </Button>
+          )}
         </Space>
       </div>
       

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { customerApi } from '../services/api';
+import { ROLES, hasAnyRole } from '../services/roleService';
 
 /**
  * Customer List - Danh sách Khách hàng
@@ -74,9 +75,11 @@ export default function CustomerList() {
         <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#111827', margin: 0 }}>
           Khách Hàng
         </h1>
-        <button style={buttonStyle} onClick={() => navigate('/customers/new')}>
-          + Thêm khách hàng
-        </button>
+        {hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF]) && (
+          <button style={buttonStyle} onClick={() => navigate('/customers/new')}>
+            + Thêm khách hàng
+          </button>
+        )}
       </div>
 
       {/* Tìm kiếm & Bộ lọc */}

@@ -164,9 +164,10 @@ function MainLayout({ children }) {
         {
           key: 'inventory',
           label: 'Tồn kho',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]),
           onClick: () => navigate('/inventory'),
         },
-      ],
+      ].filter(item => !item.hidden),
     },
     // Delivery Management
     {
@@ -199,19 +200,22 @@ function MainLayout({ children }) {
         {
           key: 'products',
           label: 'Sản phẩm',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]),
           onClick: () => navigate('/products'),
         },
         {
           key: 'suppliers',
           label: 'Nhà cung cấp',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF]),
           onClick: () => navigate('/suppliers'),
         },
         {
           key: 'customers',
           label: 'Khách hàng',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF]),
           onClick: () => navigate('/customers'),
         },
-      ],
+      ].filter(item => !item.hidden),
     },
     {
       key: 'logout',
@@ -519,9 +523,11 @@ export default function App() {
         } />
         <Route path="/sales-orders/:id" element={
           <ProtectedRoute>
-            <MainLayout>
-              <SalesOrderDetail />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER, ROLES.ACCOUNTANT, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <SalesOrderDetail />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/sales-orders/:id/edit" element={
@@ -555,9 +561,11 @@ export default function App() {
         } />
         <Route path="/goods-issues/:id" element={
           <ProtectedRoute>
-            <MainLayout>
-              <GoodsIssueDetail />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.SALES_MANAGER]}>
+              <MainLayout>
+                <GoodsIssueDetail />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
         <Route path="/goods-issues/:id/edit" element={
@@ -582,9 +590,11 @@ export default function App() {
         } />
         <Route path="/sales-invoices/:id" element={
           <ProtectedRoute>
-            <MainLayout>
-              <SalesInvoiceDetail />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.ACCOUNTANT, ROLES.SALES_MANAGER]}>
+              <MainLayout>
+                <SalesInvoiceDetail />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
@@ -611,9 +621,11 @@ export default function App() {
         } />
         <Route path="/purchase-orders/:id" element={
           <ProtectedRoute>
-            <MainLayout>
-              <PurchaseOrderDetail />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <PurchaseOrderDetail />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
@@ -629,9 +641,11 @@ export default function App() {
         } />
         <Route path="/goods-receipts/:id" element={
           <ProtectedRoute>
-            <MainLayout>
-              <GoodsReceiptDetail />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_MANAGER]}>
+              <MainLayout>
+                <GoodsReceiptDetail />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
@@ -680,9 +694,11 @@ export default function App() {
         } />
         <Route path="/delivery-plans/:id" element={
           <ProtectedRoute>
-            <MainLayout>
-              <DeliveryPlanDetail />
-            </MainLayout>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN, ROLES.SHIPPER]}>
+              <MainLayout>
+                <DeliveryPlanDetail />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
       </Routes>
