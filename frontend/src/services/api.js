@@ -418,5 +418,26 @@ export const productApi = {
   getById: (id) => api.get(`/products/${id}`),
 };
 
-export default api;
+// ==================== Dashboard & Reporting API ====================
+export const dashboardApi = {
+  // Get dashboard summary
+  getSummary: () => api.get('/dashboard/summary'),
+  
+  // Get revenue chart data
+  getRevenueChart: (startDate, endDate, groupBy = 'monthly') =>
+    api.get('/dashboard/revenue-chart', { params: { startDate, endDate, groupBy } }),
+  
+  // Get inventory stock report (nhập-xuất-tồn)
+  getInventoryReport: (startDate, endDate, warehouseId = null) =>
+    api.get('/dashboard/inventory-report', { params: { startDate, endDate, warehouseId } }),
+  
+  // Get receivables report (công nợ)
+  getReceivablesReport: (overdueOnly = false) =>
+    api.get('/dashboard/receivables-report', { params: { overdueOnly } }),
+  
+  // Get top selling products
+  getTopProducts: (startDate, endDate, limit = 10) =>
+    api.get('/dashboard/top-products', { params: { startDate, endDate, limit } }),
+};
 
+export default api;

@@ -14,6 +14,8 @@ import {
   UserOutlined,
   CreditCardOutlined,
   HistoryOutlined,
+  BarChartOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 
 // Import pages - Purchasing Module
@@ -38,6 +40,13 @@ import GoodsIssueDetail from "./pages/GoodsIssueDetail";
 import SalesInvoiceList from "./pages/SalesInvoiceList";
 import SalesInvoiceDetail from "./pages/SalesInvoiceDetail";
 import LoginPage from "./pages/LoginPage";
+
+// Import pages - Dashboard & Reporting (Phân hệ 5)
+import DashboardPage from "./pages/DashboardPage";
+
+// Import pages - Warehouse (Phân hệ 3 bổ sung)
+import WarehouseList from "./pages/WarehouseList";
+
 import { authApi } from "./services/api";
 import { ROLES, hasAnyRole } from "./services/roleService";
 
@@ -85,6 +94,7 @@ function MainLayout({ children }) {
     if (path.includes('/purchase-orders')) return 'purchase-orders';
     if (path.includes('/goods-receipts')) return 'goods-receipts';
     if (path.includes('/inventory')) return 'inventory';
+    if (path.includes('/warehouses')) return 'warehouses';
     if (path.includes('/products')) return 'products';
     if (path.includes('/suppliers')) return 'suppliers';
     if (path.includes('/delivery-plans')) return 'delivery-plans';
@@ -92,6 +102,7 @@ function MainLayout({ children }) {
     if (path.includes('/sales-orders')) return 'sales-orders';
     if (path.includes('/goods-issues')) return 'goods-issues';
     if (path.includes('/sales-invoices')) return 'sales-invoices';
+    if (path.includes('/reports')) return 'reports';
     if (path === '/') return 'dashboard';
     return 'dashboard';
   };
@@ -167,6 +178,12 @@ function MainLayout({ children }) {
           hidden: !hasAnyRole([ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]),
           onClick: () => navigate('/inventory'),
         },
+        {
+          key: 'warehouses',
+          label: 'Danh sách kho',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]),
+          onClick: () => navigate('/warehouses'),
+        },
       ].filter(item => !item.hidden),
     },
     // Delivery Management
@@ -187,6 +204,20 @@ function MainLayout({ children }) {
           label: 'Chuyến giao hàng',
           hidden: !hasAnyRole([ROLES.SHIPPER]),
           onClick: () => navigate('/delivery-plans'), // Reusing or adding a trip page later
+        },
+      ].filter(item => !item.hidden),
+    },
+    // Reporting (Phân hệ 5)
+    {
+      key: 'reporting',
+      icon: <BarChartOutlined />,
+      label: 'Báo cáo',
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT]),
+      children: [
+        {
+          key: 'reports',
+          label: 'Báo cáo & Dashboard',
+          onClick: () => navigate('/reports'),
         },
       ].filter(item => !item.hidden),
     },
@@ -312,7 +343,7 @@ function MainLayout({ children }) {
         <Menu
           mode="inline"
           selectedKeys={[getSelectedKey()]}
-          defaultOpenKeys={['sales', 'purchasing', 'warehouse', 'master-data', 'delivery']}
+          defaultOpenKeys={['sales', 'purchasing', 'warehouse', 'master-data', 'delivery', 'reporting']}
           style={{ borderRight: 0, paddingTop: 8 }}
           items={menuItems}
         />
@@ -331,159 +362,6 @@ function MainLayout({ children }) {
   );
 }
 
-// Dashboard Component
-function Dashboard() {
-  const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const roles = user.roles || [];
-
-  const getDashboardTitle = () => {
-    if (roles.includes(ROLES.ADMIN)) return "Bảng điều khiển quản trị";
-    if (roles.includes(ROLES.PURCHASE_STAFF)) return "Quản lý mua hàng";
-    if (roles.includes(ROLES.WAREHOUSE_STAFF)) return "Điều hành kho hàng";
-    if (roles.includes(ROLES.SALES_STAFF)) return "Quản lý kinh doanh";
-    if (roles.includes(ROLES.ACCOUNTANT)) return "Phân tích tài chính";
-    if (roles.includes(ROLES.DELIVERY_ADMIN)) return "Điều hành vận chuyển";
-    if (roles.includes(ROLES.SHIPPER)) return "Chuyến giao hàng của tôi";
-    return "Hệ thống quản lý phân phối";
-  };
-
-  const cards = [
-    // Purchasing Cards
-    {
-      title: "Đơn mua hàng",
-      desc: "Quản lý đơn hàng mua từ nhà cung cấp",
-      icon: <ShoppingCartOutlined />,
-      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      path: "/purchase-orders",
-      roles: [ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT]
-    },
-    {
-      title: "Phiếu nhập kho",
-      desc: "Nhập hàng vào kho từ đơn PO",
-      icon: <InboxOutlined />,
-      color: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
-      path: "/goods-receipts",
-      roles: [ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_MANAGER]
-    },
-    // Sales Cards
-    {
-      title: "Đơn bán hàng",
-      desc: "Quản lý đơn khách hàng đặt",
-      icon: <DollarOutlined />,
-      color: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-      path: "/sales-orders",
-      roles: [ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER, ROLES.ACCOUNTANT]
-    },
-    {
-      title: "Phiếu xuất kho",
-      desc: "Xuất hàng giao cho khách hàng",
-      icon: <TruckOutlined />,
-      color: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-      path: "/goods-issues",
-      roles: [ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.SALES_MANAGER]
-    },
-    // Accounting Cards
-    {
-      title: "Hóa đơn & Thanh toán",
-      desc: "Quản lý công nợ và thanh toán",
-      icon: <FileTextOutlined />,
-      color: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-      path: "/sales-invoices",
-      roles: [ROLES.ADMIN, ROLES.ACCOUNTANT, ROLES.SALES_MANAGER]
-    },
-    // Delivery Cards
-    {
-      title: "Kế hoạch giao hàng",
-      desc: "Điều phối vận chuyển và giao hàng",
-      icon: <TruckOutlined />,
-      color: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-      path: "/delivery-plans",
-      roles: [ROLES.ADMIN, ROLES.DELIVERY_ADMIN]
-    },
-    {
-      title: "Chuyến giao hàng",
-      desc: "Xem chuyến giao được phân công",
-      icon: <HistoryOutlined />,
-      color: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-      path: "/delivery-plans", // Tạm thời dẫn vào đây
-      roles: [ROLES.SHIPPER]
-    },
-    // Inventory
-    {
-      title: "Tồn kho",
-      desc: "Kiểm tra số lượng sản phẩm trong kho",
-      icon: <AppstoreOutlined />,
-      color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      path: "/inventory",
-      roles: [ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]
-    },
-    // Master Data
-    {
-      title: "Khách hàng",
-      desc: "Thông tin đối tác khách hàng",
-      icon: <UserOutlined />,
-      color: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-      path: "/customers",
-      roles: [ROLES.ADMIN, ROLES.SALES_STAFF]
-    },
-  ].filter(card => card.roles.some(r => roles.includes(r)) || roles.includes(ROLES.ADMIN));
-
-  return (
-    <div style={{ padding: 24 }}>
-      <Title level={2}>{getDashboardTitle()}</Title>
-      <p style={{ color: '#666', marginBottom: 24 }}>
-        Chào mừng <strong>{user.fullName || user.username}</strong>. Chúc bạn một ngày làm việc hiệu quả!
-      </p>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-        {cards.map((card, idx) => (
-          <div
-            key={idx}
-            onClick={() => navigate(card.path)}
-            style={{
-              background: card.color,
-              borderRadius: 16,
-              padding: 24,
-              cursor: 'pointer',
-              color: 'white',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              height: 160,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-5px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ 
-                  background: 'rgba(255,255,255,0.2)', 
-                  padding: 10, 
-                  borderRadius: 12, 
-                  fontSize: 24,
-                  display: 'flex'
-                }}>
-                  {card.icon}
-                </div>
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 12 }}>{card.title}</div>
-            </div>
-            <div style={{ opacity: 0.85, fontSize: 13 }}>{card.desc}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // Router with Routes
 export default function App() {
@@ -497,8 +375,19 @@ export default function App() {
         <Route path="/" element={
           <ProtectedRoute>
             <MainLayout>
-              <Dashboard />
+              <DashboardPage />
             </MainLayout>
+          </ProtectedRoute>
+        } />
+
+        {/* Dashboard & Reporting (Phân hệ 5) */}
+        <Route path="/reports" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT]}>
+              <MainLayout>
+                <DashboardPage />
+              </MainLayout>
+            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
@@ -655,6 +544,17 @@ export default function App() {
             <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_STAFF, ROLES.SALES_STAFF]}>
               <MainLayout>
                 <InventoryList />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+
+        {/* Warehouses (Phân hệ 3 bổ sung) */}
+        <Route path="/warehouses" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <WarehouseList />
               </MainLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>
