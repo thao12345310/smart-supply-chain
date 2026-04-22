@@ -10,6 +10,7 @@
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/repository/RoleRepository.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/service/impl/DeliveryTripServiceImpl.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/service/AuthService.java
+/Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/dto/DashboardDTO.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/controller/InventoryController.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/dto/LoginRequest.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/repository/UserRepository.java
@@ -36,6 +37,7 @@
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/dto/SalesOrderDTO.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/model/enums/PurchaseOrderStatus.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/model/SalesOrder.java
+/Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/service/impl/DashboardServiceImpl.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/dto/InventoryDTO.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/repository/DeliveryAddressRepository.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/dto/ApprovalRequestDTO.java
@@ -52,6 +54,7 @@
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/service/impl/GoodsIssueServiceImpl.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/dto/SalesInvoiceItemDTO.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/model/DeliveryTripRouteItem.java
+/Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/controller/DashboardController.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/service/WarehouseService.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/exception/InventoryException.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/model/InventoryTransaction.java
@@ -80,6 +83,7 @@
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/dto/CustomerDTO.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/model/PurchaseOrderItem.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/repository/SalesOrderRepository.java
+/Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/service/DashboardService.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/model/User.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/model/DeliveryPlanShipper.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/security/SecurityUtils.java
