@@ -28,6 +28,9 @@ import GoodsReceiptDetail from "./pages/GoodsReceiptDetail";
 import InventoryList from "./pages/InventoryList";
 import DeliveryPlanList from "./pages/DeliveryPlanList";
 import DeliveryPlanDetail from "./pages/DeliveryPlanDetail";
+import PurchaseOrderForm from "./pages/PurchaseOrderForm";
+import GoodsReceiptForm from "./pages/GoodsReceiptForm";
+import DeliveryPlanForm from "./pages/DeliveryPlanForm";
 
 // Import pages - Sales Module
 import CustomerList from "./pages/CustomerList";
@@ -508,6 +511,33 @@ export default function App() {
             </RoleProtectedRoute>
           </ProtectedRoute>
         } />
+        <Route path="/purchase-orders/new" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_STAFF]}>
+              <MainLayout>
+                <PurchaseOrderForm />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/purchase-orders/:id/edit" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_STAFF]}>
+              <MainLayout>
+                <PurchaseOrderForm />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/purchase-orders/:poId/receive" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <GoodsReceiptForm />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
         <Route path="/purchase-orders/:id" element={
           <ProtectedRoute>
             <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT, ROLES.WAREHOUSE_STAFF]}>
@@ -524,6 +554,15 @@ export default function App() {
             <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF, ROLES.PURCHASE_MANAGER]}>
               <MainLayout>
                 <GoodsReceiptList />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/goods-receipts/:id/edit" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <GoodsReceiptForm />
               </MainLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>
@@ -588,6 +627,15 @@ export default function App() {
             <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN, ROLES.SHIPPER]}>
               <MainLayout>
                 <DeliveryPlanList />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/delivery-plans/new" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN]}>
+              <MainLayout>
+                <DeliveryPlanForm />
               </MainLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>

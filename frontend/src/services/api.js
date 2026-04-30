@@ -164,6 +164,9 @@ export const goodsReceiptApi = {
   
   // Get receiving summary for PO
   getReceivingSummary: (poId) => api.get(`/goods-receipts/receiving-summary/${poId}`),
+
+  // Get by status
+  getByStatus: (status) => api.get(`/goods-receipts/status/${status}`),
 };
 
 // ==================== Inventory API ====================
@@ -416,6 +419,17 @@ export const productApi = {
   
   // Get product by ID
   getById: (id) => api.get(`/products/${id}`),
+};
+
+// ==================== Delivery Plan API ====================
+export const deliveryPlanApi = {
+  getAll: () => api.get('/delivery-plans'),
+  getById: (id) => api.get(`/delivery-plans/${id}`),
+  create: (data) => api.post('/delivery-plans', data),
+  update: (id, data) => api.put(`/delivery-plans/${id}`, data),
+  delete: (id) => api.delete(`/delivery-plans/${id}`),
+  addShipper: (id, data) => api.post(`/delivery-plans/${id}/shippers`, data),
+  generateTrips: (id) => api.post(`/delivery-plans/${id}/generate-trips`),
 };
 
 // ==================== Dashboard & Reporting API ====================

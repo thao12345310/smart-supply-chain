@@ -12,7 +12,6 @@ import {
 } from "@ant-design/icons";
 import { purchaseOrderApi, goodsReceiptApi } from "../services/api";
 import dayjs from "dayjs";
-import GoodsReceiptForm from "./GoodsReceiptForm";
 import { ROLES, hasAnyRole } from "../services/roleService";
 
 const { TextArea } = Input;
@@ -36,7 +35,6 @@ export default function PurchaseOrderDetail() {
   const [loading, setLoading] = useState(true);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [grFormVisible, setGrFormVisible] = useState(false);
 
   const fetchDetail = async () => {
     setLoading(true);
@@ -136,13 +134,6 @@ export default function PurchaseOrderDetail() {
         }
       },
     });
-  };
-
-  const handleGoodsReceiptSaved = () => {
-    setGrFormVisible(false);
-    fetchDetail();
-    fetchGoodsReceipts();
-    message.success("Tạo phiếu nhập thành công!");
   };
 
   const itemColumns = [
@@ -390,10 +381,10 @@ export default function PurchaseOrderDetail() {
         <>
           {canReceiveGoods && (
             <div style={{ marginBottom: 16 }}>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 icon={<InboxOutlined />}
-                onClick={() => setGrFormVisible(true)}
+                onClick={() => navigate(`/purchase-orders/${id}/receive`)}
               >
                 Tạo phiếu nhập mới
               </Button>
@@ -463,7 +454,11 @@ export default function PurchaseOrderDetail() {
       <Card style={{ marginBottom: 20 }}>
         <Space wrap>
           {canEdit && (
-            <Button type="primary" icon={<EditOutlined />}>
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/purchase-orders/${id}/edit`)}
+            >
               Chỉnh sửa
             </Button>
           )}
@@ -489,10 +484,10 @@ export default function PurchaseOrderDetail() {
           )}
 
           {canReceiveGoods && (
-            <Button 
+            <Button
               type="primary"
               icon={<InboxOutlined />}
-              onClick={() => setGrFormVisible(true)}
+              onClick={() => navigate(`/purchase-orders/${id}/receive`)}
             >
               Tạo phiếu nhập
             </Button>
@@ -544,13 +539,6 @@ export default function PurchaseOrderDetail() {
         />
       </Modal>
 
-      {/* Goods Receipt Form */}
-      <GoodsReceiptForm
-        visible={grFormVisible}
-        purchaseOrderId={po.id}
-        onCancel={() => setGrFormVisible(false)}
-        onSuccess={handleGoodsReceiptSaved}
-      />
     </div>
   );
 }
