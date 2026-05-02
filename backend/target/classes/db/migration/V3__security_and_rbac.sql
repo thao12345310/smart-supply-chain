@@ -94,7 +94,7 @@ CREATE INDEX IF NOT EXISTS idx_trip_status ON delivery_triproute(status);
 INSERT INTO users (username, password, full_name, email, active)
 VALUES (
     'admin',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+    '$2b$10$qVBH87sk.T2gRXfWFiX1y.8vt7QYbS/BfO9p5sP0yq3UtHbrt23KK',
     'System Administrator',
     'admin@distribution.local',
     true
@@ -112,15 +112,15 @@ ON CONFLICT DO NOTHING;
 -- Insert sample users for testing (all passwords: 'password123')
 -- BCrypt hash for 'password123'
 INSERT INTO users (username, password, full_name, email, active) VALUES
-    ('purchase_staff', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Purchase Staff User', 'purchase.staff@distribution.local', true),
-    ('purchase_manager', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Purchase Manager User', 'purchase.manager@distribution.local', true),
-    ('sales_staff', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Sales Staff User', 'sales.staff@distribution.local', true),
-    ('sales_manager', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Sales Manager User', 'sales.manager@distribution.local', true),
-    ('warehouse_staff', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Warehouse Staff User', 'warehouse.staff@distribution.local', true),
-    ('delivery_admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Delivery Admin User', 'delivery.admin@distribution.local', true),
-    ('shipper1', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Shipper One', 'shipper1@distribution.local', true),
-    ('shipper2', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Shipper Two', 'shipper2@distribution.local', true),
-    ('accountant', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Accountant User', 'accountant@distribution.local', true)
+    ('purchase_staff', '$2b$10$oapRaEqjSp3FFsp6I/GqSO4I2VJijZiCn.3/FzTd38WCXJpoojiLG', 'Purchase Staff User', 'purchase.staff@distribution.local', true),
+    ('purchase_manager', '$2b$10$oapRaEqjSp3FFsp6I/GqSO4I2VJijZiCn.3/FzTd38WCXJpoojiLG', 'Purchase Manager User', 'purchase.manager@distribution.local', true),
+    ('sales_staff', '$2b$10$oapRaEqjSp3FFsp6I/GqSO4I2VJijZiCn.3/FzTd38WCXJpoojiLG', 'Sales Staff User', 'sales.staff@distribution.local', true),
+    ('sales_manager', '$2b$10$oapRaEqjSp3FFsp6I/GqSO4I2VJijZiCn.3/FzTd38WCXJpoojiLG', 'Sales Manager User', 'sales.manager@distribution.local', true),
+    ('warehouse_staff', '$2b$10$oapRaEqjSp3FFsp6I/GqSO4I2VJijZiCn.3/FzTd38WCXJpoojiLG', 'Warehouse Staff User', 'warehouse.staff@distribution.local', true),
+    ('delivery_admin', '$2b$10$oapRaEqjSp3FFsp6I/GqSO4I2VJijZiCn.3/FzTd38WCXJpoojiLG', 'Delivery Admin User', 'delivery.admin@distribution.local', true),
+    ('shipper1', '$2b$10$oapRaEqjSp3FFsp6I/GqSO4I2VJijZiCn.3/FzTd38WCXJpoojiLG', 'Shipper One', 'shipper1@distribution.local', true),
+    ('shipper2', '$2b$10$oapRaEqjSp3FFsp6I/GqSO4I2VJijZiCn.3/FzTd38WCXJpoojiLG', 'Shipper Two', 'shipper2@distribution.local', true),
+    ('accountant', '$2b$10$oapRaEqjSp3FFsp6I/GqSO4I2VJijZiCn.3/FzTd38WCXJpoojiLG', 'Accountant User', 'accountant@distribution.local', true)
 ON CONFLICT (username) DO NOTHING;
 
 -- Assign roles to sample users

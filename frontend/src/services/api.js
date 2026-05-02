@@ -421,6 +421,16 @@ export const productApi = {
   getById: (id) => api.get(`/products/${id}`),
 };
 
+// ==================== Inventory Lot API ====================
+export const inventoryLotApi = {
+  getAll: (params) => api.get('/inventory-lots', { params }),
+  getByProductWarehouse: (productId, warehouseId) =>
+    api.get(`/inventory-lots/product/${productId}/warehouse/${warehouseId}`),
+  getExpiringSoon: (days = 30) =>
+    api.get('/inventory-lots/expiring-soon', { params: { days } }),
+  getExpired: () => api.get('/inventory-lots/expired'),
+};
+
 // ==================== Delivery Plan API ====================
 export const deliveryPlanApi = {
   getAll: () => api.get('/delivery-plans'),

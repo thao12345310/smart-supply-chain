@@ -11,12 +11,12 @@ export default function GoodsIssueForm() {
   const [searchParams] = useSearchParams();
   const salesOrderId = searchParams.get('salesOrderId');
   const isEdit = Boolean(id);
-  
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [salesOrder, setSalesOrder] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     salesOrderId: salesOrderId || '',
     issueDate: new Date().toISOString().split('T')[0],
@@ -43,7 +43,7 @@ export default function GoodsIssueForm() {
       const response = await salesOrderApi.getIssueSummary(soId);
       const so = response.data;
       setSalesOrder(so);
-      
+
       // Khởi tạo danh sách sản phẩm còn lại
       const items = (so.items || [])
         .filter(item => (item.remainingQuantity || 0) > 0)
@@ -59,7 +59,7 @@ export default function GoodsIssueForm() {
           batchNumber: '',
           notes: '',
         }));
-      
+
       setFormData(prev => ({
         ...prev,
         salesOrderId: soId,
@@ -79,12 +79,12 @@ export default function GoodsIssueForm() {
       setLoading(true);
       const response = await goodsIssueApi.getById(id);
       const gi = response.data;
-      
+
       if (gi.salesOrderId) {
         const soRes = await salesOrderApi.getById(gi.salesOrderId);
         setSalesOrder(soRes.data);
       }
-      
+
       setFormData({
         salesOrderId: gi.salesOrderId,
         issueDate: gi.issueDate,
@@ -105,7 +105,7 @@ export default function GoodsIssueForm() {
   const handleItemChange = (index, field, value) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
-    
+
     // Kiểm tra không vượt quá số lượng còn lại
     if (field === 'issuedQuantity') {
       const maxQty = newItems[index].remainingQuantity;
@@ -113,26 +113,27 @@ export default function GoodsIssueForm() {
         newItems[index].issuedQuantity = maxQty;
       }
     }
-    
+
     setFormData({ ...formData, items: newItems });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const validItems = formData.items.filter(item => Number(item.issuedQuantity) > 0);
     if (validItems.length === 0) {
       setError('Vui lòng nhập số lượng cho ít nhất một sản phẩm');
       return;
     }
-    
+
     try {
       setSaving(true);
       setError(null);
-      
+
       const payload = {
         ...formData,
         items: validItems.map(item => ({
+          orderedQuantity: Number(item.orderedQuantity),
           salesOrderItemId: item.salesOrderItemId,
           productId: item.productId,
           issuedQuantity: Number(item.issuedQuantity),
@@ -140,7 +141,7 @@ export default function GoodsIssueForm() {
           notes: item.notes,
         })),
       };
-      
+
       if (isEdit) {
         await goodsIssueApi.update(id, payload);
         navigate(`/goods-issues/${id}`);
@@ -295,7 +296,7 @@ export default function GoodsIssueForm() {
           <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#111827' }}>
             Sản phẩm xuất kho
           </h2>
-          
+
           {formData.items.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
               Không còn sản phẩm cần giao. Tất cả đã được giao hết.
