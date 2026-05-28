@@ -16,33 +16,31 @@ import java.time.LocalDateTime;
  * - Tracks both available and reserved quantities
  */
 @Entity
-@Table(name = "inventory", 
-    uniqueConstraints = @UniqueConstraint(columnNames = {"product_id", "warehouse_id"}),
-    indexes = {
-        @Index(name = "idx_inv_product", columnList = "product_id"),
-        @Index(name = "idx_inv_warehouse", columnList = "warehouse_id")
-    }
-)
+@Table(name = "inventory", uniqueConstraints = @UniqueConstraint(columnNames = { "product_id",
+        "warehouse_id" }), indexes = {
+                @Index(name = "idx_inv_product", columnList = "product_id"),
+                @Index(name = "idx_inv_warehouse", columnList = "warehouse_id")
+        })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Inventory {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "warehouse_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private Warehouse warehouse;
 
     @Column(name = "quantity_on_hand", nullable = false)
@@ -76,7 +74,7 @@ public class Inventory {
     private LocalDateTime updatedAt;
 
     @Version
-    private Long version; // Optimistic locking for concurrent updates
+    private Long version = 0L; // Optimistic locking for concurrent updates
 
     // Helper methods
     @PrePersist
@@ -90,8 +88,8 @@ public class Inventory {
      * Calculate available quantity
      */
     public void calculateAvailable() {
-        this.quantityAvailable = (quantityOnHand != null ? quantityOnHand : 0) 
-            - (quantityReserved != null ? quantityReserved : 0);
+        this.quantityAvailable = (quantityOnHand != null ? quantityOnHand : 0)
+                - (quantityReserved != null ? quantityReserved : 0);
     }
 
     /**
@@ -104,12 +102,13 @@ public class Inventory {
                 this.averageCost = unitCost;
             } else {
                 BigDecimal totalValue = this.averageCost.multiply(BigDecimal.valueOf(this.quantityOnHand))
-                    .add(unitCost.multiply(BigDecimal.valueOf(quantity)));
+                        .add(unitCost.multiply(BigDecimal.valueOf(quantity)));
                 int newQuantity = this.quantityOnHand + quantity;
-                this.averageCost = totalValue.divide(BigDecimal.valueOf(newQuantity), 2, java.math.RoundingMode.HALF_UP);
+                this.averageCost = totalValue.divide(BigDecimal.valueOf(newQuantity), 2,
+                        java.math.RoundingMode.HALF_UP);
             }
         }
-        
+
         this.quantityOnHand = (this.quantityOnHand != null ? this.quantityOnHand : 0) + quantity;
         this.lastReceivedDate = LocalDateTime.now();
         calculateAvailable();
@@ -117,14 +116,14 @@ public class Inventory {
 
     /**
      * Remove stock (e.g., for sales or transfers)
+     * 
      * @throws IllegalArgumentException if insufficient available quantity
      */
     public void removeStock(int quantity) {
         if (quantity > this.quantityAvailable) {
             throw new IllegalArgumentException(
-                String.format("Insufficient stock. Available: %d, Requested: %d", 
-                    this.quantityAvailable, quantity)
-            );
+                    String.format("Insufficient stock. Available: %d, Requested: %d",
+                            this.quantityAvailable, quantity));
         }
         this.quantityOnHand = this.quantityOnHand - quantity;
         this.lastIssuedDate = LocalDateTime.now();
@@ -137,9 +136,8 @@ public class Inventory {
     public void reserveStock(int quantity) {
         if (quantity > this.quantityAvailable) {
             throw new IllegalArgumentException(
-                String.format("Insufficient available stock to reserve. Available: %d, Requested: %d", 
-                    this.quantityAvailable, quantity)
-            );
+                    String.format("Insufficient available stock to reserve. Available: %d, Requested: %d",
+                            this.quantityAvailable, quantity));
         }
         this.quantityReserved = (this.quantityReserved != null ? this.quantityReserved : 0) + quantity;
         calculateAvailable();

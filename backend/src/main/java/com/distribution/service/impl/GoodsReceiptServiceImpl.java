@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -49,6 +51,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     private final WarehouseRepository warehouseRepo;
     private final InventoryService inventoryService;
     private final PurchaseOrderService purchaseOrderService;
+    private final InventoryLotRepository inventoryLotRepo;
 
     @Override
     public GoodsReceiptDTO create(GoodsReceiptDTO dto) {
@@ -320,9 +323,35 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                     gr.getCode(),
                     confirmedBy
                 );
+
+                // Tạo lot record theo FEFO (idempotency: skip nếu đã tồn tại)
+                if (inventoryLotRepo.existsBySourceReceiptItemId(grItem.getId())) {
+                    logger.warn("Lot đã tồn tại cho GoodsReceiptItem id={}, bỏ qua", grItem.getId());
+                } else {
+                    String batchNum = grItem.getBatchNumber();
+                    if (batchNum == null || batchNum.isBlank()) {
+                        throw new BusinessException(
+                            "Sản phẩm " + grItem.getProduct().getName() + ": thiếu số lô (batch number)");
+                    }
+                    InventoryLot lot = InventoryLot.builder()
+                        .product(grItem.getProduct())
+                        .warehouse(gr.getWarehouse())
+                        .lotNumber(batchNum)
+                        .manufactureDate(null) // GoodsReceiptItem chưa có trường manufactureDate
+                        .expiryDate(grItem.getExpiryDate())
+                        .quantityReceived(BigDecimal.valueOf(grItem.getAcceptedQuantity()))
+                        .quantityRemaining(BigDecimal.valueOf(grItem.getAcceptedQuantity()))
+                        .unitCost(grItem.getUnitPrice())
+                        .sourceReceipt(gr)
+                        .sourceReceiptItem(grItem)
+                        .build();
+                    inventoryLotRepo.save(lot);
+                    logger.info("Đã tạo lot {} cho sản phẩm {} tại kho {}",
+                        batchNum, grItem.getProduct().getName(), gr.getWarehouse().getName());
+                }
             }
         }
-        
+
         // Update GR status
         gr.setStatus(GoodsReceiptStatus.CONFIRMED);
         gr.setConfirmedDate(LocalDateTime.now());

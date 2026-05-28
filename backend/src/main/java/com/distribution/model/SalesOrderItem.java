@@ -74,7 +74,7 @@ public class SalesOrderItem {
     // Helper methods
     @PrePersist
     @PreUpdate
-    protected void calculateAmounts() {
+    public void calculateAmounts() {
         if (deliveredQuantity == null) {
             deliveredQuantity = 0;
         }

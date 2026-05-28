@@ -12,6 +12,8 @@ import com.distribution.repository.*;
 import com.distribution.service.GoodsIssueService;
 import com.distribution.service.InventoryService;
 import com.distribution.service.SalesOrderService;
+
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,7 @@ public class GoodsIssueServiceImpl implements GoodsIssueService {
     private final SalesInvoiceRepository salesInvoiceRepository;
     private final InventoryService inventoryService;
     private final SalesOrderService salesOrderService;
+    private final InventoryLotRepository inventoryLotRepository;
 
     @Override
     public GoodsIssueDTO create(GoodsIssueDTO dto) {
@@ -260,25 +263,67 @@ public class GoodsIssueServiceImpl implements GoodsIssueService {
         
         // Process inventory and update SO items
         for (GoodsIssueItem item : goodsIssue.getItems()) {
-            // Decrease inventory
+            // FEFO lot deduction (chỉ khi warehouse xác định)
             if (warehouseId != null) {
+                List<InventoryLot> availableLots = inventoryLotRepository.findAvailableLotsFEFO(
+                    item.getProduct().getId(), warehouseId);
+
+                if (!availableLots.isEmpty()) {
+                    // Có lot data → validate và trừ theo FEFO
+                    BigDecimal totalLotAvailable = availableLots.stream()
+                        .map(InventoryLot::getQuantityRemaining)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal issuedQty = BigDecimal.valueOf(item.getIssuedQuantity());
+
+                    if (totalLotAvailable.compareTo(issuedQty) < 0) {
+                        throw new BusinessException(
+                            "Sản phẩm " + item.getProduct().getName() +
+                            ": không đủ tồn kho theo lô. Cần: " + item.getIssuedQuantity() +
+                            ", Còn: " + totalLotAvailable);
+                    }
+
+                    BigDecimal stillToIssue = issuedQty;
+                    InventoryLot firstLot = null;
+
+                    for (InventoryLot lot : availableLots) {
+                        if (stillToIssue.compareTo(BigDecimal.ZERO) <= 0) break;
+                        if (firstLot == null) firstLot = lot;
+
+                        BigDecimal take = stillToIssue.min(lot.getQuantityRemaining());
+                        lot.setQuantityRemaining(lot.getQuantityRemaining().subtract(take));
+                        inventoryLotRepository.save(lot);
+                        stillToIssue = stillToIssue.subtract(take);
+                    }
+
+                    // Ghi nhận lot đầu tiên (expiry sớm nhất) vào item để hiển thị
+                    if (firstLot != null) {
+                        item.setBatchNumber(firstLot.getLotNumber());
+                        item.setExpiryDate(firstLot.getExpiryDate());
+                    }
+                    log.info("FEFO: đã trừ {} đơn vị sản phẩm {} từ {} lô tại kho {}",
+                        item.getIssuedQuantity(), item.getProduct().getName(),
+                        availableLots.size(), warehouseId);
+                }
+                // Nếu không có lot → fall through, chỉ dùng inventory cũ (backward compat)
+
+                // Decrease inventory (legacy)
                 inventoryService.decreaseInventory(
-                    item.getProduct().getId(), 
-                    warehouseId, 
+                    item.getProduct().getId(),
+                    warehouseId,
                     item.getIssuedQuantity(),
                     "GOODS_ISSUE",
                     goodsIssue.getId(),
                     goodsIssue.getCode()
                 );
-                
+
                 // Release reservation
                 inventoryService.releaseReservedInventory(
-                    item.getProduct().getId(), 
-                    warehouseId, 
+                    item.getProduct().getId(),
+                    warehouseId,
                     item.getIssuedQuantity()
                 );
             }
-            
+
             // Update SO item delivered quantity
             SalesOrderItem soItem = item.getSalesOrderItem();
             soItem.addDeliveredQuantity(item.getIssuedQuantity());

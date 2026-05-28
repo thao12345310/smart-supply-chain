@@ -3,24 +3,23 @@ spring:
     url: jdbc:postgresql://localhost:5432/distribution_db
     username: postgres
     password: 123
+  flyway:
+    enabled: true
+    out-of-order: true        # Cho phép V4, V5 chạy dù bị skip trước đó
+    baseline-on-migrate: false
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate      # Đổi từ update → validate
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-
 server:
   port: 8080
-
 app:
   cors:
     allowed-origins: http://localhost:5173
   jwt:
-    # Secret key for signing JWT tokens (min 32 characters for HS256)
     secret: distribution-logistics-jwt-secret-key-2024-very-secure
-    # Access token expiration: 24 hours (in milliseconds)
     expiration-ms: 86400000
-    # Refresh token expiration: 7 days (in milliseconds)
     refresh-expiration-ms: 604800000

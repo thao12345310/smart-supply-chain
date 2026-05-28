@@ -421,6 +421,16 @@ export const productApi = {
   getById: (id) => api.get(`/products/${id}`),
 };
 
+// ==================== Inventory Lot API ====================
+export const inventoryLotApi = {
+  getAll: (params) => api.get('/inventory-lots', { params }),
+  getByProductWarehouse: (productId, warehouseId) =>
+    api.get(`/inventory-lots/product/${productId}/warehouse/${warehouseId}`),
+  getExpiringSoon: (days = 30) =>
+    api.get('/inventory-lots/expiring-soon', { params: { days } }),
+  getExpired: () => api.get('/inventory-lots/expired'),
+};
+
 // ==================== Delivery Plan API ====================
 export const deliveryPlanApi = {
   getAll: () => api.get('/delivery-plans'),
@@ -430,6 +440,19 @@ export const deliveryPlanApi = {
   delete: (id) => api.delete(`/delivery-plans/${id}`),
   addShipper: (id, data) => api.post(`/delivery-plans/${id}/shippers`, data),
   generateTrips: (id) => api.post(`/delivery-plans/${id}/generate-trips`),
+};
+
+// ==================== User Management (Admin) API ====================
+export const userApi = {
+  getAll: () => api.get('/users'),
+  getRoles: () => api.get('/users/roles'),
+  getById: (id) => api.get(`/users/${id}`),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  activate: (id) => api.put(`/users/${id}/activate`),
+  deactivate: (id) => api.put(`/users/${id}/deactivate`),
+  resetPassword: (id, password) => api.put(`/users/${id}/password`, { password }),
+  delete: (id) => api.delete(`/users/${id}`),
 };
 
 // ==================== Dashboard & Reporting API ====================

@@ -176,11 +176,12 @@ public class SalesOrder {
      * Recalculate total amount from items
      */
     public void recalculateTotal() {
+        // item.totalAmount đã bao gồm thuế (amount_before_tax + tax_amount)
         this.totalAmount = items.stream()
             .map(SalesOrderItem::getTotalAmount)
             .filter(amount -> amount != null)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
         this.taxAmount = items.stream()
             .map(SalesOrderItem::getTaxAmount)
             .filter(amount -> amount != null)
@@ -189,9 +190,8 @@ public class SalesOrder {
         BigDecimal discount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
         BigDecimal shipping = shippingCost != null ? shippingCost : BigDecimal.ZERO;
         BigDecimal total = totalAmount != null ? totalAmount : BigDecimal.ZERO;
-        BigDecimal tax = taxAmount != null ? taxAmount : BigDecimal.ZERO;
 
-        this.grandTotal = total.add(tax).subtract(discount).add(shipping);
+        this.grandTotal = total.subtract(discount).add(shipping);
     }
 
     /**
