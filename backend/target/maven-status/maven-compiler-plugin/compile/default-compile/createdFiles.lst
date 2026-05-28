@@ -32,6 +32,7 @@ com/distribution/dto/DashboardDTO$TopProductDTO$TopProductDTOBuilder.class
 com/distribution/model/Product$ProductBuilder.class
 com/distribution/dto/ProductDTO$ProductDTOBuilder.class
 com/distribution/model/GoodsIssueItem$GoodsIssueItemBuilder.class
+com/distribution/dto/UserDTO.class
 com/distribution/dto/GoodsReceiptDTO.class
 com/distribution/service/PurchaseOrderService.class
 com/distribution/dto/SupplierDTO$SupplierDTOBuilder.class
@@ -91,6 +92,7 @@ com/distribution/model/PurchaseOrderItem$PurchaseOrderItemBuilder.class
 com/distribution/model/InventoryTransaction$InventoryTransactionBuilder.class
 com/distribution/dto/DashboardDTO$WarehouseStock.class
 com/distribution/dto/DashboardDTO$RevenueChartData$RevenueChartDataBuilder.class
+com/distribution/dto/UserDTO$UserDTOBuilder.class
 com/distribution/model/Customer.class
 com/distribution/controller/InventoryLotController.class
 com/distribution/model/User$UserBuilder.class
@@ -113,9 +115,11 @@ com/distribution/service/SupplierService.class
 com/distribution/repository/PurchaseOrderItemRepository.class
 com/distribution/model/PurchaseOrder$PurchaseOrderBuilder.class
 com/distribution/exception/GlobalExceptionHandler.class
+com/distribution/controller/UserController.class
 com/distribution/model/GoodsReceiptItem$GoodsReceiptItemBuilder.class
 com/distribution/repository/InventoryTransactionRepository.class
 com/distribution/dto/SalesInvoiceItemDTO$SalesInvoiceItemDTOBuilder.class
+com/distribution/service/impl/UserServiceImpl.class
 com/distribution/dto/LoginRequest.class
 com/distribution/dto/GoodsReceiptItemDTO$GoodsReceiptItemDTOBuilder.class
 com/distribution/repository/PurchaseOrderRepository.class
@@ -156,6 +160,7 @@ com/distribution/repository/DeliveryOrderRepository.class
 com/distribution/repository/SalesOrderItemRepository.class
 com/distribution/dto/DashboardDTO$WarehouseStock$WarehouseStockBuilder.class
 com/distribution/model/Supplier$SupplierBuilder.class
+com/distribution/service/UserService.class
 com/distribution/security/CustomUserDetails.class
 com/distribution/security/DataFilterAspect.class
 com/distribution/model/DeliveryTripRoute.class

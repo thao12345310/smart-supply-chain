@@ -14,8 +14,8 @@ import {
   UserOutlined,
   CreditCardOutlined,
   HistoryOutlined,
-  BarChartOutlined,
   HomeOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 
 // Import pages - Purchasing Module
@@ -49,6 +49,9 @@ import DashboardPage from "./pages/DashboardPage";
 
 // Import pages - Warehouse (Phân hệ 3 bổ sung)
 import WarehouseList from "./pages/WarehouseList";
+
+// Import pages - Admin
+import UserManagement from "./pages/UserManagement";
 
 import { authApi } from "./services/api";
 import { ROLES, hasAnyRole } from "./services/roleService";
@@ -105,7 +108,7 @@ function MainLayout({ children }) {
     if (path.includes('/sales-orders')) return 'sales-orders';
     if (path.includes('/goods-issues')) return 'goods-issues';
     if (path.includes('/sales-invoices')) return 'sales-invoices';
-    if (path.includes('/reports')) return 'reports';
+    if (path.includes('/admin/users')) return 'admin-users';
     if (path === '/') return 'dashboard';
     return 'dashboard';
   };
@@ -163,7 +166,7 @@ function MainLayout({ children }) {
         {
           key: 'goods-receipts',
           label: 'Phiếu nhập kho',
-          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.WAREHOUSE_STAFF]),
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.WAREHOUSE_STAFF]),
           onClick: () => navigate('/goods-receipts'),
         },
       ].filter(item => !item.hidden),
@@ -210,20 +213,6 @@ function MainLayout({ children }) {
         },
       ].filter(item => !item.hidden),
     },
-    // Reporting (Phân hệ 5)
-    {
-      key: 'reporting',
-      icon: <BarChartOutlined />,
-      label: 'Báo cáo',
-      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT]),
-      children: [
-        {
-          key: 'reports',
-          label: 'Báo cáo & Dashboard',
-          onClick: () => navigate('/reports'),
-        },
-      ].filter(item => !item.hidden),
-    },
     // Master Data
     {
       key: 'master-data',
@@ -250,6 +239,20 @@ function MainLayout({ children }) {
           onClick: () => navigate('/customers'),
         },
       ].filter(item => !item.hidden),
+    },
+    // Admin Management (Admin only)
+    {
+      key: 'admin',
+      icon: <SettingOutlined />,
+      label: 'Quản trị',
+      hidden: !hasAnyRole([ROLES.ADMIN]),
+      children: [
+        {
+          key: 'admin-users',
+          label: 'Tài khoản nhân viên',
+          onClick: () => navigate('/admin/users'),
+        },
+      ],
     },
     {
       key: 'logout',
@@ -346,7 +349,7 @@ function MainLayout({ children }) {
         <Menu
           mode="inline"
           selectedKeys={[getSelectedKey()]}
-          defaultOpenKeys={['sales', 'purchasing', 'warehouse', 'master-data', 'delivery', 'reporting']}
+          defaultOpenKeys={['sales', 'purchasing', 'warehouse', 'master-data', 'delivery', 'admin']}
           style={{ borderRight: 0, paddingTop: 8 }}
           items={menuItems}
         />
@@ -380,17 +383,6 @@ export default function App() {
             <MainLayout>
               <DashboardPage />
             </MainLayout>
-          </ProtectedRoute>
-        } />
-
-        {/* Dashboard & Reporting (Phân hệ 5) */}
-        <Route path="/reports" element={
-          <ProtectedRoute>
-            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT]}>
-              <MainLayout>
-                <DashboardPage />
-              </MainLayout>
-            </RoleProtectedRoute>
           </ProtectedRoute>
         } />
 
@@ -645,6 +637,17 @@ export default function App() {
             <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN, ROLES.SHIPPER]}>
               <MainLayout>
                 <DeliveryPlanDetail />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+
+        {/* Admin: User Management */}
+        <Route path="/admin/users" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN]}>
+              <MainLayout>
+                <UserManagement />
               </MainLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>

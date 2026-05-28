@@ -442,6 +442,19 @@ export const deliveryPlanApi = {
   generateTrips: (id) => api.post(`/delivery-plans/${id}/generate-trips`),
 };
 
+// ==================== User Management (Admin) API ====================
+export const userApi = {
+  getAll: () => api.get('/users'),
+  getRoles: () => api.get('/users/roles'),
+  getById: (id) => api.get(`/users/${id}`),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  activate: (id) => api.put(`/users/${id}/activate`),
+  deactivate: (id) => api.put(`/users/${id}/deactivate`),
+  resetPassword: (id, password) => api.put(`/users/${id}/password`, { password }),
+  delete: (id) => api.delete(`/users/${id}`),
+};
+
 // ==================== Dashboard & Reporting API ====================
 export const dashboardApi = {
   // Get dashboard summary

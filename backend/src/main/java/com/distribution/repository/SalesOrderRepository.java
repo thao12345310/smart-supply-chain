@@ -17,13 +17,17 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     
     Optional<SalesOrder> findByCode(String code);
     
-    List<SalesOrder> findByStatus(SalesOrderStatus status);
-    
-    List<SalesOrder> findByPaymentStatus(PaymentStatus paymentStatus);
-    
-    List<SalesOrder> findByCustomerId(Long customerId);
-    
-    List<SalesOrder> findByWarehouseId(Long warehouseId);
+    @Query("SELECT so FROM SalesOrder so WHERE so.status = :status ORDER BY so.id DESC")
+    List<SalesOrder> findByStatus(@Param("status") SalesOrderStatus status);
+
+    @Query("SELECT so FROM SalesOrder so WHERE so.paymentStatus = :paymentStatus ORDER BY so.id DESC")
+    List<SalesOrder> findByPaymentStatus(@Param("paymentStatus") PaymentStatus paymentStatus);
+
+    @Query("SELECT so FROM SalesOrder so WHERE so.customer.id = :customerId ORDER BY so.id DESC")
+    List<SalesOrder> findByCustomerId(@Param("customerId") Long customerId);
+
+    @Query("SELECT so FROM SalesOrder so WHERE so.warehouse.id = :warehouseId ORDER BY so.id DESC")
+    List<SalesOrder> findByWarehouseId(@Param("warehouseId") Long warehouseId);
     
     @Query("SELECT so FROM SalesOrder so WHERE so.orderDate BETWEEN :startDate AND :endDate ORDER BY so.orderDate DESC")
     List<SalesOrder> findByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
@@ -49,7 +53,8 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     @Query("SELECT so FROM SalesOrder so WHERE " +
            "LOWER(so.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(so.orderName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(so.customer.name) LIKE LOWER(CONCAT('%', :search, '%'))")
+           "LOWER(so.customer.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "ORDER BY so.id DESC")
     List<SalesOrder> search(@Param("search") String search);
     
     boolean existsByCode(String code);

@@ -20,27 +20,31 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
     /**
      * Find all POs by status
      */
-    List<PurchaseOrder> findByStatus(PurchaseOrderStatus status);
-    
+    @Query("SELECT po FROM PurchaseOrder po WHERE po.status = :status ORDER BY po.id DESC")
+    List<PurchaseOrder> findByStatus(@Param("status") PurchaseOrderStatus status);
+
     /**
      * Find all POs by supplier
      */
-    List<PurchaseOrder> findBySupplierId(Long supplierId);
-    
+    @Query("SELECT po FROM PurchaseOrder po WHERE po.supplier.id = :supplierId ORDER BY po.id DESC")
+    List<PurchaseOrder> findBySupplierId(@Param("supplierId") Long supplierId);
+
     /**
      * Find all POs by warehouse
      */
-    List<PurchaseOrder> findByWarehouseId(Long warehouseId);
-    
+    @Query("SELECT po FROM PurchaseOrder po WHERE po.warehouse.id = :warehouseId ORDER BY po.id DESC")
+    List<PurchaseOrder> findByWarehouseId(@Param("warehouseId") Long warehouseId);
+
     /**
      * Find POs created between dates
      */
-    List<PurchaseOrder> findByCreatedDateBetween(LocalDate startDate, LocalDate endDate);
-    
+    @Query("SELECT po FROM PurchaseOrder po WHERE po.createdDate BETWEEN :startDate AND :endDate ORDER BY po.id DESC")
+    List<PurchaseOrder> findByCreatedDateBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
     /**
      * Find approved POs that are ready for goods receipt
      */
-    @Query("SELECT po FROM PurchaseOrder po WHERE po.status IN (:statuses)")
+    @Query("SELECT po FROM PurchaseOrder po WHERE po.status IN (:statuses) ORDER BY po.id DESC")
     List<PurchaseOrder> findByStatusIn(@Param("statuses") List<PurchaseOrderStatus> statuses);
     
     /**
@@ -53,7 +57,7 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
     /**
      * Find POs that can receive goods (APPROVED or PARTIALLY_RECEIVED)
      */
-    @Query("SELECT po FROM PurchaseOrder po WHERE po.status IN ('ORDER_APPROVED', 'ORDER_PARTIALLY_RECEIVED')")
+    @Query("SELECT po FROM PurchaseOrder po WHERE po.status IN ('ORDER_APPROVED', 'ORDER_PARTIALLY_RECEIVED') ORDER BY po.id DESC")
     List<PurchaseOrder> findReadyForGoodsReceipt();
     
     /**

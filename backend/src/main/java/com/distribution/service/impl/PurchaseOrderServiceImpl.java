@@ -13,6 +13,7 @@ import com.distribution.service.PurchaseOrderService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -195,7 +196,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseOrderDTO> getAll() {
-        return orderRepo.findAll().stream()
+        return orderRepo.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
             .map(this::toDto)
             .collect(Collectors.toList());
     }

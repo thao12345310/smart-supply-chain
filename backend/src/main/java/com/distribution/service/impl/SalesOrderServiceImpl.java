@@ -13,6 +13,7 @@ import com.distribution.service.SalesOrderService;
 import com.distribution.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -168,7 +169,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     @Override
     @Transactional(readOnly = true)
     public List<SalesOrderDTO> getAll() {
-        return salesOrderRepository.findAll().stream()
+        return salesOrderRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
             .map(this::mapToDTO)
             .collect(Collectors.toList());
     }
@@ -387,8 +388,8 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     private SalesOrderItem createItem(SalesOrderItemDTO dto) {
         Product product = productRepository.findById(dto.getProductId())
             .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + dto.getProductId()));
-        
-        return SalesOrderItem.builder()
+
+        SalesOrderItem item = SalesOrderItem.builder()
             .product(product)
             .unit(dto.getUnit())
             .quantity(dto.getQuantity())
@@ -398,6 +399,8 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             .taxPercent(dto.getTaxPercent())
             .notes(dto.getNotes())
             .build();
+        item.calculateAmounts();
+        return item;
     }
 
     private SalesOrderDTO mapToDTO(SalesOrder salesOrder) {
