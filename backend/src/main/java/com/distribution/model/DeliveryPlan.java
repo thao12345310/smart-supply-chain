@@ -1,5 +1,6 @@
 package com.distribution.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -22,9 +23,11 @@ public class DeliveryPlan {
     private String description;
     private String status; // Created, InProgress, Completed
 
+    @JsonIgnore
     @OneToMany(mappedBy = "deliveryPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DeliveryPlanOrder> orders;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "deliveryPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DeliveryPlanShipper> shippers;
 }

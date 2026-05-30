@@ -30,6 +30,7 @@ com/distribution/service/InventoryLotService.class
 com/distribution/repository/DeliveryPlanShipperRepository.class
 com/distribution/dto/DashboardDTO$TopProductDTO$TopProductDTOBuilder.class
 com/distribution/model/Product$ProductBuilder.class
+com/distribution/controller/DeliveryPlanController$CreateTripRequest.class
 com/distribution/dto/ProductDTO$ProductDTOBuilder.class
 com/distribution/model/GoodsIssueItem$GoodsIssueItemBuilder.class
 com/distribution/dto/UserDTO.class
@@ -40,6 +41,7 @@ com/distribution/security/SecurityAnnotations$RequireSalesAccess.class
 com/distribution/service/impl/DeliveryTripServiceImpl.class
 com/distribution/dto/DeliveryTripRouteDTO.class
 com/distribution/repository/CustomerRepository.class
+com/distribution/controller/DeliveryOrderController.class
 com/distribution/dto/WarehouseDTO$WarehouseDTOBuilder.class
 com/distribution/model/DeliveryTripRoute$DeliveryTripRouteBuilder.class
 com/distribution/service/SalesInvoiceService.class
@@ -126,6 +128,7 @@ com/distribution/repository/PurchaseOrderRepository.class
 com/distribution/dto/SalesOrderDTO$SalesOrderDTOBuilder.class
 com/distribution/repository/GoodsIssueRepository.class
 com/distribution/dto/AuthResponse$UserInfo.class
+com/distribution/service/DeliveryOrderService.class
 com/distribution/dto/CustomerDTO$CustomerDTOBuilder.class
 com/distribution/controller/DeliveryTripController.class
 com/distribution/service/impl/PurchaseOrderServiceImpl.class
@@ -207,6 +210,7 @@ com/distribution/dto/DashboardDTO$InvoiceSummary.class
 com/distribution/dto/DeliveryAddressDTO.class
 com/distribution/model/PurchaseOrder.class
 com/distribution/service/impl/WarehouseServiceImpl.class
+com/distribution/dto/DeliveryOrderDTO$DeliveryOrderDTOBuilder.class
 com/distribution/dto/AuthResponse.class
 com/distribution/model/Inventory.class
 com/distribution/dto/DashboardDTO$RevenuePoint$RevenuePointBuilder.class
@@ -214,6 +218,7 @@ com/distribution/repository/SupplierRepository.class
 com/distribution/service/DashboardService.class
 com/distribution/dto/DeliveryTripRouteDTO$DeliveryTripRouteDTOBuilder.class
 com/distribution/service/InventoryService.class
+com/distribution/dto/DeliveryOrderDTO.class
 com/distribution/security/JwtTokenProvider.class
 com/distribution/dto/PurchaseOrderDTO.class
 com/distribution/dto/DashboardDTO$InventoryReportDTO$InventoryReportDTOBuilder.class

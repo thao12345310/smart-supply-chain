@@ -28,6 +28,7 @@ import GoodsReceiptDetail from "./pages/GoodsReceiptDetail";
 import InventoryList from "./pages/InventoryList";
 import DeliveryPlanList from "./pages/DeliveryPlanList";
 import DeliveryPlanDetail from "./pages/DeliveryPlanDetail";
+import AssignedTrips from "./pages/AssignedTrips";
 import PurchaseOrderForm from "./pages/PurchaseOrderForm";
 import GoodsReceiptForm from "./pages/GoodsReceiptForm";
 import DeliveryPlanForm from "./pages/DeliveryPlanForm";
@@ -103,6 +104,7 @@ function MainLayout({ children }) {
     if (path.includes('/warehouses')) return 'warehouses';
     if (path.includes('/products')) return 'products';
     if (path.includes('/suppliers')) return 'suppliers';
+    if (path.includes('/assigned-trips')) return 'assigned-trips';
     if (path.includes('/delivery-plans')) return 'delivery-plans';
     if (path.includes('/customers')) return 'customers';
     if (path.includes('/sales-orders')) return 'sales-orders';
@@ -209,7 +211,7 @@ function MainLayout({ children }) {
           key: 'assigned-trips',
           label: 'Chuyến giao hàng',
           hidden: !hasAnyRole([ROLES.SHIPPER]),
-          onClick: () => navigate('/delivery-plans'), // Reusing or adding a trip page later
+          onClick: () => navigate('/assigned-trips'),
         },
       ].filter(item => !item.hidden),
     },
@@ -637,6 +639,15 @@ export default function App() {
             <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN, ROLES.SHIPPER]}>
               <MainLayout>
                 <DeliveryPlanDetail />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/assigned-trips" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN, ROLES.SHIPPER]}>
+              <MainLayout>
+                <AssignedTrips />
               </MainLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>

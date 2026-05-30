@@ -121,6 +121,17 @@ public class DeliveryTripController {
         return ResponseEntity.ok(ApiResponse.success(trip, "Trip status updated successfully"));
     }
 
+    @PutMapping("/{id}/items/{itemId}/status")
+    @Operation(summary = "Record delivery outcome at a point",
+               description = "Mark a delivery order (point) in the trip as Delivered or Failed")
+    public ResponseEntity<ApiResponse<DeliveryTripRouteDTO>> updateItemStatus(
+            @Parameter(description = "Trip ID") @PathVariable Long id,
+            @Parameter(description = "Trip item ID") @PathVariable Long itemId,
+            @RequestParam String status) {
+        DeliveryTripRouteDTO trip = deliveryTripService.updateTripItemStatus(id, itemId, status);
+        return ResponseEntity.ok(ApiResponse.success(trip, "Delivery point updated"));
+    }
+
     // ==================== Admin Actions ====================
 
     @PutMapping("/{id}/assign")
@@ -142,5 +153,14 @@ public class DeliveryTripController {
             @RequestParam(required = false) String reason) {
         DeliveryTripRouteDTO trip = deliveryTripService.cancelTrip(id, reason);
         return ResponseEntity.ok(ApiResponse.success(trip, "Trip cancelled"));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DELIVERY_ADMIN')")
+    @Operation(summary = "Delete trip (Admin only)", description = "Delete a delivery trip and its items")
+    public ResponseEntity<ApiResponse<Void>> deleteTrip(
+            @Parameter(description = "Trip ID") @PathVariable Long id) {
+        deliveryTripService.deleteTrip(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Trip deleted"));
     }
 }

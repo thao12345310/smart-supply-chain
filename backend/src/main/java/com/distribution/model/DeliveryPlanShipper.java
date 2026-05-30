@@ -1,5 +1,6 @@
 package com.distribution.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,6 +19,7 @@ public class DeliveryPlanShipper {
     private String shipperName;
     private String phone;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "delivery_plan_id")
     private DeliveryPlan deliveryPlan;

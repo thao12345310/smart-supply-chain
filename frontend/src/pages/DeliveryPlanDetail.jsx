@@ -5,27 +5,17 @@ import { ArrowLeftOutlined, PlusOutlined, DeleteOutlined, ThunderboltOutlined } 
 import api from "../services/api";
 import dayjs from "dayjs";
 import { ROLES, hasAnyRole } from "../services/roleService";
-
-// Status configuration
-const STATUS_CONFIG = {
-  DRAFT: { color: "blue", label: "Nháp" },
-  PENDING: { color: "orange", label: "Chờ xử lý" },
-  IN_PROGRESS: { color: "processing", label: "Đang giao" },
-  COMPLETED: { color: "success", label: "Hoàn thành" },
-  CANCELLED: { color: "default", label: "Đã hủy" },
-};
+import { getStatusConfig } from "../services/deliveryStatus";
 
 export default function DeliveryPlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [plan, setPlan] = useState({});
   const [orders, setOrders] = useState([]);
-  const [availableOrders, setAvailableOrders] = useState([]);
+  const [, setAvailableOrders] = useState([]);
   const [shippers, setShippers] = useState([]);
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
-  const [shipperName, setShipperName] = useState("");
 
   const fetchAll = async () => {
     // Nếu id là "new", không fetch data
@@ -43,7 +33,8 @@ export default function DeliveryPlanDetail() {
       setPlan(planRes.data);
       setOrders(orderRes.data || []);
       setShippers(shipperRes.data || []);
-      setTrips(tripRes.data || []);
+      // Chuyến mới tạo (id lớn hơn) hiển thị trên đầu
+      setTrips((tripRes.data || []).slice().sort((a, b) => b.id - a.id));
     } catch {
       message.error("Không thể tải dữ liệu");
     } finally {
@@ -61,7 +52,9 @@ export default function DeliveryPlanDetail() {
       return;
     }
     const res = await api.get("/delivery-orders");
-    setAvailableOrders(res.data || []);
+    const available = res.data || [];
+    setAvailableOrders(available);
+    let chosen = [];
     Modal.confirm({
       title: "Thêm vận đơn vào đợt",
       content: (
@@ -69,11 +62,12 @@ export default function DeliveryPlanDetail() {
           mode="multiple"
           style={{ width: "100%" }}
           placeholder="Chọn vận đơn"
-          onChange={(v) => setSelectedOrderIds(v)}
+          optionFilterProp="children"
+          onChange={(v) => { chosen = v; }}
         >
-          {(res.data || []).map((o) => (
+          {available.map((o) => (
             <Select.Option key={o.id} value={o.id}>
-              {o.code}
+              {o.code} — {o.customerName || ""}
             </Select.Option>
           ))}
         </Select>
@@ -81,7 +75,11 @@ export default function DeliveryPlanDetail() {
       okText: "Thêm",
       cancelText: "Hủy",
       onOk: async () => {
-        await api.post(`/delivery-plans/${id}/orders`, selectedOrderIds);
+        if (!chosen || chosen.length === 0) {
+          message.warning("Chưa chọn vận đơn nào");
+          return;
+        }
+        await api.post(`/delivery-plans/${id}/orders`, chosen);
         message.success("Đã thêm vận đơn");
         fetchAll();
       },
@@ -95,24 +93,49 @@ export default function DeliveryPlanDetail() {
     fetchAll();
   };
 
-  const handleAddShipper = () => {
+  const handleAddShipper = async () => {
     if (id === "new") {
       message.warning("Vui lòng tạo đợt giao hàng trước");
       return;
     }
+    let shipperUsers = [];
+    try {
+      const res = await api.get("/delivery-plans/shipper-users");
+      shipperUsers = res.data || [];
+    } catch {
+      // ignore - rơi về nhập tay nếu không lấy được
+    }
+    let chosenName = "";
     Modal.confirm({
       title: "Thêm nhân viên giao hàng",
-      content: (
-        <Input
-          placeholder="Tên nhân viên giao hàng"
-          onChange={(e) => setShipperName(e.target.value)}
-        />
-      ),
+      content:
+        shipperUsers.length > 0 ? (
+          <Select
+            style={{ width: "100%" }}
+            placeholder="Chọn nhân viên giao hàng"
+            onChange={(v) => { chosenName = v; }}
+          >
+            {shipperUsers.map((u) => (
+              <Select.Option key={u.id} value={u.name}>
+                {u.name}
+              </Select.Option>
+            ))}
+          </Select>
+        ) : (
+          <Input
+            placeholder="Tên nhân viên giao hàng"
+            onChange={(e) => { chosenName = e.target.value; }}
+          />
+        ),
       okText: "Thêm",
       cancelText: "Hủy",
       onOk: async () => {
+        if (!chosenName) {
+          message.warning("Chưa chọn nhân viên giao hàng");
+          return;
+        }
         await api.post(`/delivery-plans/${id}/shippers`, {
-          shipperName,
+          shipperName: chosenName,
           phone: "",
         });
         message.success("Đã thêm nhân viên giao hàng");
@@ -128,17 +151,129 @@ export default function DeliveryPlanDetail() {
     fetchAll();
   };
 
+  // Tự động chia vận đơn của đợt cho các shipper đã thêm vào đợt
   const handleGenerateTrips = async () => {
     if (id === "new") {
       message.warning("Vui lòng tạo đợt giao hàng trước");
       return;
     }
-    await api.post(`/delivery-plans/${id}/generate-trips`);
-    message.success("Đã tự động tạo chuyến giao hàng");
-    fetchAll();
+    if (orders.length === 0) {
+      message.warning("Đợt giao hàng chưa có vận đơn nào");
+      return;
+    }
+    if (shippers.length === 0) {
+      message.warning("Hãy thêm nhân viên giao hàng vào đợt trước");
+      return;
+    }
+    Modal.confirm({
+      title: "Tự động tạo chuyến",
+      content: (
+        <p>
+          Chia {orders.length} vận đơn cho {shippers.length} nhân viên giao hàng của đợt
+          (mỗi nhân viên một chuyến)?
+        </p>
+      ),
+      okText: "Tạo chuyến",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const res = await api.post(`/delivery-plans/${id}/generate-trips`);
+          message.success(`Đã tạo ${(res.data || []).length} chuyến giao hàng`);
+          fetchAll();
+        } catch (e) {
+          message.error(e.message || "Không thể tạo chuyến");
+        }
+      },
+    });
   };
 
-  const statusConfig = STATUS_CONFIG[plan.status] || { color: "default", label: plan.status };
+  // Tạo 1 chuyến thủ công: chọn shipper + chọn vận đơn
+  const handleAddTripManual = async () => {
+    if (id === "new") {
+      message.warning("Vui lòng tạo đợt giao hàng trước");
+      return;
+    }
+    if (orders.length === 0) {
+      message.warning("Đợt giao hàng chưa có vận đơn nào");
+      return;
+    }
+    let shipperUsers = [];
+    try {
+      const res = await api.get("/delivery-plans/shipper-users");
+      shipperUsers = res.data || [];
+    } catch {
+      // ignore
+    }
+    let chosenShipperId = null;
+    let chosenOrderIds = [];
+    Modal.confirm({
+      title: "Tạo chuyến thủ công",
+      width: 520,
+      content: (
+        <div>
+          <p style={{ marginBottom: 4 }}>Nhân viên giao hàng:</p>
+          <Select
+            style={{ width: "100%", marginBottom: 12 }}
+            placeholder="Chọn nhân viên giao hàng"
+            onChange={(v) => { chosenShipperId = v; }}
+          >
+            {shipperUsers.map((u) => (
+              <Select.Option key={u.id} value={u.id}>{u.name}</Select.Option>
+            ))}
+          </Select>
+          <p style={{ marginBottom: 4 }}>Vận đơn cho chuyến:</p>
+          <Select
+            mode="multiple"
+            style={{ width: "100%" }}
+            placeholder="Chọn vận đơn"
+            optionFilterProp="children"
+            onChange={(v) => { chosenOrderIds = v; }}
+          >
+            {orders.map((o) => (
+              <Select.Option key={o.id} value={o.id}>
+                {o.code} — {o.customerName || ""}
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
+      ),
+      okText: "Tạo chuyến",
+      cancelText: "Hủy",
+      onOk: async () => {
+        if (!chosenShipperId) {
+          message.warning("Chưa chọn nhân viên giao hàng");
+          return Promise.reject();
+        }
+        if (!chosenOrderIds.length) {
+          message.warning("Chưa chọn vận đơn");
+          return Promise.reject();
+        }
+        try {
+          await api.post(`/delivery-plans/${id}/trips`, {
+            shipperId: chosenShipperId,
+            orderIds: chosenOrderIds,
+          });
+          message.success("Đã tạo chuyến giao hàng");
+          fetchAll();
+        } catch (e) {
+          message.error(e.message || "Không thể tạo chuyến");
+          return Promise.reject();
+        }
+      },
+    });
+  };
+
+  const handleRemoveTrip = async (tripId) => {
+    try {
+      await api.delete(`/delivery-trips/${tripId}`);
+      message.success("Đã xóa chuyến");
+      fetchAll();
+    } catch (e) {
+      message.error(e.message || "Không thể xóa chuyến");
+    }
+  };
+
+  const statusConfig = getStatusConfig(plan.status);
 
   const orderColumns = [
     { 
@@ -146,9 +281,8 @@ export default function DeliveryPlanDetail() {
       dataIndex: "code",
       render: (text) => <strong>{text}</strong>,
     },
-    { title: "Người tạo", dataIndex: "creator" },
-    { title: "Khách hàng", dataIndex: "customerName" },
-    { title: "Địa chỉ giao", dataIndex: "deliveryAddress", ellipsis: true },
+    { title: "Khách hàng", dataIndex: "customerName", render: (t) => t || "-" },
+    { title: "Địa chỉ giao", dataIndex: "deliveryAddress", ellipsis: true, render: (t) => t || "-" },
     {
       title: "Thao tác",
       width: 100,
@@ -189,13 +323,27 @@ export default function DeliveryPlanDetail() {
     { title: "Mã chuyến", dataIndex: "code" },
     { title: "Nhân viên GH", dataIndex: "shipperName" },
     { title: "Số vận đơn", dataIndex: "orderCount", align: "center" },
-    { 
-      title: "Trạng thái", 
+    {
+      title: "Trạng thái",
       dataIndex: "status",
       render: (status) => {
-        const config = STATUS_CONFIG[status] || { color: "default", label: status };
+        const config = getStatusConfig(status);
         return <Tag color={config.color}>{config.label}</Tag>;
       },
+    },
+    {
+      title: "Thao tác",
+      width: 100,
+      render: (_, record) => (
+        <Button
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={() => handleRemoveTrip(record.id)}
+        >
+          Xóa
+        </Button>
+      ),
     },
   ];
 
@@ -331,9 +479,11 @@ export default function DeliveryPlanDetail() {
                       icon={<ThunderboltOutlined />}
                       onClick={handleGenerateTrips}
                     >
-                      Tự động phân chuyến
+                      Tự động tạo chuyến
                     </Button>
-                    <Button icon={<PlusOutlined />}>Thêm thủ công</Button>
+                    <Button icon={<PlusOutlined />} onClick={handleAddTripManual}>
+                      Thêm thủ công
+                    </Button>
                   </Space>
                 )}
                 <Table

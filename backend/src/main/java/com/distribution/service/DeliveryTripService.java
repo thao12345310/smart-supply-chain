@@ -51,6 +51,28 @@ public interface DeliveryTripService {
     List<DeliveryTripRouteDTO> getActiveTripsForCurrentUser();
 
     /**
+     * Auto-generate trips for a plan: splits the plan's vận đơn across the plan's shippers
+     * (one trip per shipper). Returns the created trips.
+     */
+    List<DeliveryTripRouteDTO> generateTripsForPlan(Long planId);
+
+    /**
+     * Manually create a trip: assign a chosen shipper and a chosen subset of the plan's vận đơn.
+     */
+    DeliveryTripRouteDTO createTripManually(Long planId, Long shipperId, List<Long> orderIds);
+
+    /**
+     * Delete a trip (and its items).
+     */
+    void deleteTrip(Long tripId);
+
+    /**
+     * Record delivery outcome at one point (vận đơn): status = "Delivered" or "Failed".
+     * Auto-completes the trip when all points are resolved.
+     */
+    DeliveryTripRouteDTO updateTripItemStatus(Long tripId, Long itemId, String status);
+
+    /**
      * Assign shipper to a trip
      */
     DeliveryTripRouteDTO assignShipper(Long tripId, Long shipperId);

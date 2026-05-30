@@ -76,6 +76,7 @@ public class DeliveryTripRouteDTO {
         private String deliveryOrderCode;
         private String customerName;
         private String deliveryAddress;
+        private String products;
         private Integer sequence;
         private String status;
         private String notes;

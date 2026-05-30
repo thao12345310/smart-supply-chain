@@ -1,19 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Table, Button, message, Tag, Card, Space, Row, Col, Statistic } from "antd";
-import { PlusOutlined, TruckOutlined, CheckCircleOutlined, ClockCircleOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { PlusOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import dayjs from "dayjs";
 import { ROLES, hasAnyRole } from "../services/roleService";
-
-// Status configuration
-const STATUS_CONFIG = {
-  DRAFT: { color: "blue", label: "Nháp", icon: <ClockCircleOutlined /> },
-  PENDING: { color: "orange", label: "Chờ xử lý", icon: <ClockCircleOutlined /> },
-  IN_PROGRESS: { color: "processing", label: "Đang giao", icon: <TruckOutlined /> },
-  COMPLETED: { color: "success", label: "Hoàn thành", icon: <CheckCircleOutlined /> },
-  CANCELLED: { color: "default", label: "Đã hủy", icon: null },
-};
+import { getStatusConfig, isStatus } from "../services/deliveryStatus";
 
 export default function DeliveryPlanList() {
   const [plans, setPlans] = useState([]);
@@ -24,7 +16,8 @@ export default function DeliveryPlanList() {
     setLoading(true);
     try {
       const res = await api.get("/delivery-plans");
-      setPlans(res.data || []);
+      // Đợt mới tạo (id lớn hơn) hiển thị trên đầu
+      setPlans((res.data || []).slice().sort((a, b) => b.id - a.id));
     } catch {
       message.error("Không thể tải danh sách kế hoạch giao hàng");
     } finally {
@@ -38,9 +31,9 @@ export default function DeliveryPlanList() {
 
   const getStats = () => ({
     total: plans.length,
-    pending: plans.filter(p => p.status === 'PENDING' || p.status === 'DRAFT').length,
-    inProgress: plans.filter(p => p.status === 'IN_PROGRESS').length,
-    completed: plans.filter(p => p.status === 'COMPLETED').length,
+    pending: plans.filter(p => isStatus(p.status, 'CREATED') || isStatus(p.status, 'DRAFT') || isStatus(p.status, 'PENDING')).length,
+    inProgress: plans.filter(p => isStatus(p.status, 'IN_PROGRESS')).length,
+    completed: plans.filter(p => isStatus(p.status, 'COMPLETED')).length,
   });
 
   const stats = getStats();
@@ -80,7 +73,7 @@ export default function DeliveryPlanList() {
       dataIndex: "status",
       width: 120,
       render: (status) => {
-        const config = STATUS_CONFIG[status] || { color: "default", label: status };
+        const config = getStatusConfig(status);
         return <Tag color={config.color}>{config.label}</Tag>;
       },
     },

@@ -13,11 +13,10 @@
 ```bash
 # Terminal 1 – Backend (Spring Boot)
 cd backend
-./mvnw spring-boot:run        # hoặc: mvn spring-boot:run
+mvn spring-boot:run        # hoặc: mvn spring-boot:run
 
 # Terminal 2 – Frontend (React + Vite)
 cd frontend
-npm install      # nếu chưa cài
 npm run dev      # mở http://localhost:5173
 ```
 - Kiểm tra DB PostgreSQL đã chạy, các migration V1→V6 đã apply (Flyway tự chạy khi khởi động backend).
