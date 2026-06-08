@@ -1,0 +1,21 @@
+@startuml deployment
+' Deployment diagram - template section 4.5
+skinparam shadowing false
+
+node "Client Device" {
+  artifact "Web Browser\n(React SPA)" as browser
+}
+
+node "Application Server" {
+  artifact "Spring Boot JAR\n(Tomcat embedded, :8080)" as app
+  artifact "JRE 17" as jre
+}
+
+node "Database Server" {
+  database "PostgreSQL :5432\n(distribution_db)" as pg
+}
+
+browser --> app : HTTPS / REST (JWT)
+app --> pg : JDBC
+app ..> jre : runs on
+@enduml

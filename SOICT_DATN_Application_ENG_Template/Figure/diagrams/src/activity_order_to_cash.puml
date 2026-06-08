@@ -1,0 +1,39 @@
+@startuml activity_order_to_cash
+' Business process: Order-to-cash - template section 2.2.3
+|Sales Staff|
+start
+:Create Sales Order (status OPEN);
+:Check customer credit limit;
+:Submit for approval;
+|Sales Manager / Accountant|
+if (Approve?) then (yes)
+  :Set SO = APPROVED;
+  :Reserve inventory for items;
+else (no)
+  :Set SO = REJECTED;
+  stop
+endif
+|Warehouse Staff|
+:Create Goods Issue;
+:Confirm Goods Issue;
+|System|
+:Allocate stock by FEFO lots;
+:Decrease inventory + release reservation;
+:Write Inventory Transaction (ISSUE);
+:Generate Sales Invoice (ISSUED);
+if (All SO items delivered?) then (yes)
+  :Set SO = COMPLETED;
+else (no)
+  :Set SO = PARTIALLY_DELIVERED;
+endif
+|Delivery Admin / Shipper|
+:Plan trip, assign shipper, deliver;
+|Accountant|
+:Record customer payment;
+if (Fully paid?) then (yes)
+  :Invoice = PAID;
+else (no)
+  :Invoice = PARTIAL / OVERDUE;
+endif
+stop
+@enduml

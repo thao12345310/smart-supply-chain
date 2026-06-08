@@ -27,14 +27,23 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
     @Query("SELECT si FROM SalesInvoice si WHERE si.invoiceDate BETWEEN :startDate AND :endDate ORDER BY si.invoiceDate DESC")
     List<SalesInvoice> findByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
     
-    @Query("SELECT si FROM SalesInvoice si WHERE si.dueDate < :today AND si.status IN ('ISSUED', 'PARTIALLY_PAID') ORDER BY si.dueDate")
+    @Query("SELECT si FROM SalesInvoice si WHERE si.dueDate < :today AND si.status IN ('ISSUED', 'PARTIALLY_PAID', 'OVERDUE') ORDER BY si.dueDate")
     List<SalesInvoice> findOverdue(@Param("today") LocalDate today);
-    
+
     @Query("SELECT si FROM SalesInvoice si WHERE si.status = 'DRAFT' ORDER BY si.createdAt DESC")
     List<SalesInvoice> findDraft();
-    
-    @Query("SELECT si FROM SalesInvoice si WHERE si.status IN ('ISSUED', 'PARTIALLY_PAID') ORDER BY si.dueDate")
+
+    @Query("SELECT si FROM SalesInvoice si WHERE si.status IN ('ISSUED', 'PARTIALLY_PAID', 'OVERDUE') ORDER BY si.dueDate")
     List<SalesInvoice> findUnpaid();
+
+    /**
+     * Bulk-mark invoices whose due date has passed and are still unpaid as OVERDUE.
+     * Run periodically by the scheduled job. Returns the number of rows updated.
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE SalesInvoice si SET si.status = 'OVERDUE', si.updatedAt = CURRENT_TIMESTAMP " +
+           "WHERE si.dueDate < :today AND si.status IN ('ISSUED', 'PARTIALLY_PAID')")
+    int markOverdue(@Param("today") LocalDate today);
     
     @Query("SELECT si FROM SalesInvoice si LEFT JOIN FETCH si.items WHERE si.id = :id")
     Optional<SalesInvoice> findByIdWithItems(@Param("id") Long id);

@@ -11,7 +11,12 @@ public interface DeliveryPlanOrderRepository extends JpaRepository<DeliveryPlanO
 
     List<DeliveryPlanOrder> findByDeliveryPlanId(Long deliveryPlanId);
 
+    long countByDeliveryPlanId(Long deliveryPlanId);
+
     boolean existsByDeliveryPlanIdAndDeliveryOrderId(Long deliveryPlanId, Long deliveryOrderId);
+
+    /** Vận đơn này đã được gom vào một đợt giao hàng nào đó hay chưa. */
+    boolean existsByDeliveryOrderId(Long deliveryOrderId);
 
     Optional<DeliveryPlanOrder> findByDeliveryPlanIdAndDeliveryOrderId(Long deliveryPlanId, Long deliveryOrderId);
 }

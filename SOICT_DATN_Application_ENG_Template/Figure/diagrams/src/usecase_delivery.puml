@@ -1,0 +1,31 @@
+@startuml usecase_delivery
+' Detailed use case - Delivery subsystem - template section 2.2.2
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Delivery Admin" as DA
+actor "Shipper"        as SH
+
+rectangle "Delivery Management" {
+  usecase "Create Delivery Plan"         as U1
+  usecase "Assign Orders to Plan"        as U2
+  usecase "Assign Shipper to Trip"       as U3
+  usecase "View Assigned Trips\n(own trips only)" as U4
+  usecase "Start Trip"                   as U5
+  usecase "Mark Stop Delivered"          as U6
+  usecase "Complete Trip"                as U7
+  usecase "Report Failed Delivery"       as U8
+}
+
+DA --> U1
+DA --> U2
+DA --> U3
+SH --> U4
+SH --> U5
+SH --> U6
+SH --> U7
+SH --> U8
+
+U2 .> U1 : <<include>>
+U6 .> U5 : <<precedes>>
+@enduml

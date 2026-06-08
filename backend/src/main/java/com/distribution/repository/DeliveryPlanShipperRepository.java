@@ -12,5 +12,7 @@ public interface DeliveryPlanShipperRepository extends JpaRepository<DeliveryPla
 
     @Query("SELECT dps FROM DeliveryPlanShipper dps WHERE dps.deliveryPlan.id = :deliveryPlanId")
     List<DeliveryPlanShipper> findByDeliveryPlanId(@Param("deliveryPlanId") Long id);
+
+    boolean existsByDeliveryPlanIdAndShipperUserId(Long deliveryPlanId, Long shipperUserId);
 }
 

@@ -28,7 +28,14 @@ export default function GoodsIssueList() {
         response = await goodsIssueApi.getByStatus(statusFilter);
       }
       
-      setIssues(response.data || []);
+      const data = response.data || [];
+      // Sắp xếp phiếu mới nhất lên đầu (theo ngày xuất, sau đó theo mã/ID giảm dần)
+      data.sort((a, b) => {
+        const dateDiff = new Date(b.issueDate || 0) - new Date(a.issueDate || 0);
+        if (dateDiff !== 0) return dateDiff;
+        return (b.id || 0) - (a.id || 0);
+      });
+      setIssues(data);
     } catch (err) {
       setError(err.message || 'Không thể tải danh sách phiếu xuất');
     } finally {

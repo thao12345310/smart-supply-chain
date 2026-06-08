@@ -5,6 +5,7 @@ import com.distribution.model.Product;
 import com.distribution.repository.ProductRepository;
 import com.distribution.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -60,7 +61,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductDTO> getAll() {
-        return repo.findAll().stream().map(this::toDto).collect(Collectors.toList());
+        return repo.findAll(Sort.by(Sort.Direction.DESC, "id")).stream().map(this::toDto).collect(Collectors.toList());
     }
 
     @Override

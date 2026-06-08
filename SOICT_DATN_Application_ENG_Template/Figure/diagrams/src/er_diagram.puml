@@ -1,0 +1,147 @@
+@startuml er_diagram
+' Entity-Relationship diagram - template section 4.2.3
+hide circle
+skinparam linetype ortho
+
+entity Supplier {
+  * id
+  --
+  code, name, contact
+}
+entity Product {
+  * id
+  --
+  code, name, price
+}
+entity Customer {
+  * id
+  --
+  code, name, creditLimit, currentBalance
+}
+entity DeliveryAddress {
+  * id
+  --
+  recipient, addressLine, isDefault
+}
+entity Warehouse {
+  * id
+  --
+  code, name, location
+}
+entity Inventory {
+  * id
+  --
+  qtyOnHand, qtyReserved, avgCost, version
+}
+entity InventoryLot {
+  * id
+  --
+  lotNumber, expiryDate, qtyRemaining, unitCost
+}
+entity InventoryTransaction {
+  * id
+  --
+  type, qtyBefore, qtyAfter, refType
+}
+entity PurchaseOrder {
+  * id
+  --
+  code, status, totalAmount
+}
+entity PurchaseOrderItem {
+  * id
+}
+entity GoodsReceipt {
+  * id
+  --
+  code, status, receiptDate
+}
+entity GoodsReceiptItem {
+  * id
+}
+entity SalesOrder {
+  * id
+  --
+  code, status, grandTotal, paymentStatus
+}
+entity SalesOrderItem {
+  * id
+}
+entity GoodsIssue {
+  * id
+  --
+  code, status, issueDate
+}
+entity GoodsIssueItem {
+  * id
+  --
+  batchNumber, expiryDate
+}
+entity SalesInvoice {
+  * id
+  --
+  code, status, totalAmount, paidAmount
+}
+entity DeliveryPlan {
+  * id
+  --
+  code, plannedDate, status
+}
+entity DeliveryOrder {
+  * id
+  --
+  code, status
+}
+entity DeliveryTripRoute {
+  * id
+  --
+  code, status
+}
+entity DeliveryTripRouteItem {
+  * id
+}
+entity "User" as Usr {
+  * id
+  --
+  username, fullName
+}
+entity Role {
+  * id
+  --
+  name
+}
+
+Supplier ||--o{ Product
+Customer ||--o{ DeliveryAddress
+Customer ||--o{ SalesOrder
+Warehouse ||--o{ Inventory
+Product ||--o{ Inventory
+Product ||--o{ InventoryLot
+Warehouse ||--o{ InventoryLot
+GoodsReceipt ||--o{ InventoryLot
+Product ||--o{ InventoryTransaction
+
+Supplier ||--o{ PurchaseOrder
+PurchaseOrder ||--o{ PurchaseOrderItem
+Product ||--o{ PurchaseOrderItem
+PurchaseOrder ||--o{ GoodsReceipt
+GoodsReceipt ||--o{ GoodsReceiptItem
+PurchaseOrderItem ||--o{ GoodsReceiptItem
+
+SalesOrder ||--o{ SalesOrderItem
+Product ||--o{ SalesOrderItem
+SalesOrder ||--o{ GoodsIssue
+GoodsIssue ||--o{ GoodsIssueItem
+SalesOrderItem ||--o{ GoodsIssueItem
+GoodsIssue ||--|| SalesInvoice
+SalesOrder ||--o{ SalesInvoice
+DeliveryAddress ||--o{ SalesOrder
+
+DeliveryPlan ||--o{ DeliveryOrder
+SalesOrder ||--o{ DeliveryOrder
+DeliveryPlan ||--o{ DeliveryTripRoute
+Usr ||--o{ DeliveryTripRoute
+DeliveryTripRoute ||--o{ DeliveryTripRouteItem
+GoodsIssue ||--o{ DeliveryTripRouteItem
+Usr }o--o{ Role
+@enduml

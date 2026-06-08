@@ -1,0 +1,29 @@
+@startuml seq_so_gi_fefo
+' Sequence: Confirm Goods Issue with FEFO allocation - template section 4.2.2
+actor "Warehouse Staff" as WH
+participant "GoodsIssueController" as C
+participant "GoodsIssueServiceImpl" as S
+participant "InventoryLotRepository" as LR
+participant "InventoryService" as IS
+participant "SalesInvoiceService" as INV
+database "PostgreSQL" as DB
+
+WH -> C : POST /goods-issues/{id}/confirm
+C -> S : confirmGoodsIssue(id)
+S -> S : validate stock >= issuedQty
+S -> LR : findAvailableLotsFEFO(productId, whId)
+LR -> DB : SELECT ... ORDER BY expiryDate ASC NULLS LAST
+LR --> S : List<InventoryLot>
+loop until issuedQty fulfilled
+  S -> S : take = min(remaining, lot.qtyRemaining)
+  S -> DB : update lot.quantityRemaining
+end
+S -> IS : decreaseInventory + releaseReserved
+IS -> DB : update inventory
+S -> S : update SO item deliveredQty
+S -> INV : createInvoice(goodsIssue)
+INV -> DB : insert SalesInvoice (ISSUED)
+S -> S : update SO status\n(PARTIALLY_DELIVERED / COMPLETED)
+S --> C : GoodsIssueDTO
+C --> WH : 200 OK
+@enduml

@@ -1,0 +1,36 @@
+@startuml usecase_sales
+' Detailed use case - Sales subsystem - template section 2.2.2
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Sales Staff"   as SS
+actor "Sales Manager" as SM
+actor "Accountant"    as AC
+actor "Warehouse Staff" as WH
+
+rectangle "Sales & Goods Issue" {
+  usecase "Create Sales Order"          as U1
+  usecase "Check Customer Credit Limit" as U2
+  usecase "Approve Sales Order\n(reserve inventory)" as U3
+  usecase "Reject Sales Order"          as U4
+  usecase "Create Goods Issue"          as U5
+  usecase "Confirm Goods Issue\n(FEFO lot allocation)" as U6
+  usecase "Generate Sales Invoice"      as U7
+  usecase "Record Payment"              as U8
+  usecase "Handle Failed Delivery\n(restock + cancel invoice)" as U9
+}
+
+SS --> U1
+SS --> U2
+SM --> U3
+SM --> U4
+AC --> U3
+WH --> U5
+WH --> U6
+WH --> U9
+AC --> U8
+
+U1 .> U2 : <<include>>
+U6 .> U7 : <<include>>
+U3 .> U1 : <<precedes>>
+@enduml

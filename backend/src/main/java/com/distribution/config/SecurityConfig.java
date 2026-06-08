@@ -163,7 +163,9 @@ public class SecurityConfig {
                     .hasAnyRole("WAREHOUSE_STAFF", "ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/inventory/**")
                     .hasAnyRole("WAREHOUSE_STAFF", "ADMIN")
-                
+                .requestMatchers(HttpMethod.PATCH, "/api/inventory/**")
+                    .hasAnyRole("WAREHOUSE_STAFF", "ADMIN")
+
                 // ==================== Delivery Plan Endpoints ====================
                 // View all plans: Delivery Admin, Admin
                 .requestMatchers(HttpMethod.GET, "/api/delivery-plans")

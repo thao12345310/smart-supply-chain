@@ -1,0 +1,48 @@
+@startuml usecase_general
+' General use case diagram - template section 2.2.1
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "Purchase Staff"    as PS
+actor "Purchase Manager"  as PM
+actor "Sales Staff"       as SS
+actor "Sales Manager"     as SM
+actor "Warehouse Staff"   as WH
+actor "Delivery Admin"    as DA
+actor "Shipper"           as SH
+actor "Accountant"        as AC
+actor "Administrator"     as AD
+
+rectangle "Smart Supply Chain Management System" {
+  usecase "Manage Purchase Orders"      as UC_PO
+  usecase "Receive Goods"               as UC_GR
+  usecase "Manage Sales Orders"         as UC_SO
+  usecase "Issue Goods"                 as UC_GI
+  usecase "Manage Inventory & Lots (FEFO)" as UC_INV
+  usecase "Plan & Assign Deliveries"    as UC_DLV
+  usecase "Execute Delivery Trip"       as UC_TRIP
+  usecase "Manage Invoices & Payments"  as UC_INVC
+  usecase "View Dashboard / Reports"    as UC_DASH
+  usecase "Manage Master Data"          as UC_MD
+  usecase "Manage Users & Roles"        as UC_USR
+}
+
+PS --> UC_PO
+PM --> UC_PO
+SS --> UC_SO
+SM --> UC_SO
+WH --> UC_GR
+WH --> UC_GI
+WH --> UC_INV
+DA --> UC_DLV
+SH --> UC_TRIP
+AC --> UC_INVC
+AC --> UC_PO
+AC --> UC_SO
+AD --> UC_USR
+AD --> UC_MD
+
+UC_PO ..> UC_DASH
+UC_SO ..> UC_DASH
+@enduml

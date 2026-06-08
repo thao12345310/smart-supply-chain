@@ -1,0 +1,30 @@
+@startuml package_diagram
+' Layered package diagram - template section 4.1.2
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+package "config / security" as cfg
+package "controller" as ctrl
+package "dto" as dto
+package "service" as svc
+package "service.impl" as svcimpl
+package "repository" as repo
+package "model (entities + enums)" as model
+package "exception" as exc
+
+ctrl ..> dto
+ctrl ..> svc
+svcimpl ..|> svc
+svcimpl ..> repo
+svcimpl ..> model
+svcimpl ..> dto
+repo ..> model
+cfg ..> svc
+ctrl ..> exc
+svcimpl ..> exc
+
+note bottom of model
+  Lower layer: no dependency
+  on upper layers
+end note
+@enduml

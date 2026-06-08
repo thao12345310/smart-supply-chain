@@ -83,4 +83,17 @@ public interface GoodsIssueService {
      * Cancel Goods Issue (only when DRAFT)
      */
     GoodsIssueDTO cancel(Long id);
+
+    /**
+     * Hoàn hàng về kho khi một vận đơn (gắn với phiếu xuất này) giao THẤT BẠI.
+     * Tăng lại tồn on-hand + lô FEFO và giảm số lượng đã giao của đơn bán,
+     * sau đó tính lại trạng thái giao của đơn bán. Bỏ qua nếu không tìm thấy phiếu xuất.
+     */
+    void restockFromFailedDelivery(String goodsIssueCode);
+
+    /**
+     * Trừ kho lại khi sửa kết quả giao từ THẤT BẠI -> THÀNH CÔNG (đảo ngược restock).
+     * Ném lỗi nếu tồn không đủ để ghi nhận lại.
+     */
+    void reissueAfterCorrection(String goodsIssueCode);
 }

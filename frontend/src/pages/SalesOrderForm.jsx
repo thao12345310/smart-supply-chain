@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { salesOrderApi, customerApi, productApi, warehouseApi } from '../services/api';
+import { salesOrderApi, customerApi, productApi, warehouseApi, inventoryApi } from '../services/api';
 
 /**
  * Sales Order Form - Tạo/Sửa Đơn bán hàng
@@ -19,6 +19,10 @@ export default function SalesOrderForm() {
   const [products, setProducts] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [addresses, setAddresses] = useState([]);
+
+  // Tồn kho khả dụng theo kho đang chọn: { [productId]: quantityAvailable }
+  const [stockMap, setStockMap] = useState({});
+  const [stockLoading, setStockLoading] = useState(false);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -39,6 +43,38 @@ export default function SalesOrderForm() {
       loadOrder();
     }
   }, [id]);
+
+  // Tải tồn kho khả dụng mỗi khi đổi kho xuất
+  useEffect(() => {
+    loadWarehouseStock(formData.warehouseId);
+  }, [formData.warehouseId]);
+
+  const loadWarehouseStock = async (warehouseId) => {
+    if (!warehouseId) {
+      setStockMap({});
+      return;
+    }
+    try {
+      setStockLoading(true);
+      const response = await inventoryApi.getByWarehouse(warehouseId);
+      const map = {};
+      (response.data || []).forEach(inv => {
+        map[inv.productId] = inv.quantityAvailable;
+      });
+      setStockMap(map);
+    } catch (err) {
+      console.error('Lỗi tải tồn kho:', err);
+      setStockMap({});
+    } finally {
+      setStockLoading(false);
+    }
+  };
+
+  // Tồn kho khả dụng của 1 sản phẩm trong kho đang chọn (sản phẩm không có bản ghi kho => 0)
+  const getAvailableStock = (productId) => {
+    if (!productId) return null;
+    return stockMap[Number(productId)] ?? 0;
+  };
 
   const loadMasterData = async () => {
     try {
@@ -374,7 +410,7 @@ export default function SalesOrderForm() {
               <tbody>
                 {formData.items.map((item, index) => (
                   <tr key={index}>
-                    <td style={{ padding: '8px' }}>
+                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
                       <select
                         style={{ ...inputStyle, width: '100%' }}
                         value={item.productId}
@@ -386,8 +422,25 @@ export default function SalesOrderForm() {
                           <option key={p.id} value={p.id}>{p.code} - {p.name}</option>
                         ))}
                       </select>
+                      {item.productId && (() => {
+                        if (!formData.warehouseId) {
+                          return (
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                              Chọn kho xuất để xem tồn kho
+                            </div>
+                          );
+                        }
+                        const available = getAvailableStock(item.productId);
+                        const enough = Number(item.quantity) <= available;
+                        return (
+                          <div style={{ fontSize: '12px', marginTop: '4px', color: enough ? '#059669' : '#dc2626', fontWeight: '500' }}>
+                            {stockLoading ? 'Đang tải tồn kho...' : `Tồn khả dụng: ${available}`}
+                            {!stockLoading && !enough && ' — không đủ hàng'}
+                          </div>
+                        );
+                      })()}
                     </td>
-                    <td style={{ padding: '8px' }}>
+                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
                       <input
                         type="number"
                         min="1"
@@ -397,7 +450,7 @@ export default function SalesOrderForm() {
                         required
                       />
                     </td>
-                    <td style={{ padding: '8px' }}>
+                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
                       <input
                         type="number"
                         min="0"
@@ -408,7 +461,7 @@ export default function SalesOrderForm() {
                         required
                       />
                     </td>
-                    <td style={{ padding: '8px' }}>
+                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
                       <input
                         type="number"
                         min="0"
@@ -418,7 +471,7 @@ export default function SalesOrderForm() {
                         onChange={(e) => handleItemChange(index, 'discountPercent', e.target.value)}
                       />
                     </td>
-                    <td style={{ padding: '8px' }}>
+                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
                       <input
                         type="number"
                         min="0"
@@ -427,10 +480,10 @@ export default function SalesOrderForm() {
                         onChange={(e) => handleItemChange(index, 'taxPercent', e.target.value)}
                       />
                     </td>
-                    <td style={{ padding: '8px', textAlign: 'right', fontWeight: '600' }}>
+                    <td style={{ padding: '18px 8px', textAlign: 'right', fontWeight: '600', verticalAlign: 'top' }}>
                       {formatCurrency(calculateItemTotal(item))}
                     </td>
-                    <td style={{ padding: '8px' }}>
+                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
                       <button
                         type="button"
                         style={{ ...buttonStyle, backgroundColor: '#fee2e2', color: '#991b1b', padding: '6px 12px' }}

@@ -1,0 +1,44 @@
+{
+  // ===== LaTeX Workshop: cấu hình cho template SOICT (pdfLaTeX + biblatex/bibtex) =====
+
+  // Công thức build mặc định: latexmk lo toàn bộ pdflatex -> bibtex -> pdflatex x2
+  "latex-workshop.latex.recipe.default": "latexmk (pdflatex)",
+
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "latexmk (pdflatex)",
+      "tools": ["latexmk"]
+    }
+  ],
+
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk",
+      "command": "latexmk",
+      "args": [
+        "-pdf",
+        "-pdflatex=pdflatex -interaction=nonstopmode -synctex=1 %O %S",
+        "-outdir=%OUTDIR%",
+        "%DOC%"
+      ],
+      "env": {}
+    }
+  ],
+
+  // Đưa file phụ (.aux, .bbl, .log...) vào thư mục build cho gọn
+  "latex-workshop.latex.outDir": "%DIR%/build",
+
+  // Tự build khi lưu file
+  "latex-workshop.latex.autoBuild.run": "onSave",
+
+  // Mở PDF preview trong tab cạnh bên
+  "latex-workshop.view.pdf.viewer": "tab",
+
+  // Dọn các file phụ này khi clean
+  "latex-workshop.latex.clean.fileTypes": [
+    "*.aux", "*.bbl", "*.blg", "*.idx", "*.ind", "*.lof", "*.lot",
+    "*.out", "*.toc", "*.acn", "*.acr", "*.alg", "*.glg", "*.glo",
+    "*.gls", "*.ist", "*.fls", "*.log", "*.fdb_latexmk", "*.synctex.gz",
+    "*.bcf", "*.run.xml"
+  ]
+}

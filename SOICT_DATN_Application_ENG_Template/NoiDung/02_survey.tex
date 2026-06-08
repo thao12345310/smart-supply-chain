@@ -1,0 +1,76 @@
+% ===================== CHAPTER 2 — REQUIREMENT SURVEY AND ANALYSIS =====================
+% Length: 9-11 pages.
+This chapter analyses the current situation, surveys comparable products, and
+specifies the functional and non-functional requirements of the system.
+
+\section{Status Survey}
+% GUIDE: analyse 3 sources — (i) users/customers, (ii) existing systems,
+% (iii) similar applications. Compare Odoo, SAP Business One, KiotViet, Sapo, MISA
+% in a table (features vs. limitations for a small distributor: cost, FEFO support,
+% delivery routing, customisation). Conclude what features are required.
+[TODO] Survey and compare existing products; justify the required features.
+
+% Example comparison table (fill in):
+\begin{table}[H]\centering
+\caption{Comparison of existing distribution-management products}
+\label{tab:survey}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Criterion} & \textbf{Odoo} & \textbf{KiotViet} & \textbf{Sapo} & \textbf{This thesis} \\ \hline
+Lot/expiry (FEFO) tracking & \dots & \dots & \dots & Yes \\ \hline
+Role-based approval workflow & \dots & \dots & \dots & Yes (9 roles) \\ \hline
+Delivery planning \& shipper app & \dots & \dots & \dots & Yes \\ \hline
+Self-hosted / customisable & \dots & \dots & \dots & Yes \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Functional Overview}
+
+\subsection{General Use Case Diagram}
+% GUIDE: describe the 9 actors and the top-level use cases, then reference the figure.
+\thesisfig{usecase_general}{General use case diagram of the system}{fig:uc-general}
+[TODO] Explain the actors (Purchase/Sales Staff \& Manager, Warehouse Staff,
+Delivery Admin, Shipper, Accountant, Administrator) and the main use cases.
+
+\subsection{Detailed Use Case Diagrams}
+% GUIDE: one subsection per high-level use case; the decomposed UC name must match.
+\thesisfig{usecase_purchasing}{Detailed use cases — Purchasing \& Goods Receipt}{fig:uc-purchasing}
+\thesisfig{usecase_sales}{Detailed use cases — Sales \& Goods Issue}{fig:uc-sales}
+\thesisfig{usecase_warehouse}{Detailed use cases — Inventory \& Lot management}{fig:uc-warehouse}
+\thesisfig{usecase_delivery}{Detailed use cases — Delivery management}{fig:uc-delivery}
+[TODO] Briefly explain each decomposed use case.
+
+\subsection{Business Process}
+% GUIDE: model the combined activity flow of multiple use cases (NOT a single UC).
+\thesisfig{activity_procure_to_stock}{Procure-to-stock business process}{fig:act-p2s}
+\thesisfig{activity_order_to_cash}{Order-to-cash business process}{fig:act-o2c}
+[TODO] Describe the two core business processes.
+
+\section{Functional Description}
+% GUIDE: pick 4-7 most important use cases; for each give name, event flow
+% (main + alternate), pre-conditions, post-conditions. Add activity diagrams only
+% when a use case is complex. Extra ones -> Appendix (NoiDung/07_appendix.tex).
+
+\subsection{Confirm Goods Issue (FEFO)}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Pre-conditions:} Sales Order is APPROVED; on-hand stock $\geq$ issued qty.
+  \item \textbf{Main flow:} validate stock $\to$ allocate by FEFO lots $\to$ decrease
+        inventory and release reservation $\to$ update delivered quantity $\to$
+        auto-generate invoice $\to$ update SO status.
+  \item \textbf{Alternate flow:} insufficient lot stock $\to$ reject with error.
+  \item \textbf{Post-conditions:} inventory and lots reduced; invoice issued.
+\end{itemize}
+
+\subsection{Approve Sales Order (Inventory Reservation)}
+[TODO] Specify event flow, pre/post-conditions.
+
+\subsection{Confirm Goods Receipt}
+[TODO] Specify event flow, pre/post-conditions.
+
+\subsection{Assign and Execute Delivery Trip}
+[TODO] Specify event flow, pre/post-conditions.
+
+\section{Non-Functional Requirements}
+% GUIDE: performance, reliability, usability, maintainability, security, plus
+% technical requirements (PostgreSQL, REST API, JWT auth, browser support).
+[TODO] List non-functional and technical requirements.

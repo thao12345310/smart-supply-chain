@@ -318,6 +318,26 @@ public class InventoryServiceImpl implements InventoryService {
         logger.debug("Created inventory transaction: {}", transaction.getId());
     }
 
+    @Override
+    public InventoryDTO updateReorderLevel(Long inventoryId, Integer reorderLevel, Integer reorderQuantity) {
+        Inventory inventory = inventoryRepo.findById(inventoryId)
+            .orElseThrow(() -> new ResourceNotFoundException("Inventory not found: " + inventoryId));
+
+        // Guard against legacy rows with NULL version (avoids Hibernate version-increment NPE on save)
+        if (inventory.getVersion() == null) {
+            inventory.setVersion(0L);
+        }
+
+        inventory.setReorderLevel(reorderLevel);
+        if (reorderQuantity != null) {
+            inventory.setReorderQuantity(reorderQuantity);
+        }
+
+        Inventory saved = inventoryRepo.save(inventory);
+        logger.info("Updated reorder level for inventory {}: reorderLevel={}", inventoryId, reorderLevel);
+        return toDto(saved);
+    }
+
     private InventoryDTO toDto(Inventory inventory) {
         InventoryDTO dto = InventoryDTO.builder()
             .id(inventory.getId())

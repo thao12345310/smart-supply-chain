@@ -1,0 +1,244 @@
+% =====================================================================
+%  WORKING COPY of the thesis (Smart Supply Chain Management System).
+%  - Same preamble/formatting as the original main.tex (UNCHANGED template).
+%  - Body content lives in NoiDung/*.tex  ->  YOU WRITE THERE.
+%  - Build:  latexmk -pdf -outdir=build main_datn.tex
+%  The original main.tex + Chapter/* are kept untouched as a reference.
+% =====================================================================
+\documentclass[a4paper,13pt,3p,twoside]{report}
+\usepackage{scrextend}
+\changefontsizes{13pt}
+\usepackage[utf8]{vietnam}
+\usepackage[top=2cm, bottom=2cm, left=3.5cm, right=2.5cm]{geometry}
+
+\usepackage{graphicx}
+\usepackage{fancybox}
+\usepackage{indentfirst}
+\usepackage{amsthm}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{times}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{subfiles}
+\usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{chngcntr}
+\usepackage{pdflscape}
+\usepackage{afterpage}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{capt-of}
+\usepackage{multirow}
+\usepackage{fancyhdr}
+\usepackage{appendix}
+\usepackage{outlines}
+\usepackage[font=small,labelfont=bf]{caption}
+
+\usepackage{listings}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{xurl}
+\usepackage{longtable}
+\usepackage{booktabs}
+
+\usepackage[nonumberlist, nopostdot, nogroupskip, acronym]{glossaries}
+\usepackage{glossary-superragged}
+\setglossarystyle{superraggedheaderborder}
+\usepackage{setspace}
+\usepackage{parskip}
+
+\usepackage{tocbasic}
+\usepackage{blindtext}
+
+% ===================================================
+\renewcommand{\bibname}{reference}
+\usepackage[backend=bibtex,style=ieee]{biblatex}
+
+\renewcommand\appendixname{APPENDIX}
+\renewcommand\appendixpagename{APPENDIX}
+\renewcommand\appendixtocname{APPENDIX}
+
+\renewcommand{\figurename}{Figure}
+\renewcommand{\tablename}{Table}
+\renewcommand{\chaptername}{CHAPTER}
+
+\addbibresource{reference.bib}
+
+\include{lstlisting}
+
+\input{glossary}
+
+% ===================================================
+%  Helper: insert a thesis diagram (renders a TODO box if PNG missing,
+%  so the document always builds). Usage: \thesisfig{er_diagram}{Caption}{fig:er}
+\newcommand{\thesisfig}[3]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{Figure/diagrams/#1.png}%
+      {\includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{Figure/diagrams/#1.png}}%
+      {\fbox{\parbox[c][3cm][c]{0.8\linewidth}{\centering\itshape [TODO render diagram: Figure/diagrams/#1.png — run \texttt{bash Figure/diagrams/render.sh}]}}}%
+    \caption{#2}\label{#3}
+  \end{figure}%
+}
+
+% ===================================================
+\fancypagestyle{plain}{%
+\fancyhf{}
+\fancyfoot[RO,RE]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}}
+
+\setlength{\headheight}{10pt}
+
+\def \TITLE{GRADUATION THESIS}
+\def \AUTHOR{DUONG PHUONG THAO}
+
+% ===================================================
+\titleformat{\chapter}[hang]{\centering\bfseries}{CHƯƠNG \thechapter.\ }{0pt}{}[]
+\titleformat
+    {\chapter}[hang]{\centering\bfseries}{CHAPTER \thechapter.\ }{0pt}{}[]
+\titlespacing*{\chapter}{0pt}{-20pt}{20pt}
+
+\titleformat
+    {\section}[hang]{\bfseries}{\thechapter.\arabic{section}\ \ \ \ }{0pt}{}[]
+\titlespacing{\section}{0pt}{\parskip}{0.5\parskip}
+
+\titleformat
+    {\subsection}[hang]{\bfseries}{\thechapter.\arabic{section}.\arabic{subsection}\ \ \ \ }{0pt}{}[]
+\titlespacing{\subsection}{30pt}{\parskip}{0.5\parskip}
+
+\renewcommand\thesubsubsection{\alph{subsubsection}}
+\titleformat
+    {\subsubsection}[hang]{\bfseries}{\alph{subsubsection}, \ }{0pt}{}[]
+\titlespacing{\subsubsection}{50pt}{\parskip}{0.5\parskip}
+
+% ===================================================
+\usepackage{hyperref}
+\hypersetup{pdfborder = {0 0 0}}
+\hypersetup{pdftitle={\TITLE}, pdfauthor={\AUTHOR}}
+\usepackage[all]{hypcap}
+
+\graphicspath{{figures/}{../figures/}{Figure/}}
+
+\counterwithin{figure}{chapter}
+
+\title{\bf \TITLE}
+\author{\AUTHOR}
+
+\setcounter{secnumdepth}{3}
+
+\theoremstyle{definition}
+\newtheorem{example}{Example}[chapter]
+
+\onehalfspacing
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{15pt}
+
+% =========================== BODY ===============
+\begin{document}
+\subfile{Cover}
+\subfile{Cover2}
+
+% ===================================================
+\pagenumbering{roman}
+\renewcommand{\figurename}{Figure}
+\renewcommand{\tablename}{Table}
+\renewcommand{\chaptername}{CHAPTER}
+
+\newpage
+\input{NoiDung/00_acknowledgment}
+
+\newpage
+\input{NoiDung/00_abstract}
+
+% ===================================================
+\newpage
+\pagenumbering{roman}
+\renewcommand*\contentsname{TABLE OF CONTENTS}
+
+\titlecontents{chapter}[0.0cm]{\bfseries\vspace{0.3cm}}{{\bfseries{\scshape}CHAPTER \thecontentslabel.\ }}{}{\titlerule*[0.3pc]{.}\contentspage}
+\titlecontents{section}[0.0cm]{\vspace{0.3cm}}{\thecontentslabel \ }{}{\titlerule*[0.3pc]{.}\contentspage}
+\titlecontents{subsection}[1.0cm]{\vspace{0.3cm}}{\thecontentslabel \ }{}{\titlerule*[0.3pc]{.}\contentspage}
+
+\addtocontents{toc}{\protect\thispagestyle{empty}}
+\tableofcontents
+\thispagestyle{empty}
+\cleardoublepage
+
+\renewcommand{\listfigurename}{LIST OF FIGURES}
+{\let\oldnumberline\numberline
+\renewcommand{\numberline}{Figure~\oldnumberline}
+\listoffigures}
+\newpage
+
+\renewcommand{\listtablename}{LIST OF TABLES}
+{\let\oldnumberline\numberline
+\renewcommand{\numberline}{Table~\oldnumberline}
+\listoftables}
+
+\glsaddall
+\renewcommand*{\acronymname}{LIST OF ABBREVIATIONS}
+\renewcommand*{\entryname}{Abbreviation}
+\renewcommand*{\descriptionname}{Full Expression}
+\printnoidxglossaries
+
+% ===================================================
+\newpage
+\pagenumbering{arabic}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[RE, LO]{\leftmark}
+\fancyfoot[RE, LO]{\thepage}
+
+\chapter{INTRODUCTION}
+\label{chapter:Introduction}
+\input{NoiDung/01_introduction}
+
+\newpage
+\chapter{REQUIREMENT SURVEY AND ANALYSIS}
+\label{chapter:Survey}
+\input{NoiDung/02_survey}
+
+\newpage
+\chapter{THEORETICAL BACKGROUND AND TECHNOLOGIES}
+\label{chapter:Background}
+\input{NoiDung/03_background}
+
+\newpage
+\chapter{DESIGN, IMPLEMENTATION, AND EVALUATION}
+\label{chapter:Design}
+\input{NoiDung/04_design_impl}
+
+\newpage
+\chapter{SOLUTION AND CONTRIBUTION}
+\label{chapter:Contribution}
+\input{NoiDung/05_contribution}
+
+\newpage
+\chapter{CONCLUSION AND FUTURE WORK}
+\label{chapter:Conclusion}
+\input{NoiDung/06_conclusion}
+
+% ===================================================
+\newpage
+\renewcommand\bibname{REFERENCE}
+\printbibliography
+\phantomsection\addcontentsline{toc}{chapter}{REFERENCE}
+
+\appendixpage
+\appendices
+\addappheadtotoc
+\renewcommand{\figurename}{Figure}
+\renewcommand{\tablename}{Table}
+\renewcommand{\chaptername}{CHAPTER}
+
+\titleformat{\chapter}[hang]{\centering\bfseries}{ \thechapter.\ }{0pt}{}[]
+\titlespacing*{\chapter}{0pt}{-20pt}{20pt}
+\titlecontents{chapter}[0.0cm]{\bfseries\vspace{0.3cm}}{{\bfseries{\scshape} \thecontentslabel.\ }}{}{\titlerule*[0.3pc]{.}\contentspage}
+
+\chapter{ADDITIONAL USE CASE DESCRIPTIONS}
+\input{NoiDung/07_appendix}
+\end{document}

@@ -1,0 +1,11 @@
+@startuml state_purchase_order
+' Purchase Order lifecycle state machine
+[*] --> ORDER_OPEN : create
+ORDER_OPEN --> ORDER_APPROVED : approve
+ORDER_OPEN --> ORDER_CANCELLED : cancel / reject
+ORDER_APPROVED --> ORDER_APPROVED : partial goods receipt
+ORDER_APPROVED --> ORDER_COMPLETED : all items received
+ORDER_APPROVED --> ORDER_CANCELLED : cancel
+ORDER_COMPLETED --> [*]
+ORDER_CANCELLED --> [*]
+@enduml

@@ -1,0 +1,28 @@
+@startuml usecase_warehouse
+' Detailed use case - Warehouse & Inventory subsystem - template section 2.2.2
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Warehouse Staff" as WH
+actor "Administrator"   as AD
+
+rectangle "Inventory & Lot Management" {
+  usecase "View Stock Levels"            as U1
+  usecase "View Inventory Lots"          as U2
+  usecase "Monitor Expiring / Expired Lots" as U3
+  usecase "Adjust Stock"                 as U4
+  usecase "View Inventory Transactions\n(audit trail)" as U5
+  usecase "Reserve / Release Stock"      as U6
+  usecase "Configure Reorder Levels"     as U7
+}
+
+WH --> U1
+WH --> U2
+WH --> U3
+WH --> U4
+WH --> U5
+WH --> U6
+AD --> U7
+
+U3 .> U2 : <<extends>>
+@enduml

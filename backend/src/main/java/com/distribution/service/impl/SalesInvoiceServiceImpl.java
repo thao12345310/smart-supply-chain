@@ -11,6 +11,7 @@ import com.distribution.repository.*;
 import com.distribution.service.SalesInvoiceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +50,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
     @Override
     @Transactional(readOnly = true)
     public List<SalesInvoiceDTO> getAll() {
-        return salesInvoiceRepository.findAll().stream()
+        return salesInvoiceRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
             .map(this::mapToDTO)
             .collect(Collectors.toList());
     }

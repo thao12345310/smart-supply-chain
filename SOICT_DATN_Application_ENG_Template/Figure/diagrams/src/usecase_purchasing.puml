@@ -1,0 +1,35 @@
+@startuml usecase_purchasing
+' Detailed use case - Purchasing subsystem - template section 2.2.2
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Purchase Staff"   as PS
+actor "Purchase Manager" as PM
+actor "Accountant"       as AC
+actor "Warehouse Staff"  as WH
+
+rectangle "Purchasing & Goods Receipt" {
+  usecase "Create Purchase Order"  as U1
+  usecase "Edit Purchase Order"    as U2
+  usecase "Submit for Approval"    as U3
+  usecase "Approve Purchase Order" as U4
+  usecase "Reject Purchase Order"  as U5
+  usecase "Create Goods Receipt"   as U6
+  usecase "Confirm Goods Receipt\n(update stock + create lot)" as U7
+  usecase "View PO / GR History"   as U8
+}
+
+PS --> U1
+PS --> U2
+PS --> U3
+PS --> U8
+PM --> U4
+PM --> U5
+AC --> U4
+WH --> U6
+WH --> U7
+WH --> U8
+
+U3 .> U4 : <<precedes>>
+U7 .> U6 : <<extends>>
+@enduml

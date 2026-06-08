@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Báo cáo tiến độ — Smart Supply Chain Management</title>
+<style>
+  :root{
+    --bg:#0f172a; --bg2:#1e293b; --card:#ffffff; --ink:#0f172a; --muted:#64748b;
+    --line:#e2e8f0; --brand:#2563eb; --brand2:#0ea5e9;
+    --done:#16a34a; --done-bg:#dcfce7; --prog:#d97706; --prog-bg:#fef3c7;
+    --next:#7c3aed; --next-bg:#ede9fe; --soft:#f8fafc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       color:var(--ink);background:var(--soft);line-height:1.6}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+  header.hero{background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 55%,#0ea5e9 100%);color:#fff;padding:54px 0 60px}
+  .hero .wrap{display:flex;flex-direction:column;gap:14px}
+  .eyebrow{letter-spacing:.18em;text-transform:uppercase;font-size:12px;font-weight:700;color:#93c5fd}
+  h1{margin:0;font-size:34px;line-height:1.2;font-weight:800}
+  .sub{font-size:17px;color:#dbeafe;max-width:740px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+  .pill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
+
+  section{padding:40px 0}
+  h2{font-size:22px;font-weight:800;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+  .lead{color:var(--muted);margin:0 0 22px}
+
+  /* progress bar */
+  .overall{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+  .bar{height:18px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin:14px 0 6px}
+  .bar > i{display:block;height:100%;width:78%;background:linear-gradient(90deg,#16a34a,#0ea5e9);border-radius:999px}
+  .bar-label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-weight:600}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:22px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center}
+  .stat b{display:block;font-size:30px;font-weight:800;color:var(--brand)}
+  .stat span{font-size:13px;color:var(--muted);font-weight:600}
+
+  /* module grid */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .mod{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .mod h3{margin:0 0 4px;font-size:16px;display:flex;align-items:center;gap:8px}
+  .mod p{margin:0 0 12px;font-size:13.5px;color:var(--muted)}
+  .mod ul{margin:0;padding-left:18px;font-size:13.5px}
+  .mod li{margin:3px 0}
+  .tag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .t-done{background:var(--done-bg);color:var(--done)}
+  .t-prog{background:var(--prog-bg);color:var(--prog)}
+  .t-next{background:var(--next-bg);color:var(--next)}
+  .modhead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+
+  /* timeline */
+  .timeline{position:relative;margin-top:8px;padding-left:28px}
+  .timeline::before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:var(--line)}
+  .tl{position:relative;margin-bottom:22px}
+  .tl::before{content:"";position:absolute;left:-24px;top:4px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--brand)}
+  .tl.done::before{border-color:var(--done);background:var(--done)}
+  .tl.now::before{border-color:var(--prog);background:var(--prog)}
+  .tl.future::before{border-color:var(--next);background:#fff}
+  .tl h4{margin:0;font-size:15px}
+  .tl small{color:var(--muted);font-weight:600;font-size:12px}
+  .tl p{margin:4px 0 0;font-size:13.5px;color:#475569}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f1f5f9;font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:#475569}
+  tr:last-child td{border-bottom:none}
+  td.now{color:var(--prog);font-weight:600}
+  td.future{color:var(--next);font-weight:600}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-bottom:18px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:11px;height:11px;border-radius:50%}
+
+  footer{background:var(--bg);color:#94a3b8;text-align:center;padding:26px 0;font-size:13px}
+  footer b{color:#e2e8f0}
+
+  @media(max-width:760px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .grid{grid-template-columns:1fr}
+    h1{font-size:26px}
+  }
+  @media print{
+    body{background:#fff}
+    header.hero{background:#1e3a8a !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .mod,.stat,.overall,table{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Đồ án tốt nghiệp · Báo cáo tiến độ</div>
+    <h1>Hệ thống Quản lý Chuỗi cung ứng Thông minh</h1>
+    <p class="sub">Số hóa thông suốt quy trình <b>Mua hàng → Nhập kho → Bán hàng → Xuất kho → Giao hàng → Báo cáo</b>, có phân quyền theo vai trò và quản lý lô/hạn sử dụng (FEFO).</p>
+    <div class="meta">
+      <span class="pill">👩‍💻 Dương Phương Thảo</span>
+      <span class="pill">📅 Cập nhật: 31/05/2026</span>
+      <span class="pill">⚙️ Spring Boot · React · PostgreSQL</span>
+    </div>
+  </div>
+</header>
+
+<!-- TỔNG QUAN -->
+<section>
+  <div class="wrap">
+    <h2>📊 Tổng quan tiến độ</h2>
+    <p class="lead">Phần lõi của hệ thống (6 phân hệ vận hành end-to-end) đã hoàn thiện và demo được. Phần còn lại tập trung vào kế toán tổng hợp và các tính năng “thông minh” nâng cao.</p>
+
+    <div class="overall">
+      <div class="bar-label"><span>Tiến độ tổng thể</span><span>~78%</span></div>
+      <div class="bar"><i></i></div>
+      <div class="bar-label" style="margin-top:8px">
+        <span>✅ Lõi nghiệp vụ &amp; bảo mật hoàn tất</span>
+        <span>🔜 Kế toán nâng cao &amp; AI đang phía trước</span>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b>6</b><span>Phân hệ end-to-end</span></div>
+      <div class="stat"><b>9</b><span>Vai trò phân quyền (RBAC)</span></div>
+      <div class="stat"><b>V7</b><span>Migration Flyway</span></div>
+      <div class="stat"><b>FEFO</b><span>Xuất kho theo lô cận hạn</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- TÌNH TRẠNG PHÂN HỆ -->
+<section style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <h2>🧩 Tình trạng theo phân hệ</h2>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--done)"></i> Hoàn thành</span>
+      <span><i class="dot" style="background:var(--prog)"></i> Đang hoàn thiện</span>
+      <span><i class="dot" style="background:var(--next)"></i> Sắp làm</span>
+    </div>
+
+    <div class="grid">
+      <div class="mod">
+        <div class="modhead"><h3>🗂️ Danh mục &amp; Quản trị</h3><span class="tag t-done">Hoàn thành</span></div>
+        <p>Nền tảng dữ liệu master cho toàn hệ thống.</p>
+        <ul>
+          <li>Sản phẩm, Khách hàng, Nhà cung cấp, Kho</li>
+          <li>Quản lý người dùng &amp; phân quyền (admin)</li>
+          <li>Đăng nhập JWT + BCrypt</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="modhead"><h3>🛒 Mua hàng</h3><span class="tag t-done">Hoàn thành</span></div>
+        <p>Đặt mua → Duyệt → Nhập kho theo lô.</p>
+        <ul>
+          <li>Tạo &amp; duyệt Đơn mua (PO)</li>
+          <li>Phiếu nhập kho (Goods Receipt), nhập một phần</li>
+          <li>Ghi nhận lô + hạn sử dụng + giá vốn</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="modhead"><h3>📦 Kho vận &amp; FEFO</h3><span class="tag t-done">Hoàn thành</span></div>
+        <p>Điểm khác biệt “thông minh” của hệ thống.</p>
+        <ul>
+          <li>Tồn kho real-time, nhật ký biến động</li>
+          <li>Quản lý lô (<code>inventory_lot</code>) + index FEFO</li>
+          <li>Optimistic locking chống sai tồn khi đồng thời</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="modhead"><h3>💰 Bán hàng</h3><span class="tag t-done">Hoàn thành</span></div>
+        <p>Đặt bán → Duyệt (chốt chặn tồn) → Xuất kho FEFO → Hóa đơn.</p>
+        <ul>
+          <li>Kiểm tra tồn khả dụng (ATP), chống bán âm kho</li>
+          <li>Reserve khi duyệt, trừ tồn khi xuất theo FEFO</li>
+          <li>Hóa đơn bán hàng + thuế GTGT đầu ra</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="modhead"><h3>🚚 Giao hàng</h3><span class="tag t-done">Hoàn thành</span></div>
+        <p>Lập đợt → Gom vận đơn → Chia chuyến → Shipper xác nhận.</p>
+        <ul>
+          <li>Vận đơn sinh tự động từ phiếu xuất đã xác nhận</li>
+          <li>Tự động chia chuyến cho shipper (round-robin)</li>
+          <li>Shipper xác nhận từng điểm, tiến độ real-time</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="modhead"><h3>📈 Báo cáo &amp; Dashboard</h3><span class="tag t-done">Hoàn thành</span></div>
+        <p>Số liệu tính trực tiếp từ DB, phản ánh tức thời.</p>
+        <ul>
+          <li>Tổng quan: doanh thu, đơn, tồn kho, công nợ</li>
+          <li>Nhập–Xuất–Tồn theo kỳ</li>
+          <li>Công nợ khách hàng &amp; hóa đơn quá hạn</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="modhead"><h3>🧾 Kế toán phải thu (AR)</h3><span class="tag t-prog">Đang hoàn thiện</span></div>
+        <p>Trục công nợ gắn trực tiếp với bán hàng.</p>
+        <ul>
+          <li>Thu tiền nhiều lần, trạng thái thanh toán tự chuyển</li>
+          <li>Scheduler gắn cờ hóa đơn quá hạn (01:00 mỗi ngày)</li>
+          <li>Giá vốn theo lô — nền cho bút toán giá vốn</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="modhead"><h3>🧠 Tính năng AI / Nâng cao</h3><span class="tag t-next">Sắp làm</span></div>
+        <p>Đưa chữ “thông minh” lên tầm cao hơn.</p>
+        <ul>
+          <li>Dự báo nhu cầu &amp; gợi ý đặt hàng tự động</li>
+          <li>Tối ưu định tuyến giao hàng (VRP)</li>
+          <li>App mobile cho shipper (offline-sync)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LỘ TRÌNH -->
+<section>
+  <div class="wrap">
+    <h2>🗺️ Lộ trình &amp; chặng đường tiếp theo</h2>
+    <p class="lead">Tóm tắt những gì đã làm và những việc sắp triển khai theo thứ tự ưu tiên.</p>
+
+    <div class="timeline">
+      <div class="tl done">
+        <small>ĐÃ XONG</small>
+        <h4>Nền tảng &amp; phân hệ Mua hàng – Kho – Bán hàng</h4>
+        <p>Kiến trúc phân lớp, RBAC 9 vai trò, quản lý lô &amp; FEFO, kiểm soát tồn kho an toàn (optimistic locking, ràng buộc không âm kho).</p>
+      </div>
+      <div class="tl done">
+        <small>ĐÃ XONG</small>
+        <h4>Phân hệ Giao hàng &amp; Dashboard báo cáo</h4>
+        <p>Đợt giao → vận đơn → chia chuyến → shipper xác nhận từng điểm. Dashboard 3 tab số liệu real-time. Sửa migration V7 (khóa ngoại delivery_order) &amp; chuyển ddl-auto=validate.</p>
+      </div>
+      <div class="tl now">
+        <small>ĐANG LÀM</small>
+        <h4>Hoàn thiện &amp; ổn định trước báo cáo</h4>
+        <p>Rà soát luồng end-to-end, làm mượt UI, chuẩn hóa dữ liệu seed cho demo, kiểm thử thủ công đối chiếu số liệu Dashboard với phiếu nhập/xuất.</p>
+      </div>
+      <div class="tl future">
+        <small>SẮP LÀM · ƯU TIÊN 1</small>
+        <h4>Mở rộng kế toán: phải trả (AP) &amp; bút toán giá vốn</h4>
+        <p>Thêm <code>PurchaseInvoice</code> + theo dõi nợ nhà cung cấp; hạch toán giá vốn (COGS) theo lô FEFO đã trừ.</p>
+      </div>
+      <div class="tl future">
+        <small>SẮP LÀM · ƯU TIÊN 2</small>
+        <h4>Sổ cái &amp; báo cáo tài chính</h4>
+        <p>Hệ thống tài khoản, bút toán kép tự sinh, bảng <code>Payment</code> độc lập &amp; đối soát; P&amp;L, Cân đối kế toán, Lưu chuyển tiền tệ.</p>
+      </div>
+      <div class="tl future">
+        <small>HƯỚNG PHÁT TRIỂN</small>
+        <h4>Tính năng “thông minh” nâng cao</h4>
+        <p>Dự báo nhu cầu &amp; gợi ý đặt hàng (AI), tối ưu tuyến giao hàng cho shipper, app mobile có offline-sync.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BẢNG VIỆC SẮP TỚI -->
+<section style="background:#fff;border-top:1px solid var(--line)">
+  <div class="wrap">
+    <h2>✅ Bảng việc sắp tới</h2>
+    <p class="lead">Chi tiết hiện trạng và việc cần làm cho phần kế toán – tài chính.</p>
+    <table>
+      <thead>
+        <tr><th>Hạng mục</th><th>Hiện trạng</th><th>Việc sắp làm</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Công nợ phải trả (AP)</b></td>
+          <td>Mới có phía bán (AR)</td>
+          <td class="future">Thêm hóa đơn mua &amp; thanh toán NCC, đối xứng phía bán</td>
+        </tr>
+        <tr>
+          <td><b>Bút toán kép &amp; Sổ cái</b></td>
+          <td>Chưa có chart of accounts</td>
+          <td class="future">Mỗi nghiệp vụ tự sinh cặp Nợ/Có vào sổ cái</td>
+        </tr>
+        <tr>
+          <td><b>Bút toán giá vốn (COGS)</b></td>
+          <td>Đã có dữ liệu <code>unit_cost</code> theo lô</td>
+          <td class="future">Khi xuất bán tự ghi Nợ Giá vốn / Có Hàng tồn kho</td>
+        </tr>
+        <tr>
+          <td><b>Giao dịch thanh toán</b></td>
+          <td>Mới lưu <code>paid_amount</code></td>
+          <td class="future">Bảng <code>Payment</code> riêng + đối soát ngân hàng</td>
+        </tr>
+        <tr>
+          <td><b>Thuế</b></td>
+          <td>Mới có thuế đầu ra trên hóa đơn</td>
+          <td class="future">Quản lý GTGT đầu vào/đầu ra, kết xuất tờ khai</td>
+        </tr>
+        <tr>
+          <td><b>Báo cáo tài chính</b></td>
+          <td>Mới có báo cáo công nợ &amp; tồn kho</td>
+          <td class="future">P&amp;L, Cân đối kế toán, Lưu chuyển tiền tệ tự động</td>
+        </tr>
+        <tr>
+          <td><b>Định tuyến giao hàng</b></td>
+          <td>Chia chuyến round-robin</td>
+          <td class="future">Tối ưu quãng đường (VRP)</td>
+        </tr>
+        <tr>
+          <td><b>Dự báo &amp; mobile</b></td>
+          <td>Chưa có</td>
+          <td class="future">AI dự báo nhu cầu · app shipper offline-sync</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <b>Smart Supply Chain Management</b> — Đồ án tốt nghiệp · Dương Phương Thảo<br>
+    Spring Boot · React + Vite + Ant Design · PostgreSQL (Flyway V1→V7) · JWT &amp; RBAC
+  </div>
+</footer>
+
+</body>
+</html>

@@ -136,8 +136,8 @@ public class GoodsReceipt {
      */
     public void recalculateTotal() {
         this.totalAmount = items.stream()
-            .map(GoodsReceiptItem::getTotalAmount)
-            .filter(amount -> amount != null)
+            .filter(item -> item.getUnitPrice() != null && item.getAcceptedQuantity() != null)
+            .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getAcceptedQuantity())))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

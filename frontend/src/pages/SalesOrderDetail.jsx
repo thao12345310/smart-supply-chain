@@ -159,6 +159,11 @@ export default function SalesOrderDetail() {
     return <div style={containerStyle}>Không tìm thấy đơn hàng</div>;
   }
 
+  // order.totalAmount đã bao gồm thuế (= chưa thuế + VAT), nên tách lại để hiển thị
+  const taxAmount = order.taxAmount || 0;
+  const subtotalBeforeTax = (order.totalAmount || 0) - taxAmount;
+  const vatPercent = subtotalBeforeTax > 0 ? Math.round((taxAmount / subtotalBeforeTax) * 100) : 0;
+
   return (
     <div style={containerStyle}>
       {/* Header */}
@@ -317,16 +322,22 @@ export default function SalesOrderDetail() {
                   {formatCurrency(item.unitPrice)}
                 </td>
                 <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '600' }}>
-                  {formatCurrency(item.totalAmount)}
+                  {formatCurrency(item.amountBeforeTax)}
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan="5" style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>Tạm tính:</td>
-              <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>{formatCurrency(order.totalAmount)}</td>
+              <td colSpan="5" style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>Tạm tính (chưa thuế):</td>
+              <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>{formatCurrency(subtotalBeforeTax)}</td>
             </tr>
+            {taxAmount > 0 && (
+              <tr>
+                <td colSpan="5" style={{ padding: '12px', textAlign: 'right' }}>Thuế VAT ({vatPercent}%):</td>
+                <td style={{ padding: '12px', textAlign: 'right' }}>{formatCurrency(taxAmount)}</td>
+              </tr>
+            )}
             {order.discountAmount > 0 && (
               <tr>
                 <td colSpan="5" style={{ padding: '12px', textAlign: 'right' }}>Chiết khấu:</td>
@@ -369,7 +380,7 @@ export default function SalesOrderDetail() {
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>Ngày xuất</th>
                   <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>Trạng thái</th>
                   <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>Số lượng</th>
-                  <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #e5e7eb' }}>Giá trị</th>
+                  <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #e5e7eb' }}>Giá trị (sau thuế)</th>
                   <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>Thao tác</th>
                 </tr>
               </thead>
@@ -396,7 +407,7 @@ export default function SalesOrderDetail() {
                       {gi.totalIssuedQuantity || 0}
                     </td>
                     <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right' }}>
-                      {formatCurrency(gi.totalAmount)}
+                      {formatCurrency((gi.totalAmount || 0) * (1 + vatPercent / 100))}
                     </td>
                     <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
                       <button

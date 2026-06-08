@@ -1,0 +1,24 @@
+@startuml class_delivery
+' Class diagram (names + relationships) - delivery flow - template section 4.1.3
+skinparam classAttributeIconSize 0
+hide members
+
+class DeliveryPlan
+class DeliveryOrder
+class DeliveryTripRoute
+class DeliveryTripRouteItem
+class SalesOrder
+class GoodsIssue
+class DeliveryAddress
+class User
+class Role
+
+DeliveryPlan "1" *-- "*" DeliveryOrder
+DeliveryOrder --> SalesOrder
+DeliveryPlan "1" --> "*" DeliveryTripRoute
+DeliveryTripRoute --> User : shipper
+DeliveryTripRoute "1" *-- "*" DeliveryTripRouteItem
+DeliveryTripRouteItem --> GoodsIssue
+DeliveryTripRouteItem --> DeliveryAddress
+User "*" --> "*" Role
+@enduml

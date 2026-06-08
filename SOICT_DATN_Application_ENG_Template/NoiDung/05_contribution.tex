@@ -1,0 +1,41 @@
+% ===================== CHAPTER 5 — SOLUTION AND CONTRIBUTION =====================
+% Length: >= 5 pages. THE chapter graders weight most. Present each contribution in a
+% section with: (i) problem, (ii) solution, (iii) results. Do NOT repeat earlier detail
+% verbatim — earlier chapters should cross-reference here.
+This chapter presents the principal contributions of the thesis. Each contribution
+is described through the problem it addresses, the proposed solution, and the
+results achieved.
+
+\section{FEFO Lot-Allocation Mechanism}
+% (i) Problem: perishable goods must leave by earliest expiry to reduce waste, while
+%     keeping a per-lot audit trail. A plain quantity-only stock model cannot do this.
+% (ii) Solution: an InventoryLot model + a FEFO query (ORDER BY expiryDate ASC NULLS
+%     LAST) that greedily consumes the earliest-expiring lots on goods issue, recording
+%     the batch/expiry on each issue line. (Reference: GoodsIssueServiceImpl.)
+% (iii) Results: oldest stock exits first; full traceability; expiry alerts.
+\thesisfig{flowchart_fefo}{FEFO allocation algorithm}{fig:fefo}
+[TODO] Present the problem, the FEFO algorithm, and the results.
+
+% You may also typeset the algorithm with algorithm2e, e.g.:
+% \begin{algorithm}[H]\caption{FEFO allocation}\dots\end{algorithm}
+
+\section{Inventory Reservation on Order Approval}
+% (i) Problem: overselling between approval and shipment.
+% (ii) Solution: reserve stock at SO approval (quantityReserved up, quantityAvailable
+%      down); deduct only at goods-issue confirmation; release on cancel.
+% (iii) Results: no oversell; clear available-vs-reserved visibility.
+[TODO] Present the reservation design and its effect.
+
+\section{Failed-Delivery Recovery}
+% (i) Problem: a failed delivery must cleanly reverse stock, invoice and order state.
+% (ii) Solution: restockFromFailedDelivery() restores inventory + lots, cancels the
+%      invoice (warns if already paid), resets delivered qty, reverts SO status.
+% (iii) Results: consistent, idempotent recovery.
+[TODO] Present the recovery mechanism.
+
+\section{Role-Based Workflow Enforcement}
+% (i) Problem: separation of duties (creator != approver) across 9 roles.
+% (ii) Solution: RBAC at endpoint + method + data level (e.g. shippers see only their
+%      own trips via isAssignedTo()).
+% (iii) Results: enforced approval chains and least-privilege access.
+[TODO] Present the RBAC design; optionally include a permission matrix table.

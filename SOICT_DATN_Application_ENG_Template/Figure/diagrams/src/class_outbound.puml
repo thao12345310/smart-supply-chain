@@ -1,0 +1,30 @@
+@startuml class_outbound
+' Class diagram (names + relationships) - outbound flow - template section 4.1.3
+skinparam classAttributeIconSize 0
+hide members
+
+class Customer
+class DeliveryAddress
+class SalesOrder
+class SalesOrderItem
+class GoodsIssue
+class GoodsIssueItem
+class SalesInvoice
+class SalesInvoiceItem
+class Product
+class Inventory
+class InventoryLot
+
+Customer "1" *-- "*" DeliveryAddress
+Customer "1" --> "*" SalesOrder
+SalesOrder --> DeliveryAddress
+SalesOrder "1" *-- "*" SalesOrderItem
+SalesOrderItem --> Product
+SalesOrder "1" --> "*" GoodsIssue
+GoodsIssue "1" *-- "*" GoodsIssueItem
+GoodsIssueItem --> SalesOrderItem
+GoodsIssue "1" --> "1" SalesInvoice
+SalesInvoice "1" *-- "*" SalesInvoiceItem
+GoodsIssue ..> InventoryLot : FEFO allocate
+GoodsIssue ..> Inventory : decrease
+@enduml

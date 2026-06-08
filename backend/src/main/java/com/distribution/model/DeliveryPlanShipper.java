@@ -18,6 +18,7 @@ public class DeliveryPlanShipper {
 
     private String shipperName;
     private String phone;
+    private Long shipperUserId; // định danh tài khoản shipper (nguồn dùng chung cho cả tạo chuyến tự động & thủ công)
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

@@ -93,6 +93,14 @@ public class GlobalExceptionHandler {
             .body(ApiResponse.error(ex.getMessage(), "INVALID_ARGUMENT"));
     }
     
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException ex) {
+        logger.warn("Invalid state: {}", ex.getMessage());
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ApiResponse.error(ex.getMessage(), "INVALID_STATE"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         logger.error("Unexpected error: ", ex);

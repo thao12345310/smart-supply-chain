@@ -2,6 +2,7 @@ package com.distribution.service.impl;
 
 import com.distribution.dto.GoodsIssueDTO;
 import com.distribution.dto.GoodsIssueItemDTO;
+import com.distribution.dto.InventoryDTO;
 import com.distribution.dto.SalesInvoiceDTO;
 import com.distribution.exception.BusinessException;
 import com.distribution.exception.ResourceNotFoundException;
@@ -16,6 +17,7 @@ import com.distribution.service.SalesOrderService;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -168,7 +170,7 @@ public class GoodsIssueServiceImpl implements GoodsIssueService {
     @Override
     @Transactional(readOnly = true)
     public List<GoodsIssueDTO> getAll() {
-        return goodsIssueRepository.findAll().stream()
+        return goodsIssueRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
             .map(this::mapToDTO)
             .collect(Collectors.toList());
     }
@@ -243,12 +245,15 @@ public class GoodsIssueServiceImpl implements GoodsIssueService {
         
         // Validate inventory and issue each item
         for (GoodsIssueItem item : goodsIssue.getItems()) {
-            // Check available inventory
+            // Check physical inventory on hand.
+            // Lưu ý: KHÔNG dùng available (= onHand - reserved) vì hàng đã được giữ chỗ (reserve)
+            // cho chính đơn bán này lúc duyệt đơn; dùng available sẽ trừ trùng và báo thiếu sai.
             if (warehouseId != null) {
-                Integer available = inventoryService.getAvailableQuantity(item.getProduct().getId(), warehouseId);
-                if (available < item.getIssuedQuantity()) {
+                InventoryDTO inv = inventoryService.getByProductAndWarehouse(item.getProduct().getId(), warehouseId);
+                int onHand = (inv != null && inv.getQuantityOnHand() != null) ? inv.getQuantityOnHand() : 0;
+                if (onHand < item.getIssuedQuantity()) {
                     throw new BusinessException("Insufficient inventory for product: " + item.getProduct().getName() +
-                        ". Available: " + available + ", Requested: " + item.getIssuedQuantity());
+                        ". Available: " + onHand + ", Requested: " + item.getIssuedQuantity());
                 }
             }
             
@@ -365,6 +370,152 @@ public class GoodsIssueServiceImpl implements GoodsIssueService {
         return mapToDTO(goodsIssue);
     }
 
+    @Override
+    public void restockFromFailedDelivery(String goodsIssueCode) {
+        GoodsIssue gi = goodsIssueRepository.findByCode(goodsIssueCode).orElse(null);
+        if (gi == null) {
+            log.warn("Hoàn hàng giao thất bại: không tìm thấy phiếu xuất {}", goodsIssueCode);
+            return;
+        }
+        Long warehouseId = gi.getWarehouse() != null ? gi.getWarehouse().getId() : null;
+        for (GoodsIssueItem item : gi.getItems()) {
+            int qty = item.getIssuedQuantity() != null ? item.getIssuedQuantity() : 0;
+            if (qty <= 0) continue;
+
+            if (warehouseId != null) {
+                // Hoàn tồn on-hand (unitCost = null để không làm lệch giá vốn bình quân)
+                inventoryService.addStock(item.getProduct().getId(), warehouseId, qty, null,
+                    "DELIVERY_FAILED", gi.getId(), gi.getCode(), gi.getConfirmedBy());
+                // Hoàn vào lô FEFO nếu sản phẩm quản lý theo lô
+                restockLot(item, warehouseId, BigDecimal.valueOf(qty));
+            }
+
+            // Trả lại số lượng đã giao của đơn bán
+            SalesOrderItem soItem = item.getSalesOrderItem();
+            if (soItem != null) {
+                int current = soItem.getDeliveredQuantity() != null ? soItem.getDeliveredQuantity() : 0;
+                soItem.setDeliveredQuantity(Math.max(0, current - qty));
+                salesOrderItemRepository.save(soItem);
+            }
+        }
+
+        // Hủy hóa đơn gắn với phiếu xuất (1 GI = 1 hóa đơn) vì hàng không giao được.
+        cancelInvoiceForFailedDelivery(gi);
+
+        if (gi.getSalesOrder() != null) {
+            salesOrderService.updateDeliveryStatus(gi.getSalesOrder().getId());
+        }
+        log.info("Đã hoàn hàng về kho cho phiếu xuất {} (giao thất bại)", gi.getCode());
+    }
+
+    /**
+     * Hủy hóa đơn của phiếu xuất khi giao thất bại — chỉ khi hóa đơn chưa phát sinh thanh toán
+     * và đang ở trạng thái hủy được (DRAFT/ISSUED). Nếu đã thu tiền thì KHÔNG tự hủy,
+     * chỉ ghi cảnh báo để bộ phận kế toán xử lý hoàn tiền/điều chỉnh thủ công.
+     */
+    private void cancelInvoiceForFailedDelivery(GoodsIssue gi) {
+        salesInvoiceRepository.findByGoodsIssueId(gi.getId()).ifPresent(inv -> {
+            if (inv.getStatus() == SalesInvoiceStatus.CANCELLED) return;
+            boolean hasPayment = inv.getPaidAmount() != null
+                && inv.getPaidAmount().compareTo(BigDecimal.ZERO) > 0;
+            if (!inv.getStatus().canCancel() || hasPayment) {
+                log.warn("Giao thất bại GI {}: hóa đơn {} đang ở trạng thái {} (đã thu {}) — "
+                        + "KHÔNG tự hủy, cần xử lý hoàn tiền/điều chỉnh thủ công",
+                    gi.getCode(), inv.getCode(), inv.getStatus(), inv.getPaidAmount());
+                return;
+            }
+            inv.setStatus(SalesInvoiceStatus.CANCELLED);
+            inv.setNotes(appendNote(inv.getNotes(), "Hủy do vận đơn giao thất bại"));
+            salesInvoiceRepository.save(inv);
+            log.info("Đã hủy hóa đơn {} do giao thất bại GI {}", inv.getCode(), gi.getCode());
+        });
+    }
+
+    private String appendNote(String existing, String note) {
+        if (existing == null || existing.isBlank()) return note;
+        return existing + " | " + note;
+    }
+
+    @Override
+    public void reissueAfterCorrection(String goodsIssueCode) {
+        GoodsIssue gi = goodsIssueRepository.findByCode(goodsIssueCode).orElse(null);
+        if (gi == null) {
+            log.warn("Ghi nhận lại giao thành công: không tìm thấy phiếu xuất {}", goodsIssueCode);
+            return;
+        }
+        Long warehouseId = gi.getWarehouse() != null ? gi.getWarehouse().getId() : null;
+        for (GoodsIssueItem item : gi.getItems()) {
+            int qty = item.getIssuedQuantity() != null ? item.getIssuedQuantity() : 0;
+            if (qty <= 0) continue;
+
+            if (warehouseId != null) {
+                // Trừ lại theo FEFO (nếu có lô)
+                List<InventoryLot> lots = inventoryLotRepository.findAvailableLotsFEFO(
+                    item.getProduct().getId(), warehouseId);
+                if (!lots.isEmpty()) {
+                    BigDecimal totalAvailable = lots.stream()
+                        .map(InventoryLot::getQuantityRemaining)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    if (totalAvailable.compareTo(BigDecimal.valueOf(qty)) < 0) {
+                        throw new BusinessException("Không đủ tồn để ghi nhận lại giao thành công cho "
+                            + item.getProduct().getName() + ". Cần: " + qty + ", Còn: " + totalAvailable);
+                    }
+                    BigDecimal still = BigDecimal.valueOf(qty);
+                    for (InventoryLot lot : lots) {
+                        if (still.compareTo(BigDecimal.ZERO) <= 0) break;
+                        BigDecimal take = still.min(lot.getQuantityRemaining());
+                        lot.setQuantityRemaining(lot.getQuantityRemaining().subtract(take));
+                        inventoryLotRepository.save(lot);
+                        still = still.subtract(take);
+                    }
+                }
+                inventoryService.decreaseInventory(item.getProduct().getId(), warehouseId, qty,
+                    "DELIVERY_REDELIVERED", gi.getId(), gi.getCode());
+            }
+
+            SalesOrderItem soItem = item.getSalesOrderItem();
+            if (soItem != null) {
+                soItem.addDeliveredQuantity(qty);
+                salesOrderItemRepository.save(soItem);
+            }
+        }
+
+        // Khôi phục hóa đơn đã bị hủy lúc giao thất bại về DRAFT để có thể phát hành lại.
+        salesInvoiceRepository.findByGoodsIssueId(gi.getId()).ifPresent(inv -> {
+            if (inv.getStatus() == SalesInvoiceStatus.CANCELLED) {
+                inv.setStatus(SalesInvoiceStatus.DRAFT);
+                inv.setNotes(appendNote(inv.getNotes(), "Khôi phục do giao lại thành công"));
+                salesInvoiceRepository.save(inv);
+                log.info("Đã khôi phục hóa đơn {} về DRAFT do giao lại thành công GI {}",
+                    inv.getCode(), gi.getCode());
+            }
+        });
+
+        if (gi.getSalesOrder() != null) {
+            salesOrderService.updateDeliveryStatus(gi.getSalesOrder().getId());
+        }
+        log.info("Đã trừ kho lại cho phiếu xuất {} (sửa giao thất bại -> thành công)", gi.getCode());
+    }
+
+    /**
+     * Hoàn số lượng vào một lô tồn kho. Ưu tiên lô đúng số lô đã ghi trên dòng phiếu xuất,
+     * nếu không có thì cộng vào lô FEFO sớm nhất. Bỏ qua nếu sản phẩm không quản lý theo lô.
+     */
+    private void restockLot(GoodsIssueItem item, Long warehouseId, BigDecimal qty) {
+        List<InventoryLot> lots = inventoryLotRepository.findByProductAndWarehouse(
+            item.getProduct().getId(), warehouseId);
+        if (lots.isEmpty()) return;
+        InventoryLot target = null;
+        if (item.getBatchNumber() != null) {
+            target = lots.stream()
+                .filter(l -> item.getBatchNumber().equals(l.getLotNumber()))
+                .findFirst().orElse(null);
+        }
+        if (target == null) target = lots.get(0); // lô FEFO sớm nhất
+        target.setQuantityRemaining(target.getQuantityRemaining().add(qty));
+        inventoryLotRepository.save(target);
+    }
+
     // Helper methods
 
     private GoodsIssueItem createItem(GoodsIssueItemDTO dto, SalesOrder salesOrder) {
@@ -379,12 +530,20 @@ public class GoodsIssueServiceImpl implements GoodsIssueService {
                 ") exceeds remaining quantity (" + remainingToDeliver + ") for product: " + soItem.getProduct().getName());
         }
         
+        // Tính sẵn totalAmount để parent.recalculateTotal() có giá trị thực để cộng.
+        // Nếu để null (chỉ tính trong @PrePersist của item lúc flush), tổng phiếu xuất sẽ = 0.
+        BigDecimal lineTotal = BigDecimal.ZERO;
+        if (soItem.getUnitPrice() != null && dto.getIssuedQuantity() != null) {
+            lineTotal = soItem.getUnitPrice().multiply(BigDecimal.valueOf(dto.getIssuedQuantity()));
+        }
+
         return GoodsIssueItem.builder()
             .salesOrderItem(soItem)
             .product(soItem.getProduct())
             .orderedQuantity(soItem.getQuantity())
             .issuedQuantity(dto.getIssuedQuantity())
             .unitPrice(soItem.getUnitPrice())
+            .totalAmount(lineTotal)
             .unit(soItem.getUnit())
             .batchNumber(dto.getBatchNumber())
             .expiryDate(dto.getExpiryDate())
@@ -477,8 +636,18 @@ public class GoodsIssueServiceImpl implements GoodsIssueService {
             dto.setItems(goodsIssue.getItems().stream()
                 .map(this::mapItemToDTO)
                 .collect(Collectors.toList()));
+
+            // Fallback: nếu totalAmount lưu trong DB = 0/null (record cũ bị lỗi tính tổng)
+            // thì tính lại từ các dòng để hiển thị đúng "Tổng cộng".
+            if (dto.getTotalAmount() == null || dto.getTotalAmount().compareTo(BigDecimal.ZERO) == 0) {
+                BigDecimal recomputed = dto.getItems().stream()
+                    .map(GoodsIssueItemDTO::getTotalAmount)
+                    .filter(amount -> amount != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                dto.setTotalAmount(recomputed);
+            }
         }
-        
+
         dto.computeFields();
         return dto;
     }

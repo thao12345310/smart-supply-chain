@@ -104,6 +104,7 @@ com/distribution/dto/InventoryLotResponse.class
 com/distribution/dto/GoodsIssueItemDTO$GoodsIssueItemDTOBuilder.class
 com/distribution/model/Invoice$InvoiceBuilder.class
 com/distribution/model/InventoryLot.class
+com/distribution/scheduler/OverdueInvoiceScheduler.class
 com/distribution/dto/DashboardDTO$TopProductDTO.class
 com/distribution/model/Inventory$InventoryBuilder.class
 com/distribution/dto/AuthResponse$AuthResponseBuilder.class

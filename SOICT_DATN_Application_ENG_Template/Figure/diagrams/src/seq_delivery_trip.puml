@@ -1,0 +1,27 @@
+@startuml seq_delivery_trip
+' Sequence: Assign and execute delivery trip - template section 4.2.2
+actor "Delivery Admin" as DA
+actor "Shipper"        as SH
+participant "DeliveryTripController" as TC
+participant "DeliveryTripServiceImpl" as TS
+database "PostgreSQL" as DB
+
+DA -> TC : POST /delivery-trips (assign shipper)
+TC -> TS : createTrip(plan, shipperUserId, items)
+TS -> DB : insert DeliveryTripRoute (CREATED)
+TS --> DA : DeliveryTripRouteDTO
+
+SH -> TC : GET /delivery-trips/assigned
+TC -> TS : getAssignedTrips(currentUser)
+TS -> TS : filter isAssignedTo(userId)
+TS --> SH : own trips only
+
+SH -> TC : PATCH /delivery-trips/{id}/start
+TC -> TS : startTrip(id)
+TS -> DB : status = IN_PROGRESS, startedAt = now
+SH -> TC : PATCH /delivery-trips/{id}/complete
+TC -> TS : completeTrip(id)
+TS -> DB : status = COMPLETED, completedAt = now
+TS -> DB : update DeliveryOrder = Delivered
+TS --> SH : 200 OK
+@enduml

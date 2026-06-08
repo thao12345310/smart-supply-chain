@@ -189,6 +189,10 @@ export const inventoryApi = {
   
   // Get needing reorder
   getNeedingReorder: () => api.get('/inventory/needing-reorder'),
+
+  // Update reorder (low-stock alert) level
+  updateReorderLevel: (id, reorderLevel, reorderQuantity) =>
+    api.patch(`/inventory/${id}/reorder-level`, { reorderLevel, reorderQuantity }),
   
   // Get transactions by product
   getTransactionsByProduct: (productId) => 

@@ -32,6 +32,7 @@
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/controller/UserController.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/security/JwtAuthenticationFilter.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/repository/SalesInvoiceItemRepository.java
+/Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/scheduler/OverdueInvoiceScheduler.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/service/UserService.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/service/PurchaseOrderService.java
 /Users/duongtphuongthao/Documents/DATN/smart-supply-chain/backend/src/main/java/com/distribution/controller/GoodsReceiptController.java

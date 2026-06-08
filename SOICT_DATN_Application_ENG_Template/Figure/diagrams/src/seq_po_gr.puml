@@ -1,0 +1,26 @@
+@startuml seq_po_gr
+' Sequence: Approve PO and confirm Goods Receipt - template section 4.2.2
+actor "Purchase Manager" as PM
+actor "Warehouse Staff"  as WH
+participant "PurchaseOrderController" as PC
+participant "PurchaseOrderService"    as PS
+participant "GoodsReceiptService"     as GS
+participant "InventoryService"        as IS
+database "PostgreSQL" as DB
+
+PM -> PC : POST /purchase-orders/{id}/approve
+PC -> PS : approve(id)
+PS -> DB : update PO status = APPROVED
+PS --> PC : ok
+
+WH -> GS : confirmGoodsReceipt(id)
+GS -> GS : validate accepted quantities
+GS -> IS : addStock(product, qty, cost)
+IS -> IS : recalc weighted average cost
+IS -> DB : update inventory
+GS -> DB : insert InventoryLot (mfg/expiry)
+GS -> DB : insert InventoryTransaction (RECEIPT)
+GS -> PS : refresh PO received qty
+PS -> DB : set PO = COMPLETED if fully received
+GS --> WH : GoodsReceiptDTO
+@enduml

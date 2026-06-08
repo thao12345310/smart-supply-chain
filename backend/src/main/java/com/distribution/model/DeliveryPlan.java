@@ -20,8 +20,14 @@ public class DeliveryPlan {
 
     private String code;
     private LocalDate createdDate;
+    private LocalDate plannedDate; // ngày giao dự kiến
     private String description;
+    private String notes;          // ghi chú thêm
     private String status; // Created, InProgress, Completed
+
+    // Số vận đơn thuộc đợt — không lưu DB, set ở tầng controller để hiển thị danh sách
+    @Transient
+    private Long orderCount;
 
     @JsonIgnore
     @OneToMany(mappedBy = "deliveryPlan", cascade = CascadeType.ALL, orphanRemoval = true)

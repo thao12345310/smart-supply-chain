@@ -95,8 +95,19 @@ public class InventoryController {
                description = "Retrieve inventory items at or below their reorder level")
     public ResponseEntity<ApiResponse<List<InventoryDTO>>> getNeedingReorder() {
         List<InventoryDTO> inventory = inventoryService.getNeedingReorder();
-        return ResponseEntity.ok(ApiResponse.success(inventory, 
+        return ResponseEntity.ok(ApiResponse.success(inventory,
             "Found " + inventory.size() + " items needing reorder"));
+    }
+
+    @PatchMapping("/{id}/reorder-level")
+    @Operation(summary = "Update Reorder Level",
+               description = "Set the reorder (low-stock alert) level for an inventory record")
+    public ResponseEntity<ApiResponse<InventoryDTO>> updateReorderLevel(
+            @Parameter(description = "Inventory ID") @PathVariable Long id,
+            @RequestBody java.util.Map<String, Integer> body) {
+        InventoryDTO updated = inventoryService.updateReorderLevel(
+            id, body.get("reorderLevel"), body.get("reorderQuantity"));
+        return ResponseEntity.ok(ApiResponse.success(updated, "Reorder level updated"));
     }
 
     // ==================== Transaction History ====================

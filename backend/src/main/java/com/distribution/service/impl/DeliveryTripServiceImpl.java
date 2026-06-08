@@ -11,6 +11,7 @@ import com.distribution.model.DeliveryTripRouteItem;
 import com.distribution.model.User;
 import com.distribution.model.DeliveryOrder;
 import com.distribution.model.GoodsIssue;
+import com.distribution.repository.DeliveryOrderRepository;
 import com.distribution.repository.DeliveryPlanOrderRepository;
 import com.distribution.repository.DeliveryPlanRepository;
 import com.distribution.repository.DeliveryTripRouteItemRepository;
@@ -20,8 +21,10 @@ import com.distribution.repository.UserRepository;
 import com.distribution.security.CustomUserDetails;
 import com.distribution.security.SecurityUtils;
 import com.distribution.service.DeliveryTripService;
+import com.distribution.service.GoodsIssueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,11 +50,13 @@ public class DeliveryTripServiceImpl implements DeliveryTripService {
     private final DeliveryPlanOrderRepository deliveryPlanOrderRepository;
     private final DeliveryTripRouteItemRepository tripItemRepository;
     private final GoodsIssueRepository goodsIssueRepository;
+    private final DeliveryOrderRepository deliveryOrderRepository;
+    private final GoodsIssueService goodsIssueService;
 
     @Override
     @Transactional(readOnly = true)
     public List<DeliveryTripRouteDTO> getAllTrips() {
-        return tripRepository.findAll().stream()
+        return tripRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -163,14 +168,24 @@ public class DeliveryTripServiceImpl implements DeliveryTripService {
             throw new IllegalStateException("Đợt giao hàng chưa có nhân viên giao hàng nào để chia chuyến");
         }
 
+        // Chỉ chia những vận đơn chưa được phân vào chuyến nào → không tạo trùng khi bấm lại
+        List<Long> assignedOrderIds = tripItemRepository.findAssignedOrderIdsByPlanId(planId);
+        List<DeliveryOrder> unassigned = planOrders.stream()
+                .map(DeliveryPlanOrder::getDeliveryOrder)
+                .filter(o -> !assignedOrderIds.contains(o.getId()))
+                .collect(Collectors.toList());
+        if (unassigned.isEmpty()) {
+            throw new IllegalStateException("Tất cả vận đơn của đợt đã được phân chuyến");
+        }
+
         // Chia đều vận đơn cho các shipper theo vòng (round-robin)
         List<List<DeliveryOrder>> buckets = new ArrayList<>();
         for (int i = 0; i < shippers.size(); i++) {
             buckets.add(new ArrayList<>());
         }
         int idx = 0;
-        for (DeliveryPlanOrder po : planOrders) {
-            buckets.get(idx % shippers.size()).add(po.getDeliveryOrder());
+        for (DeliveryOrder order : unassigned) {
+            buckets.get(idx % shippers.size()).add(order);
             idx++;
         }
 
@@ -208,6 +223,17 @@ public class DeliveryTripServiceImpl implements DeliveryTripService {
             throw new IllegalStateException("Các vận đơn đã chọn không thuộc đợt giao hàng này");
         }
 
+        // Một vận đơn chỉ được thuộc tối đa một chuyến → chặn nếu đã có trong chuyến khác
+        List<Long> assignedOrderIds = tripItemRepository.findAssignedOrderIdsByPlanId(planId);
+        List<String> alreadyAssigned = orders.stream()
+                .filter(o -> assignedOrderIds.contains(o.getId()))
+                .map(DeliveryOrder::getCode)
+                .collect(Collectors.toList());
+        if (!alreadyAssigned.isEmpty()) {
+            throw new IllegalStateException(
+                    "Các vận đơn sau đã được phân vào chuyến khác: " + String.join(", ", alreadyAssigned));
+        }
+
         DeliveryTripRoute trip = createTrip(plan, shipper, orders);
         plan.setStatus("InProgress");
         deliveryPlanRepository.save(plan);
@@ -232,12 +258,21 @@ public class DeliveryTripServiceImpl implements DeliveryTripService {
         List<User> resolved = new ArrayList<>();
         if (plan.getShippers() != null) {
             for (DeliveryPlanShipper ps : plan.getShippers()) {
-                all.stream()
-                        .filter(u -> (u.getFullName() != null && u.getFullName().equalsIgnoreCase(ps.getShipperName()))
-                                || u.getUsername().equalsIgnoreCase(ps.getShipperName()))
-                        .filter(u -> resolved.stream().noneMatch(r -> r.getId().equals(u.getId())))
-                        .findFirst()
-                        .ifPresent(resolved::add);
+                // Ưu tiên định danh tài khoản; fallback khớp theo tên cho dữ liệu cũ
+                User user = null;
+                if (ps.getShipperUserId() != null) {
+                    user = userRepository.findById(ps.getShipperUserId()).orElse(null);
+                }
+                if (user == null) {
+                    user = all.stream()
+                            .filter(u -> (u.getFullName() != null && u.getFullName().equalsIgnoreCase(ps.getShipperName()))
+                                    || u.getUsername().equalsIgnoreCase(ps.getShipperName()))
+                            .findFirst().orElse(null);
+                }
+                final User fu = user;
+                if (fu != null && resolved.stream().noneMatch(r -> r.getId().equals(fu.getId()))) {
+                    resolved.add(fu);
+                }
             }
         }
         return resolved;
@@ -394,9 +429,15 @@ public class DeliveryTripServiceImpl implements DeliveryTripService {
         if (item.getTripRoute() == null || !item.getTripRoute().getId().equals(tripId)) {
             throw new IllegalStateException("Điểm giao không thuộc chuyến này");
         }
+
+        String previousStatus = item.getStatus();
         item.setStatus(status); // "Delivered" / "Failed"
         tripItemRepository.save(item);
         log.info("Trip {} item {} marked {}", trip.getCode(), itemId, status);
+
+        // Đồng bộ trạng thái vận đơn + bù trừ tồn kho/đơn bán theo kết quả giao.
+        // Toàn bộ method ở trong 1 transaction nên nếu bù trừ lỗi thì thay đổi điểm giao cũng được rollback.
+        syncDeliveryOrderOutcome(item.getDeliveryOrder(), previousStatus, status);
 
         // Khi tất cả điểm đã xử lý (Delivered/Failed) → hoàn thành chuyến
         List<DeliveryTripRouteItem> items = tripItemRepository.findByTripRouteIdOrderBySequenceAsc(tripId);
@@ -410,6 +451,32 @@ public class DeliveryTripServiceImpl implements DeliveryTripService {
         }
 
         return toDTO(tripRepository.findById(tripId).orElse(trip));
+    }
+
+    /**
+     * Cập nhật trạng thái vận đơn theo kết quả điểm giao và bù trừ tồn kho/đơn bán:
+     * - chuyển sang Failed: hoàn hàng về kho (restock) + giảm số lượng đã giao của đơn bán
+     * - sửa từ Failed -> Delivered: trừ kho lại (reissue)
+     * Tồn kho được trừ tại thời điểm xác nhận phiếu xuất, nên giao thành công không đụng tồn.
+     */
+    private void syncDeliveryOrderOutcome(DeliveryOrder order, String previousStatus, String newStatus) {
+        if (order == null) return;
+
+        boolean wasFailed = "Failed".equalsIgnoreCase(previousStatus);
+        boolean nowFailed = "Failed".equalsIgnoreCase(newStatus);
+        boolean nowDelivered = "Delivered".equalsIgnoreCase(newStatus);
+
+        if (nowFailed && !wasFailed) {
+            goodsIssueService.restockFromFailedDelivery(order.getCode());
+            order.setStatus("Failed");
+            deliveryOrderRepository.save(order);
+        } else if (nowDelivered) {
+            if (wasFailed) {
+                goodsIssueService.reissueAfterCorrection(order.getCode());
+            }
+            order.setStatus("Delivered");
+            deliveryOrderRepository.save(order);
+        }
     }
 
     /**

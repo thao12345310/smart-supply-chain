@@ -1,0 +1,53 @@
+@startuml class_detail_key
+' Detailed class design (attributes + methods) - template section 4.2.2
+skinparam classAttributeIconSize 0
+
+class Inventory {
+  - id : Long
+  - quantityOnHand : BigDecimal
+  - quantityReserved : BigDecimal
+  - quantityAvailable : BigDecimal
+  - averageCost : BigDecimal
+  - reorderLevel : BigDecimal
+  - version : Long
+  --
+  + addStock(qty, cost) : void
+  + removeStock(qty) : void
+  + reserveStock(qty) : void
+  + releaseReservedStock(qty) : void
+}
+
+class InventoryLot {
+  - id : Long
+  - lotNumber : String
+  - manufactureDate : LocalDate
+  - expiryDate : LocalDate
+  - quantityReceived : BigDecimal
+  - quantityRemaining : BigDecimal
+  - unitCost : BigDecimal
+}
+
+class SalesOrder {
+  - id : Long
+  - code : String
+  - status : SalesOrderStatus
+  - grandTotal : BigDecimal
+  - paymentStatus : PaymentStatus
+  --
+  + canApprove() : boolean
+  + canCancel() : boolean
+  + recalculateTotals() : void
+}
+
+class GoodsIssueServiceImpl {
+  --
+  + confirmGoodsIssue(id) : GoodsIssueDTO
+  - allocateByFEFO(productId, whId, qty) : void
+  + restockFromFailedDelivery(id) : void
+}
+
+GoodsIssueServiceImpl ..> SalesOrder
+GoodsIssueServiceImpl ..> Inventory
+GoodsIssueServiceImpl ..> InventoryLot
+Inventory "1" -- "*" InventoryLot
+@enduml

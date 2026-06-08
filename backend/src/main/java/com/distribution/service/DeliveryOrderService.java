@@ -4,6 +4,8 @@ import com.distribution.dto.DeliveryOrderDTO;
 import com.distribution.model.DeliveryOrder;
 import com.distribution.model.GoodsIssue;
 import com.distribution.repository.DeliveryOrderRepository;
+import com.distribution.repository.DeliveryPlanOrderRepository;
+import com.distribution.repository.DeliveryTripRouteItemRepository;
 import com.distribution.repository.GoodsIssueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,9 +27,13 @@ public class DeliveryOrderService {
 
     private final DeliveryOrderRepository deliveryOrderRepository;
     private final GoodsIssueRepository goodsIssueRepository;
+    private final DeliveryPlanOrderRepository deliveryPlanOrderRepository;
+    private final DeliveryTripRouteItemRepository tripItemRepository;
 
     /**
-     * All vận đơn available to be added to a delivery plan (derived from confirmed phiếu xuất).
+     * Vận đơn còn khả dụng để thêm vào một đợt giao hàng: sinh từ các phiếu xuất kho
+     * đã xác nhận (hàng đã thực sự ra khỏi kho = "đơn đã bán được") và CHƯA được gom
+     * vào bất kỳ đợt giao nào — tránh việc chọn lại đơn đã giao/đã phân chuyến.
      */
     @Transactional
     public List<DeliveryOrderDTO> listAvailable() {
@@ -38,7 +44,17 @@ public class DeliveryOrderService {
                             .code(gi.getCode())
                             .status("Pending")
                             .destinationAddress(formatAddress(gi))
+                            .salesOrder(gi.getSalesOrder())
                             .build()));
+            // Gán liên kết đơn bán cho các vận đơn được tạo trước khi có liên kết này
+            if (order.getSalesOrder() == null && gi.getSalesOrder() != null) {
+                order.setSalesOrder(gi.getSalesOrder());
+                deliveryOrderRepository.save(order);
+            }
+            // Lọc: bỏ qua vận đơn đã thuộc một đợt giao hàng
+            if (deliveryPlanOrderRepository.existsByDeliveryOrderId(order.getId())) {
+                continue;
+            }
             result.add(toDTO(order, gi));
         }
         return result;
@@ -49,8 +65,13 @@ public class DeliveryOrderService {
      */
     @Transactional
     public List<DeliveryOrderDTO> listByPlan(Long planId) {
+        List<Long> assignedOrderIds = tripItemRepository.findAssignedOrderIdsByPlanId(planId);
         return deliveryOrderRepository.findByDeliveryPlanId(planId).stream()
-                .map(o -> toDTO(o, goodsIssueRepository.findByCode(o.getCode()).orElse(null)))
+                .map(o -> {
+                    DeliveryOrderDTO dto = toDTO(o, goodsIssueRepository.findByCode(o.getCode()).orElse(null));
+                    dto.setAssignedToTrip(assignedOrderIds.contains(o.getId()));
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -58,11 +79,22 @@ public class DeliveryOrderService {
         return DeliveryOrderDTO.builder()
                 .id(order.getId())
                 .code(order.getCode())
+                .salesOrderCode(salesOrderCode(order, gi))
                 .status(order.getStatus())
                 .customerName(customerName(gi))
                 .deliveryAddress(gi != null && formatAddress(gi) != null
                         ? formatAddress(gi) : order.getDestinationAddress())
                 .build();
+    }
+
+    private String salesOrderCode(DeliveryOrder order, GoodsIssue gi) {
+        if (gi != null && gi.getSalesOrder() != null) {
+            return gi.getSalesOrder().getCode();
+        }
+        if (order.getSalesOrder() != null) {
+            return order.getSalesOrder().getCode();
+        }
+        return null;
     }
 
     private String customerName(GoodsIssue gi) {

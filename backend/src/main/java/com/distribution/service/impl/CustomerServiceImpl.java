@@ -11,6 +11,7 @@ import com.distribution.repository.DeliveryAddressRepository;
 import com.distribution.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,7 +94,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional(readOnly = true)
     public List<CustomerDTO> getAll() {
-        return customerRepository.findAll().stream()
+        return customerRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
             .map(this::mapToDTO)
             .collect(Collectors.toList());
     }

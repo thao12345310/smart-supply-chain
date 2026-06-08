@@ -81,6 +81,9 @@ public class GoodsReceiptDTO {
             this.totalRejectedQuantity = items.stream()
                 .mapToInt(item -> item.getRejectedQuantity() != null ? item.getRejectedQuantity() : 0)
                 .sum();
+            this.totalAmount = items.stream()
+                .map(item -> item.getTotalAmount() != null ? item.getTotalAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
         if (status != null) {
             this.statusDisplayName = status.getDisplayName();

@@ -5,6 +5,7 @@ import com.distribution.model.Warehouse;
 import com.distribution.repository.WarehouseRepository;
 import com.distribution.service.WarehouseService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -58,7 +59,7 @@ public class WarehouseServiceImpl implements WarehouseService {
 
     @Override
     public List<WarehouseDTO> getAll() {
-        return repo.findAll().stream().map(this::toDto).collect(Collectors.toList());
+        return repo.findAll(Sort.by(Sort.Direction.DESC, "id")).stream().map(this::toDto).collect(Collectors.toList());
     }
 
     @Override

@@ -1,0 +1,29 @@
+@startuml flowchart_fefo
+' FEFO (First-Expired-First-Out) allocation algorithm - Chapter 5 contribution
+start
+:Input: productId, warehouseId, issueQty;
+:lots = findAvailableLotsFEFO()\n(ORDER BY expiryDate ASC NULLS LAST, id);
+if (lots is empty?) then (yes)
+  :Fallback to inventory-only deduction;
+  stop
+endif
+:remaining = issueQty;
+:firstLot = null;
+while (remaining > 0 AND more lots?) is (yes)
+  :lot = next lot;
+  :take = min(remaining, lot.quantityRemaining);
+  :lot.quantityRemaining -= take;
+  :save(lot);
+  :remaining -= take;
+  if (firstLot == null) then (yes)
+    :firstLot = lot;
+  endif
+endwhile (no)
+if (remaining > 0?) then (yes)
+  :throw InsufficientLotStock;
+  stop
+endif
+:store firstLot.lotNumber + expiryDate\ninto GoodsIssueItem;
+:write InventoryTransaction (ISSUE);
+stop
+@enduml

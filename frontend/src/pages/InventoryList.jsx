@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Table, message, Tag, Card, Statistic, Row, Col,
-  Input, Select, Space, Tabs
+  Input, InputNumber, Select, Space, Tabs
 } from "antd";
 import { WarningOutlined, SearchOutlined } from "@ant-design/icons";
 import { inventoryApi, inventoryLotApi } from "../services/api";
@@ -65,8 +65,9 @@ export default function InventoryList() {
       setInventory(data);
       setStats({
         total: data.length,
-        lowStock: data.filter((i) => i.quantityAvailable > 0 && i.quantityAvailable <= 10).length,
-        outOfStock: data.filter((i) => i.quantityAvailable <= 0).length,
+        // Dùng chung getStockStatus để thẻ thống kê khớp với trạng thái trong bảng
+        lowStock: data.filter((i) => getStockStatus(i).priority === 2).length,
+        outOfStock: data.filter((i) => getStockStatus(i).priority === 3).length,
         totalValue: data.reduce(
           (sum, i) => sum + (i.averageCost || 0) * (i.quantityOnHand || 0),
           0
@@ -112,10 +113,25 @@ export default function InventoryList() {
   // ==================== Tổng quan helpers ====================
   const getStockStatus = (record) => {
     const available = record.quantityAvailable || 0;
-    const reorderLevel = record.reorderLevel || 10;
+    const reorderLevel = record.reorderLevel;
     if (available <= 0) return { color: "red", label: "Hết hàng", priority: 3 };
-    if (available <= reorderLevel) return { color: "orange", label: "Sắp hết", priority: 2 };
+    // Chỉ cảnh báo "Sắp hết" khi sản phẩm đã được cấu hình Mức cảnh báo (reorderLevel)
+    if (reorderLevel != null && available <= reorderLevel)
+      return { color: "orange", label: "Sắp hết", priority: 2 };
     return { color: "green", label: "Đủ hàng", priority: 1 };
+  };
+
+  const handleReorderLevelChange = async (record, value) => {
+    const newVal = value === "" || value == null ? null : Number(value);
+    if (newVal === (record.reorderLevel ?? null)) return;
+    try {
+      await inventoryApi.updateReorderLevel(record.id, newVal);
+      message.success("Đã cập nhật mức cảnh báo");
+      fetchInventory();
+    } catch (err) {
+      console.error(err);
+      message.error("Cập nhật mức cảnh báo thất bại");
+    }
   };
 
   const filteredInventory = inventory.filter((item) => {
@@ -205,9 +221,19 @@ export default function InventoryList() {
     {
       title: "Mức cảnh báo",
       dataIndex: "reorderLevel",
-      width: 110,
+      width: 130,
       align: "center",
-      render: (val) => val || "-",
+      render: (val, record) => (
+        <InputNumber
+          key={`${record.id}-${val ?? ""}`}
+          min={0}
+          defaultValue={val}
+          placeholder="-"
+          style={{ width: 90 }}
+          onPressEnter={(e) => e.target.blur()}
+          onBlur={(e) => handleReorderLevelChange(record, e.target.value)}
+        />
+      ),
     },
     {
       title: "Giá TB",

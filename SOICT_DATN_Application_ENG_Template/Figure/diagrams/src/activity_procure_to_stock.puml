@@ -1,0 +1,28 @@
+@startuml activity_procure_to_stock
+' Business process: Procure-to-stock - template section 2.2.3
+|Purchase Staff|
+start
+:Create Purchase Order (status OPEN);
+:Submit for approval;
+|Purchase Manager / Accountant|
+if (Approve?) then (yes)
+  :Set PO = APPROVED;
+else (no)
+  :Set PO = REJECTED;
+  stop
+endif
+|Warehouse Staff|
+:Create Goods Receipt for PO;
+:Enter accepted quantity,\nmanufacture & expiry dates;
+:Confirm Goods Receipt;
+|System|
+:Increase inventory (weighted avg cost);
+:Create Inventory Lot (FEFO);
+:Write Inventory Transaction (RECEIPT);
+if (All PO items fully received?) then (yes)
+  :Set PO = COMPLETED;
+else (no)
+  :PO stays APPROVED\n(partial receiving);
+endif
+stop
+@enduml

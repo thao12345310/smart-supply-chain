@@ -1,0 +1,123 @@
+% ================ CHAPTER 4 — DESIGN, IMPLEMENTATION, AND EVALUATION ================
+This chapter presents the architecture, detailed design, implementation, testing,
+and deployment of the system.
+
+\section{Architecture Design}
+
+\subsection{Software Architecture Selection}
+% GUIDE (1-3 pages): choose & briefly explain the architecture: a 3-tier, layered
+% client-server design — React SPA (presentation) / Spring Boot REST (controller-
+% service-repository) / PostgreSQL (data). Then map the layers to this system.
+\thesisfig{architecture}{Overall system architecture}{fig:architecture}
+[TODO] Justify the layered/3-tier architecture and map it to the system.
+
+\subsection{Overall Design}
+% GUIDE: UML package diagram organised by layers; explain each package's responsibility
+% and the dependency rules (upper depends on lower only).
+\thesisfig{package_diagram}{Package diagram (layered backend)}{fig:packages}
+[TODO] Explain each package and the dependency direction.
+
+\subsection{Detailed Package Design}
+% GUIDE: class diagrams (names + relationships only) per related package group.
+\thesisfig{class_inbound}{Class diagram — inbound (purchasing) flow}{fig:class-in}
+\thesisfig{class_outbound}{Class diagram — outbound (sales) flow}{fig:class-out}
+\thesisfig{class_delivery}{Class diagram — delivery flow}{fig:class-dlv}
+[TODO] Briefly explain the design of each package group.
+
+\section{Detailed Design}
+
+\subsection{User Interface Design}
+% GUIDE (2-3 pages): state display standards (resolution, colour scheme, button/
+% control conventions, feedback placement). Show UI MOCKUPS (prototypes, e.g. Figma/
+% draw.io), NOT production screenshots (those go in 4.3.3).
+[TODO] Present UI design standards and mockups (insert mockup figures here).
+
+\subsection{Layer Design}
+% GUIDE (3-4 pages): detailed design (attributes + methods) of 2-4 key classes,
+% plus sequence diagrams for 2-3 important use cases.
+\thesisfig{class_detail_key}{Detailed design of key classes}{fig:class-detail}
+\thesisfig{seq_so_gi_fefo}{Sequence — confirm Goods Issue with FEFO allocation}{fig:seq-fefo}
+\thesisfig{seq_po_gr}{Sequence — approve PO and confirm Goods Receipt}{fig:seq-pogr}
+\thesisfig{seq_delivery_trip}{Sequence — assign and execute delivery trip}{fig:seq-trip}
+[TODO] Explain the key classes and the message flows.
+
+\subsection{Database Design}
+% GUIDE (2-4 pages): E-R diagram + explanation; then the physical schema (PostgreSQL).
+\thesisfig{er_diagram}{Entity-Relationship diagram}{fig:er}
+[TODO] Explain the entities, keys and relationships.
+
+\section{Application Building}
+
+\subsection{Libraries and Tools}
+% GUIDE: list every language/library/tool WITH VERSION. (Pre-filled from pom.xml +
+% package.json — verify versions against your project.)
+\begin{table}[H]\centering
+\caption{Libraries, frameworks and tools used}
+\label{tab:tools}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Purpose} & \textbf{Tool / Library} & \textbf{Version} \\ \hline
+Backend language        & Java                    & 17 \\ \hline
+Backend framework       & Spring Boot             & 3.1.4 \\ \hline
+ORM / data access       & Spring Data JPA (Hibernate) & (Boot 3.1.4) \\ \hline
+Security / tokens       & Spring Security, JJWT   & 0.12.3 \\ \hline
+DB migration            & Flyway                  & (Boot-managed) \\ \hline
+API documentation       & SpringDoc OpenAPI       & 2.1.0 \\ \hline
+Boilerplate reduction   & Lombok                  & (Boot-managed) \\ \hline
+Build tool (backend)    & Maven                   & 3.x \\ \hline
+Database                & PostgreSQL              & 14+ \\ \hline
+Frontend library        & React                   & 18.2.0 \\ \hline
+Frontend build tool     & Vite                    & 5.0.0 \\ \hline
+UI components           & Ant Design (antd)       & 5.10.0 \\ \hline
+HTTP client             & Axios                   & 1.4.0 \\ \hline
+Routing                 & React Router DOM        & 6.11.1 \\ \hline
+Charts                  & Recharts                & 3.8.1 \\ \hline
+Date/time               & Day.js                  & 1.11.10 \\ \hline
+IDE                     & IntelliJ IDEA / VS Code & -- \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Achievement}
+% GUIDE: describe the delivered product and report statistics (LOC, #classes,
+% #packages, source size). Compute with: cloc backend/src frontend/src
+\begin{table}[H]\centering
+\caption{Source-code statistics}
+\label{tab:loc}
+\begin{tabular}{|l|r|}
+\hline
+\textbf{Metric} & \textbf{Value} \\ \hline
+Lines of code (backend) & [TODO from cloc] \\ \hline
+Lines of code (frontend) & [TODO from cloc] \\ \hline
+Number of Java classes & [TODO] \\ \hline
+Number of packages & [TODO] \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Illustration of Main Functions}
+% GUIDE: real SCREENSHOTS of the running app (login, dashboard, PO/SO, goods issue
+% with FEFO, inventory lots with expiry alerts, delivery plan, invoice). Annotate +
+% explain each. Run the app, capture, save under Figure/ and \includegraphics them.
+[TODO] Insert and explain annotated screenshots of the main functions.
+
+\section{Testing}
+% GUIDE (2-3 pages): design test cases for 2-3 critical functions (GI confirm w/FEFO,
+% SO approval reservation, credit-limit check). State techniques, summarise total
+% test cases & results, analyse failures. Extra cases -> appendix.
+\begin{table}[H]\centering
+\caption{Sample test cases}
+\label{tab:tests}
+\begin{tabular}{|c|l|l|l|c|}
+\hline
+\textbf{ID} & \textbf{Function} & \textbf{Input} & \textbf{Expected} & \textbf{Result} \\ \hline
+TC01 & Confirm GI (FEFO) & stock with 2 lots & earliest-expiry lot consumed first & [TODO] \\ \hline
+TC02 & Approve SO & qty $\leq$ available & reservation increases & [TODO] \\ \hline
+TC03 & Credit limit & balance+amt $>$ limit & order blocked & [TODO] \\ \hline
+\end{tabular}
+\end{table}
+[TODO] Describe testing technique and summarise results.
+
+\section{Deployment}
+% GUIDE: deployment model, server/equipment specs, configuration, and any test
+% deployment results (users, response time, load).
+\thesisfig{deployment}{Deployment diagram}{fig:deploy}
+[TODO] Describe the deployment model and environment.

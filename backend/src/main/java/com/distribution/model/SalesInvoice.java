@@ -194,9 +194,10 @@ public class SalesInvoice {
      * Check if invoice is overdue
      */
     public boolean isOverdue() {
-        return dueDate != null && 
-               LocalDate.now().isAfter(dueDate) && 
-               (status == SalesInvoiceStatus.ISSUED || status == SalesInvoiceStatus.PARTIALLY_PAID);
+        return dueDate != null &&
+               LocalDate.now().isAfter(dueDate) &&
+               (status == SalesInvoiceStatus.ISSUED || status == SalesInvoiceStatus.PARTIALLY_PAID
+                || status == SalesInvoiceStatus.OVERDUE);
     }
 
     /**

@@ -9,6 +9,10 @@ import {
   BarChartOutlined, AppstoreOutlined, TeamOutlined, ClockCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
+  ResponsiveContainer
+} from 'recharts';
 import { dashboardApi, warehouseApi } from '../services/api';
 
 const { Title, Text } = Typography;
@@ -145,12 +149,38 @@ export default function DashboardPage() {
     return Number(val).toLocaleString('vi-VN') + ' ₫';
   };
 
+  // Compact money formatter for axis ticks: 1.2 tỷ / 850 tr
+  const fmtCompact = (val) => {
+    const n = Number(val) || 0;
+    if (Math.abs(n) >= 1e9) return (n / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' tỷ';
+    if (Math.abs(n) >= 1e6) return (n / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' tr';
+    return n.toLocaleString('vi-VN');
+  };
+
+  const BAR_COLOR = '#2563eb';
+
+  const renderChartTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
+    const item = payload[0].payload;
+    return (
+      <div style={{
+        background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8,
+        padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', fontSize: 13
+      }}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>{item.label}</div>
+        <div>Doanh thu: <strong>{fmtMoney(item.revenue)}</strong></div>
+        <div style={{ color: '#888' }}>Số đơn: {item.orderCount}</div>
+      </div>
+    );
+  };
+
   // ==================== RENDER ====================
 
   if (loading && !summary) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <Spin size="large" tip="Đang tải dữ liệu..." />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+        <Spin size="large" />
+        <Text type="secondary">Đang tải dữ liệu...</Text>
       </div>
     );
   }
@@ -347,76 +377,47 @@ export default function DashboardPage() {
     );
   }
 
-  // ==================== Bar Chart (CSS-based) ====================
+  // ==================== Bar Chart (recharts) ====================
 
   function renderBarChart() {
     if (!revenueData || !revenueData.data || revenueData.data.length === 0) {
       return <Empty description="Chưa có dữ liệu doanh thu" />;
     }
 
-    const maxRevenue = Math.max(...revenueData.data.map(d => Number(d.revenue) || 0), 1);
+    const chartData = revenueData.data.map(d => ({
+      label: d.label,
+      shortLabel: String(d.label).replace(/^\d{4}-/, ''),
+      revenue: Number(d.revenue) || 0,
+      orderCount: d.orderCount
+    }));
 
     return (
       <div>
-        <div style={{ marginBottom: 16, textAlign: 'right' }}>
+        <div style={{ marginBottom: 12, textAlign: 'right' }}>
           <Text strong style={{ fontSize: 16 }}>
             Tổng: {fmtMoney(revenueData.total)}
           </Text>
         </div>
-        <div style={{
-          display: 'flex', alignItems: 'flex-end', gap: 4,
-          height: 220, padding: '0 8px',
-          borderBottom: '2px solid #e5e7eb'
-        }}>
-          {revenueData.data.map((item, idx) => {
-            const height = Math.max((Number(item.revenue) / maxRevenue) * 200, 4);
-            const barColor = `hsl(${220 + idx * 15}, 70%, 55%)`;
-            return (
-              <Tooltip
-                key={idx}
-                title={
-                  <div>
-                    <div><strong>{item.label}</strong></div>
-                    <div>Doanh thu: {fmtMoney(item.revenue)}</div>
-                    <div>Số đơn: {item.orderCount}</div>
-                  </div>
-                }
-              >
-                <div style={{
-                  flex: 1,
-                  height,
-                  background: `linear-gradient(180deg, ${barColor} 0%, ${barColor}88 100%)`,
-                  borderRadius: '6px 6px 0 0',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  minWidth: 16,
-                  position: 'relative'
-                }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                    e.currentTarget.style.transform = 'scaleY(1.02)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                    e.currentTarget.style.transform = 'scaleY(1)';
-                  }}
-                />
-              </Tooltip>
-            );
-          })}
-        </div>
-        {/* Labels */}
-        <div style={{ display: 'flex', gap: 4, padding: '8px 8px 0' }}>
-          {revenueData.data.map((item, idx) => (
-            <div key={idx} style={{
-              flex: 1, textAlign: 'center', fontSize: 10, color: '#888',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              minWidth: 16
-            }}>
-              {item.label.replace(/^\d{4}-/, '')}
-            </div>
-          ))}
-        </div>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef0f3" />
+            <XAxis
+              dataKey="shortLabel"
+              tick={{ fontSize: 12, fill: '#6b7280' }}
+              axisLine={{ stroke: '#e5e7eb' }}
+              tickLine={false}
+            />
+            <YAxis
+              tickFormatter={fmtCompact}
+              tick={{ fontSize: 12, fill: '#6b7280' }}
+              axisLine={false}
+              tickLine={false}
+              width={56}
+            />
+            <RTooltip content={renderChartTooltip} cursor={{ fill: 'rgba(37,99,235,0.06)' }} />
+            <Bar dataKey="revenue" fill={BAR_COLOR} radius={[4, 4, 0, 0]} maxBarSize={48} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     );
   }

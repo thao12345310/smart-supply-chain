@@ -1,0 +1,80 @@
+% ============================================================
+% Cấu hình chèn và định dạng mã nguồn (listings)
+% Dùng cho đồ án: Java / Spring Boot, SQL, JSON...
+% File này được nạp bởi \include{lstlisting} trong main.tex
+% ============================================================
+\usepackage{listings}
+\usepackage{xcolor}
+
+% --- Bảng màu ---
+\definecolor{codegreen}{rgb}{0.0,0.5,0.0}    % comment
+\definecolor{codeblue}{rgb}{0.0,0.0,0.7}     % keyword
+\definecolor{codepurple}{rgb}{0.58,0.0,0.82} % string
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}     % số dòng
+\definecolor{backcolour}{rgb}{0.97,0.97,0.95}% nền
+
+% --- Style chung ---
+\lstdefinestyle{datnstyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen}\itshape,
+    keywordstyle=\color{codeblue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=8pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{codegray},
+    xleftmargin=12pt,
+    framexleftmargin=12pt,
+    upquote=true,
+    literate=
+        {á}{{\'a}}1 {à}{{\`a}}1 {ả}{{\h{a}}}1 {ã}{{\~a}}1 {ạ}{{\d{a}}}1
+        {â}{{\^a}}1 {ấ}{{\'{\^a}}}1 {ầ}{{\`{\^a}}}1 {ậ}{{\d{\^a}}}1
+        {ă}{{\u{a}}}1 {đ}{{\dj}}1 {Đ}{{\DJ}}1
+        {é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {ế}{{\'{\^e}}}1 {ệ}{{\d{\^e}}}1
+        {í}{{\'i}}1 {ì}{{\`i}}1 {ị}{{\d{i}}}1
+        {ó}{{\'o}}1 {ò}{{\`o}}1 {ô}{{\^o}}1 {ố}{{\'{\^o}}}1 {ộ}{{\d{\^o}}}1
+        {ơ}{{\horn{o}}}1 {ớ}{{\'{\horn{o}}}}1 {ợ}{{\d{\horn{o}}}}1
+        {ú}{{\'u}}1 {ù}{{\`u}}1 {ư}{{\horn{u}}}1 {ứ}{{\'{\horn{u}}}}1 {ự}{{\d{\horn{u}}}}1
+        {ý}{{\'y}}1 {ỳ}{{\`y}}1
+}
+
+% Đặt style mặc định
+\lstset{style=datnstyle}
+
+% --- Định nghĩa thêm ngôn ngữ JSON (listings không có sẵn) ---
+\lstdefinelanguage{json}{
+    basicstyle=\ttfamily\footnotesize,
+    stringstyle=\color{codepurple},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    literate=
+        *{:}{{{\color{codeblue}{:}}}}1
+        {,}{{{\color{codeblue}{,}}}}1
+        {\{}{{{\color{codeblue}{\{}}}}1
+        {\}}{{{\color{codeblue}{\}}}}}1
+        {[}{{{\color{codeblue}{[}}}}1
+        {]}{{{\color{codeblue}{]}}}}1,
+}
+
+% ============================================================
+% CÁCH DÙNG (ví dụ):
+%
+%   \begin{lstlisting}[language=Java, caption={Service xử lý đơn hàng}, label={lst:order}]
+%   @Service
+%   public class DeliveryOrderService { ... }
+%   \end{lstlisting}
+%
+% Hoặc chèn từ file:
+%   \lstinputlisting[language=SQL, caption={Schema kho}]{Figure/schema.sql}
+% ============================================================

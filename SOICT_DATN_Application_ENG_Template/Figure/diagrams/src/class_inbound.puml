@@ -1,0 +1,29 @@
+@startuml class_inbound
+' Class diagram (names + relationships) - inbound flow - template section 4.1.3
+skinparam classAttributeIconSize 0
+hide members
+
+class Supplier
+class PurchaseOrder
+class PurchaseOrderItem
+class GoodsReceipt
+class GoodsReceiptItem
+class Product
+class Inventory
+class InventoryLot
+class InventoryTransaction
+class Warehouse
+
+Supplier "1" --> "*" PurchaseOrder
+PurchaseOrder "1" *-- "*" PurchaseOrderItem
+PurchaseOrderItem --> Product
+PurchaseOrder "1" --> "*" GoodsReceipt
+GoodsReceipt "1" *-- "*" GoodsReceiptItem
+GoodsReceiptItem --> PurchaseOrderItem
+GoodsReceipt --> Warehouse
+GoodsReceipt "1" --> "*" InventoryLot
+Inventory --> Product
+Inventory --> Warehouse
+InventoryLot --> Product
+InventoryTransaction --> Product
+@enduml

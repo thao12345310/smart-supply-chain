@@ -41,7 +41,13 @@ public interface InventoryService {
      * Get low stock items
      */
     List<InventoryDTO> getLowStock(Integer threshold);
-    
+
+    /**
+     * Update reorder (low-stock alert) level for an inventory record.
+     * Pass null reorderLevel to clear the alert threshold.
+     */
+    InventoryDTO updateReorderLevel(Long inventoryId, Integer reorderLevel, Integer reorderQuantity);
+
     /**
      * Add stock from goods receipt
      * Creates inventory transaction record

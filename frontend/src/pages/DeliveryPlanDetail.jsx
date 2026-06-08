@@ -67,7 +67,7 @@ export default function DeliveryPlanDetail() {
         >
           {available.map((o) => (
             <Select.Option key={o.id} value={o.id}>
-              {o.code} — {o.customerName || ""}
+              {o.code}{o.salesOrderCode ? ` (${o.salesOrderCode})` : ""} — {o.customerName || ""}
             </Select.Option>
           ))}
         </Select>
@@ -105,6 +105,7 @@ export default function DeliveryPlanDetail() {
     } catch {
       // ignore - rơi về nhập tay nếu không lấy được
     }
+    let chosenUserId = null;
     let chosenName = "";
     Modal.confirm({
       title: "Thêm nhân viên giao hàng",
@@ -113,10 +114,10 @@ export default function DeliveryPlanDetail() {
           <Select
             style={{ width: "100%" }}
             placeholder="Chọn nhân viên giao hàng"
-            onChange={(v) => { chosenName = v; }}
+            onChange={(v) => { chosenUserId = v; }}
           >
             {shipperUsers.map((u) => (
-              <Select.Option key={u.id} value={u.name}>
+              <Select.Option key={u.id} value={u.id}>
                 {u.name}
               </Select.Option>
             ))}
@@ -130,16 +131,22 @@ export default function DeliveryPlanDetail() {
       okText: "Thêm",
       cancelText: "Hủy",
       onOk: async () => {
-        if (!chosenName) {
+        if (!chosenUserId && !chosenName) {
           message.warning("Chưa chọn nhân viên giao hàng");
           return;
         }
-        await api.post(`/delivery-plans/${id}/shippers`, {
-          shipperName: chosenName,
-          phone: "",
-        });
-        message.success("Đã thêm nhân viên giao hàng");
-        fetchAll();
+        try {
+          await api.post(`/delivery-plans/${id}/shippers`, {
+            shipperUserId: chosenUserId,
+            shipperName: chosenName,
+            phone: "",
+          });
+          message.success("Đã thêm nhân viên giao hàng");
+          fetchAll();
+        } catch (e) {
+          message.error(e.message || "Không thể thêm nhân viên giao hàng");
+          return Promise.reject();
+        }
       },
     });
   };
@@ -197,12 +204,17 @@ export default function DeliveryPlanDetail() {
       message.warning("Đợt giao hàng chưa có vận đơn nào");
       return;
     }
-    let shipperUsers = [];
-    try {
-      const res = await api.get("/delivery-plans/shipper-users");
-      shipperUsers = res.data || [];
-    } catch {
-      // ignore
+    // Chỉ cho chọn vận đơn chưa được phân vào chuyến nào
+    const unassignedOrders = orders.filter((o) => !o.assignedToTrip);
+    if (unassignedOrders.length === 0) {
+      message.warning("Tất cả vận đơn của đợt đã được phân chuyến");
+      return;
+    }
+    // Tài xế chỉ chọn trong số nhân viên giao hàng đã thêm vào đợt (nhất quán với "Tự động tạo chuyến")
+    const planShippers = shippers.filter((s) => s.shipperUserId != null);
+    if (planShippers.length === 0) {
+      message.warning("Hãy thêm nhân viên giao hàng vào đợt trước (tab Nhân viên GH)");
+      return;
     }
     let chosenShipperId = null;
     let chosenOrderIds = [];
@@ -217,8 +229,8 @@ export default function DeliveryPlanDetail() {
             placeholder="Chọn nhân viên giao hàng"
             onChange={(v) => { chosenShipperId = v; }}
           >
-            {shipperUsers.map((u) => (
-              <Select.Option key={u.id} value={u.id}>{u.name}</Select.Option>
+            {planShippers.map((s) => (
+              <Select.Option key={s.id} value={s.shipperUserId}>{s.shipperName}</Select.Option>
             ))}
           </Select>
           <p style={{ marginBottom: 4 }}>Vận đơn cho chuyến:</p>
@@ -229,9 +241,9 @@ export default function DeliveryPlanDetail() {
             optionFilterProp="children"
             onChange={(v) => { chosenOrderIds = v; }}
           >
-            {orders.map((o) => (
+            {unassignedOrders.map((o) => (
               <Select.Option key={o.id} value={o.id}>
-                {o.code} — {o.customerName || ""}
+                {o.code}{o.salesOrderCode ? ` (${o.salesOrderCode})` : ""} — {o.customerName || ""}
               </Select.Option>
             ))}
           </Select>
@@ -276,11 +288,12 @@ export default function DeliveryPlanDetail() {
   const statusConfig = getStatusConfig(plan.status);
 
   const orderColumns = [
-    { 
-      title: "Mã vận đơn", 
+    {
+      title: "Mã vận đơn",
       dataIndex: "code",
       render: (text) => <strong>{text}</strong>,
     },
+    { title: "Đơn bán", dataIndex: "salesOrderCode", render: (t) => t || "-" },
     { title: "Khách hàng", dataIndex: "customerName", render: (t) => t || "-" },
     { title: "Địa chỉ giao", dataIndex: "deliveryAddress", ellipsis: true, render: (t) => t || "-" },
     {

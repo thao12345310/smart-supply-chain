@@ -23,5 +23,5 @@ public class DeliveryOrder {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sales_order_id")
-    private PurchaseOrder salesOrder; // reuse from PO or separate SalesOrder if available
+    private SalesOrder salesOrder; // đơn bán hàng nguồn của vận đơn này
 }

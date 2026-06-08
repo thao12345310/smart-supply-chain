@@ -16,6 +16,7 @@ import com.distribution.service.PurchaseOrderService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -232,7 +233,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     @Override
     @Transactional(readOnly = true)
     public List<GoodsReceiptDTO> getAll() {
-        return grRepo.findAll().stream()
+        return grRepo.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
             .map(this::toDto)
             .collect(Collectors.toList());
     }
@@ -240,7 +241,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     @Override
     @Transactional(readOnly = true)
     public List<GoodsReceiptDTO> getByStatus(GoodsReceiptStatus status) {
-        return grRepo.findByStatus(status).stream()
+        return grRepo.findByStatusOrderByIdDesc(status).stream()
             .map(this::toDto)
             .collect(Collectors.toList());
     }

@@ -25,7 +25,7 @@ public interface GoodsReceiptRepository extends JpaRepository<GoodsReceipt, Long
     /**
      * Find all GRs by status
      */
-    List<GoodsReceipt> findByStatus(GoodsReceiptStatus status);
+    List<GoodsReceipt> findByStatusOrderByIdDesc(GoodsReceiptStatus status);
     
     /**
      * Find all GRs by warehouse
@@ -47,7 +47,7 @@ public interface GoodsReceiptRepository extends JpaRepository<GoodsReceipt, Long
      * Find draft GRs that are pending confirmation
      */
     default List<GoodsReceipt> findPendingConfirmation() {
-        return findByStatus(GoodsReceiptStatus.DRAFT);
+        return findByStatusOrderByIdDesc(GoodsReceiptStatus.DRAFT);
     }
     
     /**

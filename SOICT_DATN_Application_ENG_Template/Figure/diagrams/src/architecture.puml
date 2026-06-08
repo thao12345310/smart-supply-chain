@@ -1,0 +1,36 @@
+@startuml architecture
+' System architecture - template section 4.1.1
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+actor "User (9 roles)" as user
+
+package "Client Tier" {
+  [React 18 SPA\n(Vite, Ant Design, Recharts)] as fe
+}
+
+package "Application Tier - Spring Boot 3.1.4" {
+  [Security Layer\n(JWT Filter, RBAC, CORS)] as sec
+  [REST Controllers\n(@RestController)] as ctrl
+  [Service Layer\n(@Service, @Transactional)] as svc
+  [Repository Layer\n(Spring Data JPA)] as repo
+  [Domain Model\n(@Entity / JPA)] as model
+}
+
+package "Data Tier" {
+  database "PostgreSQL\n(distribution_db)" as db
+}
+
+[Swagger / SpringDoc] as swagger
+[Flyway Migrations] as flyway
+
+user --> fe
+fe --> sec : HTTPS / REST + JWT
+sec --> ctrl
+ctrl --> svc
+svc --> repo
+repo --> model
+model --> db : Hibernate ORM
+flyway ..> db : schema versioning
+swagger ..> ctrl : API docs
+@enduml

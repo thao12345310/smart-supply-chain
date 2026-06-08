@@ -1,0 +1,13 @@
+@startuml state_sales_order
+' Sales Order lifecycle state machine
+[*] --> ORDER_OPEN : create
+ORDER_OPEN --> ORDER_APPROVED : approve (reserve inventory)
+ORDER_OPEN --> ORDER_CANCELLED : reject / cancel
+ORDER_APPROVED --> ORDER_PARTIALLY_DELIVERED : partial goods issue
+ORDER_APPROVED --> ORDER_COMPLETED : full goods issue
+ORDER_PARTIALLY_DELIVERED --> ORDER_COMPLETED : remaining issued
+ORDER_PARTIALLY_DELIVERED --> ORDER_APPROVED : failed delivery (restock)
+ORDER_APPROVED --> ORDER_CANCELLED : cancel (release reservation)
+ORDER_COMPLETED --> [*]
+ORDER_CANCELLED --> [*]
+@enduml

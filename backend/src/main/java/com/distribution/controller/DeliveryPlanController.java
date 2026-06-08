@@ -7,6 +7,7 @@ import com.distribution.repository.*;
 import com.distribution.service.DeliveryOrderService;
 import com.distribution.service.DeliveryTripService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,7 +36,9 @@ public class DeliveryPlanController {
     // 🟢 1. Lấy toàn bộ danh sách đợt giao hàng
     @GetMapping
     public ResponseEntity<List<DeliveryPlan>> all() {
-        return ResponseEntity.ok(repo.findAll());
+        List<DeliveryPlan> plans = repo.findAll(Sort.by(Sort.Direction.DESC, "id"));
+        plans.forEach(p -> p.setOrderCount(planOrderRepo.countByDeliveryPlanId(p.getId())));
+        return ResponseEntity.ok(plans);
     }
 
     // 🟢 2. Tạo mới đợt giao hàng
@@ -43,7 +46,13 @@ public class DeliveryPlanController {
     public ResponseEntity<DeliveryPlan> create(@RequestBody DeliveryPlan plan) {
         plan.setCreatedDate(LocalDate.now());
         plan.setStatus("Created");
-        return ResponseEntity.ok(repo.save(plan));
+        DeliveryPlan saved = repo.save(plan);
+        // Sinh mã đợt dạng DP-<năm>-<id 3 chữ số> nếu chưa có, để có định danh hiển thị/tra cứu
+        if (saved.getCode() == null || saved.getCode().isBlank()) {
+            saved.setCode(String.format("DP-%d-%03d", saved.getCreatedDate().getYear(), saved.getId()));
+            saved = repo.save(saved);
+        }
+        return ResponseEntity.ok(saved);
     }
 
     // 🟢 3. Cập nhật đợt giao hàng
@@ -52,6 +61,8 @@ public class DeliveryPlanController {
         DeliveryPlan existing = repo.findById(id).orElseThrow();
         existing.setDescription(plan.getDescription());
         existing.setStatus(plan.getStatus());
+        if (plan.getPlannedDate() != null) existing.setPlannedDate(plan.getPlannedDate());
+        if (plan.getNotes() != null) existing.setNotes(plan.getNotes());
         return ResponseEntity.ok(repo.save(existing));
     }
 
@@ -109,6 +120,10 @@ public class DeliveryPlanController {
     // 🟢 9. Xoá vận đơn khỏi đợt
     @DeleteMapping("/{id}/orders/{orderId}")
     public ResponseEntity<Void> removeOrder(@PathVariable Long id, @PathVariable Long orderId) {
+        // Không cho gỡ vận đơn đang nằm trong một chuyến (chưa hủy) để tránh điểm giao mồ côi
+        if (tripItemRepo.findAssignedOrderIdsByPlanId(id).contains(orderId)) {
+            throw new IllegalStateException("Vận đơn đang thuộc một chuyến giao, hãy hủy/gỡ khỏi chuyến trước khi xóa khỏi đợt");
+        }
         planOrderRepo.findByDeliveryPlanIdAndDeliveryOrderId(id, orderId)
                 .ifPresent(planOrderRepo::delete);
         return ResponseEntity.noContent().build();
@@ -125,6 +140,14 @@ public class DeliveryPlanController {
     public ResponseEntity<DeliveryPlanShipper> addShipper(@PathVariable Long id, @RequestBody DeliveryPlanShipper shipper) {
         DeliveryPlan plan = repo.findById(id).orElseThrow();
         shipper.setDeliveryPlan(plan);
+        // Khi chọn tài xế theo tài khoản, lấy tên chuẩn từ user và chặn trùng tài xế trong cùng đợt
+        if (shipper.getShipperUserId() != null) {
+            if (shipperRepo.existsByDeliveryPlanIdAndShipperUserId(id, shipper.getShipperUserId())) {
+                throw new IllegalStateException("Nhân viên giao hàng này đã có trong đợt");
+            }
+            userRepository.findById(shipper.getShipperUserId()).ifPresent(u ->
+                    shipper.setShipperName(u.getFullName() != null ? u.getFullName() : u.getUsername()));
+        }
         return ResponseEntity.ok(shipperRepo.save(shipper));
     }
 
