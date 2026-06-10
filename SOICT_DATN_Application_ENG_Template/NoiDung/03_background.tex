@@ -8,23 +8,149 @@ alternatives, and the rationale for the selection are discussed.
 \section{Inventory Management Theory}
 % GUIDE: stock control, reservation, weighted-average costing, and the FEFO
 % (First-Expired-First-Out) strategy vs FIFO/LIFO for perishable goods. Cite.
-[TODO] Explain inventory concepts and FEFO; cite references \cite{...}.
+Inventory management controls the quantity, location, cost, and movement history
+of goods so that business operations can meet demand without creating excessive
+stock. In a distribution company, the inventory record is not only an accounting
+figure but also an operational constraint: a sales order should be accepted only
+when the requested product can be supplied from a warehouse, and a warehouse
+transaction should leave an audit trail from the business document that caused
+it. Therefore, the system distinguishes three quantities for each product and
+warehouse: on-hand quantity, reserved quantity, and available quantity. On-hand
+quantity represents the physical stock in the warehouse. Reserved quantity
+represents stock committed to approved sales orders but not yet shipped.
+Available quantity is calculated as on-hand minus reserved stock and is used to
+prevent overselling.
+
+For goods with expiry dates, stock control must also identify the lot from which
+each outbound quantity is taken. General warehouse-management literature
+emphasizes that lot traceability and stock rotation are central to reducing loss
+and improving warehouse discipline \cite{richards2021warehouse}. FIFO
+(First-In-First-Out) issues the oldest received stock first, while LIFO
+(Last-In-First-Out) issues the newest received stock first and is mainly an
+inventory valuation convention. In contrast, FEFO (First-Expired-First-Out)
+issues the stock with the earliest expiry date first. FEFO is more appropriate
+for food, medicine, cosmetics, and other perishable goods because the receiving
+date and the expiry date are not always aligned. Odoo's inventory documentation,
+for example, separates expiration-date tracking from the FEFO removal strategy,
+which reflects the same principle \cite{odooExpiration,odooFefo}. This thesis
+therefore models both aggregate inventory and per-lot inventory, then performs
+lot allocation during goods issue.
+
+The system uses moving weighted-average cost for the aggregate inventory record.
+When goods are received, the previous stock value and the new receipt value are
+combined to update the average cost. This approach is suitable for the project
+scope because it avoids the complexity of full accounting valuation by batch
+while still keeping cost information for stock transactions. The FEFO mechanism
+is used for physical issue sequence, whereas the weighted average is used for
+simple inventory-cost reporting.
 
 \section{Backend Technologies}
 % GUIDE: Java 17, Spring Boot (IoC, layered architecture), Spring Data JPA/Hibernate
 % (ORM, optimistic locking via @Version), Spring Security + JWT (stateless RBAC),
 % Flyway (schema migration). For each: requirement solved + alternatives + why.
-[TODO] Present the backend stack with justification.
+The backend is implemented in Java 17 with Spring Boot 3.1.4. Spring Boot was
+selected because it provides an integrated platform for building standalone REST
+applications and has explicit support for Java 17 in version 3.1.x
+\cite{springboot314}. The requirement addressed by this choice is the need for a
+maintainable server-side application that exposes business functions through
+stable APIs. Alternatives such as Node.js/Express or Django could also implement
+REST services, but Spring Boot fits the project's domain better because the
+business rules are transaction-heavy and map naturally to service classes,
+repositories, and declarative transaction management.
+
+The backend follows a layered architecture. Controllers receive HTTP requests
+and validate input DTOs; services implement business rules such as purchase
+approval, goods receipt confirmation, inventory reservation, FEFO allocation,
+and delivery-status recovery; repositories encapsulate database access through
+Spring Data JPA. This structure supports the requirements from
+Chapter~\ref{chapter:Survey} because each module has clear responsibilities and
+can be tested at the service layer without exposing persistence details to the
+frontend.
+
+Spring Data JPA and Hibernate are used for object-relational mapping. They reduce
+manual SQL for common CRUD operations and allow domain relationships such as
+SalesOrder--SalesOrderItem, GoodsReceipt--GoodsReceiptItem, and
+Inventory--Warehouse to be expressed in Java entities. The alternative would be
+plain JDBC or a SQL mapper such as MyBatis. Plain SQL gives fine-grained control
+but increases repetitive code and makes entity relationships harder to maintain.
+JPA was selected because most project operations are entity-centric, while
+custom repository queries are still available for cases such as FEFO lot
+selection and pessimistic locking for stock updates.
+
+Flyway-style migration files under \texttt{db/migration} define the database
+schema and seed data. Migration-based schema management was selected because
+database changes must be repeatable across development and demonstration
+environments. Flyway documentation describes migrations as versioned scripts that
+capture incremental database changes and run in a consistent order
+\cite{flywayMigrations}. This directly supports the requirement that the system
+be deployable and maintainable without manually editing the database for each
+environment.
 
 \section{Frontend Technologies}
 % GUIDE: React 18 (component model, SPA), Vite, Ant Design, Axios, Recharts.
 % Alternatives: Angular/Vue; explain the choice.
-[TODO] Present the frontend stack with justification.
+The frontend is built as a React 18 single-page application. React's component
+model supports decomposing the interface into reusable pages, forms, tables, and
+status widgets. The project uses this model for modules such as purchase orders,
+sales orders, goods receipts, goods issues, inventory lots, delivery plans, and
+dashboard reports. Angular and Vue were considered as alternatives. Angular
+provides a complete framework, but its structure is heavier for this project.
+Vue is lightweight and productive, but the available Ant Design React component
+ecosystem made React a better fit for rapidly building consistent business
+screens. React 18 also provides improvements for modern interactive applications
+\cite{react18}.
+
+Vite 5 is used as the frontend build tool. Compared with older bundler setups,
+Vite provides a fast development server and a simpler production build workflow,
+which is useful during frequent UI iteration \cite{vite5}. Ant Design 5 supplies
+enterprise-oriented components such as tables, forms, modals, date pickers,
+steps, tags, and layout primitives. Its documentation positions it as a React UI
+library for rich interactive interfaces \cite{antdesign}, which matches the
+needs of a distribution management application where users repeatedly scan
+tables, edit forms, approve documents, and monitor statuses. Axios is used for
+HTTP communication with the REST API, while Recharts is used for dashboard charts
+such as revenue and top-selling-product reports.
 
 \section{Database — PostgreSQL}
 % GUIDE: relational model, ACID transactions, why PostgreSQL over MySQL/NoSQL here.
-[TODO] Justify the database choice.
+PostgreSQL is selected as the relational database management system. The system
+data is highly relational: orders contain items, goods receipts refer to purchase
+orders, goods issues refer to sales orders, invoices refer to goods issues,
+delivery trips contain delivery orders, and inventory records are linked to
+products and warehouses. A relational model is therefore appropriate because it
+supports foreign keys, joins, constraints, and transactions. PostgreSQL also
+provides mature SQL support and official long-term documentation
+\cite{postgresql14}.
+
+The most important database requirement is transactional consistency. For
+example, confirming a goods receipt must update the receipt status, purchase
+order received quantities, aggregate inventory, inventory transactions, and
+inventory lots as one logical unit. Confirming a goods issue must deduct lots,
+deduct aggregate inventory, release reservation, update delivered quantities,
+create an invoice, and update sales order status. A document database could store
+large nested documents, but it would make these cross-entity consistency rules
+and reporting queries more difficult. PostgreSQL was therefore chosen over a
+NoSQL database for integrity, queryability, and compatibility with JPA.
 
 \section{Authentication and Authorization}
 % GUIDE: JWT structure, stateless auth, BCrypt hashing, role-based access control.
-[TODO] Explain JWT + RBAC theory as used in the system.
+Authentication is based on JSON Web Tokens (JWT). According to RFC 7519, a JWT is
+a compact representation of claims transferred between parties \cite{rfc7519}.
+In this system, after a successful login the server signs an access token that
+contains the username, user identifier, full name, and roles. The frontend sends
+the token in subsequent API requests, and a Spring Security filter validates the
+signature and expiration before allowing access to protected endpoints. This
+stateless design avoids storing server-side HTTP sessions and is suitable for a
+React SPA communicating with a REST backend.
+
+Passwords are protected with BCrypt through Spring Security's
+\texttt{PasswordEncoder}. Authorization follows Role-Based Access Control
+(RBAC). The NIST RBAC model formalizes the mapping among users, roles, and
+permissions \cite{sandhu2000nist}. The project applies this idea through nine
+business roles: administrator, purchase staff, purchase manager, sales staff,
+sales manager, warehouse staff, delivery administrator, shipper, and accountant.
+Endpoint-level rules restrict which roles can create, update, approve, confirm,
+or delete documents. Service-level rules add domain restrictions, such as
+preventing warehouse staff from seeing unapproved orders and allowing shippers to
+work only with assigned delivery trips. This combination supports separation of
+duties in the procure-to-stock and order-to-cash workflows.

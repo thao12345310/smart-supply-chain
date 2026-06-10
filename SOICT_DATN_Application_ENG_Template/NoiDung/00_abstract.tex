@@ -12,7 +12,29 @@
 %  (iv)  main contribution & results: FEFO allocation algorithm, reservation logic,
 %        failed-delivery recovery; summarise concrete results (modules, screens, tests).
 
-\noindent [TODO] Write the abstract here as a single coherent paragraph \dots
+\noindent Small and medium-sized distributors often manage purchasing,
+warehousing, sales, invoicing, and delivery through disconnected spreadsheets,
+paper documents, and manual communication. This practice leads to inaccurate
+stock information, overselling, slow approval, weak traceability, and high risk
+of expired goods remaining in the warehouse. This thesis proposes and implements
+a web-based Smart Supply Chain Management System for distributor operations. The
+system uses a layered architecture with a Spring Boot REST backend, a React
+single-page frontend, and a PostgreSQL database. It integrates procure-to-stock,
+order-to-cash, inventory, invoice, delivery, reporting, and role-based
+administration modules in one application. The core solution maintains both
+aggregate inventory and lot-level inventory with batch numbers and expiry dates.
+Goods receipt creates inventory lots, sales order approval reserves available
+stock to prevent overselling, and goods issue deducts stock according to the
+First-Expired-First-Out principle. The system also provides a recovery mechanism
+for failed delivery by restoring inventory, adjusting delivered quantity,
+updating order status, and handling the related invoice state. Role-Based Access
+Control is implemented for nine business roles, separating document creation,
+approval, warehouse confirmation, delivery assignment, shipper execution, and
+administration. The completed prototype includes 152 backend Java classes,
+approximately 14,860 backend source lines, and approximately 10,302 frontend
+source lines. The main contribution of the thesis is the integration of FEFO lot
+allocation, inventory reservation, failed-delivery recovery, and role-based
+workflow enforcement into a focused distribution-management system.
 
 \vspace{0.8cm}
 \noindent Student

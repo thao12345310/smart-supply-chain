@@ -14,7 +14,57 @@ results achieved.
 %     the batch/expiry on each issue line. (Reference: GoodsIssueServiceImpl.)
 % (iii) Results: oldest stock exits first; full traceability; expiry alerts.
 \thesisfig{flowchart_fefo}{FEFO allocation algorithm}{fig:fefo}
-[TODO] Present the problem, the FEFO algorithm, and the results.
+The first contribution is the lot-allocation mechanism for perishable goods.
+Many inventory systems keep only an aggregate quantity for each product and
+warehouse. This model is sufficient for simple stock checking, but it cannot
+answer which batch should be picked first, which expiry date was delivered to a
+customer, or which remaining lots are close to expiry. For a distributor that
+handles food, medicine, cosmetics, or other date-sensitive goods, this limitation
+directly creates waste and traceability risk.
+
+The proposed solution extends the aggregate inventory model with an
+\texttt{InventoryLot} entity. Each lot stores the product, warehouse, lot number,
+expiry date, quantity received, quantity remaining, unit cost, and the source
+goods receipt item. When a goods receipt is confirmed, the accepted quantity
+increases aggregate inventory and also creates a corresponding inventory lot.
+The implementation prevents duplicate lot creation for the same receipt item by
+checking whether a source receipt item has already generated a lot. This keeps
+goods receipt confirmation safe when the operation is retried after an
+interrupted request.
+
+During goods issue confirmation, the service retrieves all available lots for
+the product and warehouse ordered by FEFO: lots with an expiry date come first,
+the earliest expiry date is selected before later ones, and lots without expiry
+dates are placed last. The service validates that the sum of remaining lot
+quantity can cover the requested issue quantity. It then greedily consumes lots
+in this order until the requested quantity is fully allocated. The first consumed
+lot number and expiry date are copied to the goods issue item so that the
+outbound document displays the batch information used for picking.
+
+\begin{algorithm}[H]
+\caption{FEFO allocation for a goods-issue item}
+\KwIn{product, warehouse, issueQuantity}
+\KwOut{updated lots and goods-issue line batch information}
+lots $\leftarrow$ find available lots ordered by expiry date ascending\;
+\If{sum(lot.quantityRemaining) $<$ issueQuantity}{
+  reject confirmation with an insufficient-lot-stock error\;
+}
+remaining $\leftarrow$ issueQuantity\;
+\ForEach{lot in lots}{
+  \If{remaining = 0}{break}
+  take $\leftarrow$ min(remaining, lot.quantityRemaining)\;
+  lot.quantityRemaining $\leftarrow$ lot.quantityRemaining - take\;
+  remaining $\leftarrow$ remaining - take\;
+}
+record the first consumed lot number and expiry date on the goods-issue item\;
+\end{algorithm}
+
+The achieved result is a practical FEFO process integrated with the order and
+warehouse workflow. The system no longer relies on the warehouse employee to
+manually choose a batch after reading several spreadsheets. Earlier-expiring
+stock is consumed first, remaining lot quantities are visible for expiry
+monitoring, and outbound documents keep the batch information needed for later
+traceability.
 
 % You may also typeset the algorithm with algorithm2e, e.g.:
 % \begin{algorithm}[H]\caption{FEFO allocation}\dots\end{algorithm}
@@ -24,18 +74,107 @@ results achieved.
 % (ii) Solution: reserve stock at SO approval (quantityReserved up, quantityAvailable
 %      down); deduct only at goods-issue confirmation; release on cancel.
 % (iii) Results: no oversell; clear available-vs-reserved visibility.
-[TODO] Present the reservation design and its effect.
+The second contribution is inventory reservation at the moment a sales order is
+approved. In a manual process, two sales staff members may check the same
+physical stock and both promise it to different customers. Even if the stock is
+physically sufficient at the first check, the company can oversell before the
+warehouse confirms goods issue. This problem appears in the interval between
+sales approval and physical shipment.
+
+The system addresses this issue by separating on-hand, reserved, and available
+quantities. When a sales order is approved, the service checks available
+quantity for each order line in the selected warehouse. If every line can be
+fulfilled, it increases the reserved quantity and reduces the available quantity.
+The physical on-hand quantity is not reduced at this stage because the goods are
+still in the warehouse. When the goods issue is later confirmed, the system
+deducts on-hand quantity and releases the corresponding reservation. If an
+approved order is cancelled before shipment, only the remaining reserved
+quantity is released.
+
+This design gives different business users the right view of stock. Sales staff
+see available quantity, which prevents them from selling stock that is already
+committed. Warehouse staff still see the physical on-hand quantity for picking
+and reconciliation. Managers can distinguish between real stock shortage and
+stock that is present but reserved for approved orders. As a result, the system
+reduces overselling risk without prematurely deducting stock before goods leave
+the warehouse.
 
 \section{Failed-Delivery Recovery}
 % (i) Problem: a failed delivery must cleanly reverse stock, invoice and order state.
 % (ii) Solution: restockFromFailedDelivery() restores inventory + lots, cancels the
 %      invoice (warns if already paid), resets delivered qty, reverts SO status.
 % (iii) Results: consistent, idempotent recovery.
-[TODO] Present the recovery mechanism.
+The third contribution is a centralized recovery mechanism for failed delivery.
+In the order-to-cash workflow, a confirmed goods issue has already deducted
+stock, updated delivered quantities, and generated an invoice. If the delivery
+later fails, a manual correction must reverse several records in the right order.
+If only one record is corrected, the system becomes inconsistent: inventory may
+show fewer goods than the warehouse has, the order may appear delivered, or the
+invoice may remain active although the customer did not receive the goods.
+
+The system implements this recovery in \texttt{restockFromFailedDelivery}. The
+method finds the goods issue linked to the failed trip, adds the issued quantity
+back to aggregate inventory, restores the quantity to the corresponding lot,
+decreases the delivered quantity of the sales order item, cancels the invoice
+when it is still cancellable and unpaid, and recalculates the sales order
+delivery status. If the invoice already has payment, the system does not
+silently cancel it; instead it records a warning so that the accountant can
+perform refund or adjustment work manually. This is important because financial
+documents should not be reversed automatically after money has been collected.
+
+The result is that delivery failure is treated as a business event rather than a
+set of unrelated manual edits. The recovery path protects the consistency among
+inventory, lots, sales orders, and invoices. In the current implementation, the
+method is intended to be called from a controlled delivery-status transition; a
+future improvement is to add an explicit recovery marker on the goods issue or
+delivery order to make repeated calls harmless at the database level.
 
 \section{Role-Based Workflow Enforcement}
 % (i) Problem: separation of duties (creator != approver) across 9 roles.
 % (ii) Solution: RBAC at endpoint + method + data level (e.g. shippers see only their
 %      own trips via isAssignedTo()).
 % (iii) Results: enforced approval chains and least-privilege access.
-[TODO] Present the RBAC design; optionally include a permission matrix table.
+The fourth contribution is role-based workflow enforcement. The distribution
+process involves several responsibilities: staff create documents, managers or
+accountants approve them, warehouse staff confirm physical stock movements,
+delivery administrators assign trips, and shippers update only their assigned
+deliveries. If all users could access all operations, the system would lose
+separation of duties and approval would become only a visual status rather than
+a real control.
+
+The system defines nine roles and applies access control at three levels. At the
+endpoint level, Spring Security restricts URL patterns and HTTP methods, for
+example allowing only purchase managers, accountants, or administrators to
+approve purchase orders. At the method level, reusable authorization annotations
+express common policies such as manager access, warehouse access, delivery
+access, and accountant access. At the data level, services enforce contextual
+constraints, such as preventing warehouse staff from seeing unapproved orders
+and limiting shippers to assigned trips. Table~\ref{tab:rbac-matrix} summarises
+the main permission groups.
+
+\begin{table}[H]\centering
+\caption{Simplified RBAC permission matrix}
+\label{tab:rbac-matrix}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{|p{3.6cm}|c|c|c|c|c|c|}
+\hline
+\textbf{Role} & \textbf{PO} & \textbf{SO} & \textbf{GR/GI} & \textbf{Delivery} & \textbf{Invoice} & \textbf{Users} \\ \hline
+Administrator & Full & Full & Full & Full & Full & Full \\ \hline
+Purchase staff & Create/Edit & View & View GR & No & No & No \\ \hline
+Purchase manager & Approve & View & View GR & No & No & No \\ \hline
+Sales staff & View & Create/Edit & View GI & No & View & No \\ \hline
+Sales manager & View & Approve & View GI & No & Manage & No \\ \hline
+Warehouse staff & Approved only & Approved only & Confirm & No & No & No \\ \hline
+Delivery administrator & No & View & View & Manage & No & No \\ \hline
+Shipper & No & No & No & Assigned trips & No & No \\ \hline
+Accountant & Approve & Approve & View & No & Manage & No \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+This design makes the workflow enforceable by the application instead of relying
+only on organizational discipline. It also improves usability because each user
+sees a smaller set of relevant actions. The result is a least-privilege
+prototype that supports approval chains, warehouse control, delivery assignment,
+and financial visibility while keeping administrative functions restricted.

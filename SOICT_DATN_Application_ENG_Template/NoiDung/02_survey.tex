@@ -8,29 +8,72 @@ specifies the functional and non-functional requirements of the system.
 % (iii) similar applications. Compare Odoo, SAP Business One, KiotViet, Sapo, MISA
 % in a table (features vs. limitations for a small distributor: cost, FEFO support,
 % delivery routing, customisation). Conclude what features are required.
-[TODO] Survey and compare existing products; justify the required features.
+The requirement survey was conducted from three sources. The first source is the
+typical workflow of a small or medium-sized distributor: purchasing goods from
+suppliers, receiving them into warehouses, selling them to customers, issuing
+invoices, and arranging delivery. The second source is the current manual
+practice, where employees often use spreadsheets, paper forms, and direct
+messages to coordinate stock and approvals. The third source is a group of
+similar software products, including Odoo, SAP Business One, KiotViet, Sapo, and
+MISA.
+
+Existing systems confirm that lot and expiry-date management is an important
+industry requirement. Odoo supports expiration-date tracking and FEFO removal
+strategy \cite{odooExpiration,odooFefo}. SAP Business One batch master data
+contains fields such as expiration date, manufacturing date, and admission date
+\cite{sapBatch}. KiotViet, Sapo, and MISA provide Vietnamese-market functions
+for managing goods by lot and expiry date
+\cite{kiotvietLotExpiry,sapoLotExpiry,misaLotExpiry}. However, these products
+either target broad ERP usage or retail/POS usage. A small distributor may need a
+more focused workflow that connects purchase approval, goods receipt, stock
+reservation, FEFO goods issue, delivery execution, invoice generation, and
+failed-delivery recovery in one prototype.
 
 % Example comparison table (fill in):
 \begin{table}[H]\centering
 \caption{Comparison of existing distribution-management products}
 \label{tab:survey}
-\begin{tabular}{|l|c|c|c|c|}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{|p{4.2cm}|p{2.5cm}|p{2.5cm}|p{2.5cm}|p{2.5cm}|}
 \hline
 \textbf{Criterion} & \textbf{Odoo} & \textbf{KiotViet} & \textbf{Sapo} & \textbf{This thesis} \\ \hline
-Lot/expiry (FEFO) tracking & \dots & \dots & \dots & Yes \\ \hline
-Role-based approval workflow & \dots & \dots & \dots & Yes (9 roles) \\ \hline
-Delivery planning \& shipper app & \dots & \dots & \dots & Yes \\ \hline
-Self-hosted / customisable & \dots & \dots & \dots & Yes \\ \hline
-\end{tabular}
+Lot/expiry tracking & Strong, includes FEFO & Supported & Supported & Supported with FEFO allocation \\ \hline
+Role-based approval workflow & Configurable, broad ERP scope & Mainly retail roles & Mainly retail roles & Focused 9-role workflow \\ \hline
+Sales order reservation & Available in ERP configuration & Limited for POS flow & Limited for POS flow & Explicit reservation on approval \\ \hline
+Delivery planning \& shipper workflow & Available with modules & Limited by package & Limited by package & Integrated delivery plan/trip \\ \hline
+Self-hosted/customisable for thesis rules & High but complex & SaaS-oriented & SaaS-oriented & Full source-code control \\ \hline
+\end{tabular}%
+}
 \end{table}
+
+From this survey, the required features are defined as follows. The system must
+support end-to-end procure-to-stock and order-to-cash workflows, not only
+standalone inventory counting. It must maintain both aggregate stock and
+lot-level stock for FEFO. It must prevent overselling by reserving stock after
+sales order approval. It must separate duties through role-based access control.
+Finally, it must support delivery status changes and recovery when delivery
+fails.
 
 \section{Functional Overview}
 
 \subsection{General Use Case Diagram}
 % GUIDE: describe the 9 actors and the top-level use cases, then reference the figure.
 \thesisfig{usecase_general}{General use case diagram of the system}{fig:uc-general}
-[TODO] Explain the actors (Purchase/Sales Staff \& Manager, Warehouse Staff,
-Delivery Admin, Shipper, Accountant, Administrator) and the main use cases.
+Figure~\ref{fig:uc-general} shows the general use case diagram. The system has
+nine actors. The administrator manages users, roles, master data, and system
+configuration. Purchase staff create and update purchase orders, while purchase
+managers approve or reject them. Sales staff create and update sales orders,
+while sales managers approve or reject them. Warehouse staff confirm physical
+goods receipt and goods issue, manage inventory, and monitor lots. Delivery
+administrators create delivery plans, assign shippers, and monitor delivery
+execution. Shippers view assigned trips and update delivery status. Accountants
+view financial information, approve business documents when assigned that duty,
+and manage invoice-related operations.
+
+The top-level use cases are grouped by business area: purchasing, sales,
+warehouse, delivery, reporting, and administration. This organization matches
+the operational departments of a distributor and keeps each actor's
+responsibility explicit.
 
 \subsection{Detailed Use Case Diagrams}
 % GUIDE: one subsection per high-level use case; the decomposed UC name must match.
@@ -38,13 +81,45 @@ Delivery Admin, Shipper, Accountant, Administrator) and the main use cases.
 \thesisfig{usecase_sales}{Detailed use cases — Sales \& Goods Issue}{fig:uc-sales}
 \thesisfig{usecase_warehouse}{Detailed use cases — Inventory \& Lot management}{fig:uc-warehouse}
 \thesisfig{usecase_delivery}{Detailed use cases — Delivery management}{fig:uc-delivery}
-[TODO] Briefly explain each decomposed use case.
+The purchasing use cases in Figure~\ref{fig:uc-purchasing} include creating a
+purchase order, updating it while it is still open, approving or rejecting it,
+creating a goods receipt from an approved purchase order, and confirming the
+receipt. The important rule is that warehouse receipt is not independent from
+purchase approval; goods receipt can only proceed when the purchase order status
+allows receiving.
+
+The sales use cases in Figure~\ref{fig:uc-sales} include creating a sales
+order, approving or rejecting it, reserving inventory, creating a goods issue,
+confirming the goods issue, and generating the sales invoice. The sales flow is
+designed to separate commercial approval from physical shipment. The warehouse
+use cases in Figure~\ref{fig:uc-warehouse} include viewing inventory, managing
+lots, checking expiring or expired lots, and viewing inventory transactions. The
+delivery use cases in Figure~\ref{fig:uc-delivery} include creating delivery
+plans, assigning shippers, viewing assigned trips, updating delivery status, and
+handling failed delivery.
 
 \subsection{Business Process}
 % GUIDE: model the combined activity flow of multiple use cases (NOT a single UC).
 \thesisfig{activity_procure_to_stock}{Procure-to-stock business process}{fig:act-p2s}
 \thesisfig{activity_order_to_cash}{Order-to-cash business process}{fig:act-o2c}
-[TODO] Describe the two core business processes.
+Figure~\ref{fig:act-p2s} describes the procure-to-stock process. The process
+starts when purchase staff create a purchase order for a supplier. A purchase
+manager or accountant reviews the order. If the order is rejected, the process
+ends with a cancellation status. If the order is approved, the warehouse can
+create a goods receipt when goods arrive. On confirmation, the system validates
+the received quantity, updates the purchase order receiving progress, increases
+inventory, creates inventory transactions, and creates inventory lots with batch
+and expiry information.
+
+Figure~\ref{fig:act-o2c} describes the order-to-cash process. Sales staff create
+a sales order for a customer and selected warehouse. A sales manager or
+accountant approves the order after the system checks available stock. Approval
+reserves stock so that other orders cannot consume the same quantity. Warehouse
+staff then create and confirm a goods issue. Confirmation deducts physical stock
+by FEFO, releases reservation, updates delivered quantity, and creates an
+invoice. Delivery staff execute the delivery plan and update delivery status. If
+delivery fails, the system restores stock and adjusts the related order and
+invoice state.
 
 \section{Functional Description}
 % GUIDE: pick 4-7 most important use cases; for each give name, event flow
@@ -62,15 +137,75 @@ Delivery Admin, Shipper, Accountant, Administrator) and the main use cases.
 \end{itemize}
 
 \subsection{Approve Sales Order (Inventory Reservation)}
-[TODO] Specify event flow, pre/post-conditions.
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Pre-conditions:} Sales Order is ORDER\_OPEN; customer is active;
+        warehouse is selected; order items are valid.
+  \item \textbf{Main flow:} load SO with items $\to$ verify status allows
+        approval $\to$ check available quantity for each product and warehouse
+        $\to$ reserve inventory $\to$ set status to ORDER\_APPROVED $\to$ store
+        approver and approval time.
+  \item \textbf{Alternate flow:} insufficient available stock $\to$ reject
+        approval and keep SO unchanged; invalid status $\to$ reject transition.
+  \item \textbf{Post-conditions:} SO is approved; reserved quantity increases;
+        available quantity decreases; on-hand quantity is unchanged.
+\end{itemize}
 
 \subsection{Confirm Goods Receipt}
-[TODO] Specify event flow, pre/post-conditions.
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Pre-conditions:} Purchase Order is APPROVED or
+        PARTIALLY\_RECEIVED; Goods Receipt is DRAFT; warehouse and receipt items
+        are provided.
+  \item \textbf{Main flow:} load GR with items $\to$ validate status $\to$ check
+        remaining ordered quantity $\to$ update PO item received quantity $\to$
+        add accepted quantity to inventory $\to$ create inventory transaction
+        $\to$ create inventory lot with batch number and expiry date $\to$
+        update PO receiving status.
+  \item \textbf{Alternate flow:} received quantity exceeds remaining quantity
+        $\to$ reject confirmation; missing batch number for lot-managed receipt
+        $\to$ reject confirmation.
+  \item \textbf{Post-conditions:} GR is CONFIRMED; inventory and lots increase;
+        purchase order receiving progress is updated.
+\end{itemize}
 
 \subsection{Assign and Execute Delivery Trip}
-[TODO] Specify event flow, pre/post-conditions.
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Pre-conditions:} Goods Issue or delivery order is ready for
+        delivery; shipper user exists and has SHIPPER role.
+  \item \textbf{Main flow:} delivery administrator creates delivery plan $\to$
+        selects orders to deliver $\to$ assigns shipper $\to$ system creates
+        trip route and route items $\to$ shipper views assigned trips $\to$
+        shipper updates each delivery item as delivered or failed.
+  \item \textbf{Alternate flow:} delivery failed $\to$ trigger failed-delivery
+        recovery for the related goods issue; unauthorized shipper access $\to$
+        reject request.
+  \item \textbf{Post-conditions:} delivery status is updated; successful trips
+        remain linked to completed delivery, while failed trips restore stock and
+        require follow-up handling.
+\end{itemize}
 
 \section{Non-Functional Requirements}
 % GUIDE: performance, reliability, usability, maintainability, security, plus
 % technical requirements (PostgreSQL, REST API, JWT auth, browser support).
-[TODO] List non-functional and technical requirements.
+The system must satisfy several non-functional requirements. For performance,
+common list pages such as products, customers, purchase orders, sales orders,
+and inventory should respond within a few seconds on a local development
+database. Critical stock updates must run in database transactions to avoid
+partial updates. For reliability, approval, goods receipt confirmation, goods
+issue confirmation, and failed-delivery recovery must either complete all
+related changes or fail without changing business state.
+
+For security, every protected API must require authentication, and authorization
+must follow the role matrix described in Chapter~\ref{chapter:Contribution}.
+Passwords must be stored using a one-way hash, and JWT secrets must be
+configured outside source code in production. For usability, the web interface
+must clearly show document status, validation errors, and operation results.
+For maintainability, the backend must preserve the controller-service-repository
+separation, DTOs must be used at the API boundary, and database schema changes
+must be represented as migration scripts.
+
+The technical requirements are as follows. The backend provides REST APIs over
+HTTP and is implemented with Java and Spring Boot. The frontend is a browser
+application implemented with React and Ant Design. PostgreSQL is used as the
+database. The application should run in modern browsers such as Chrome, Edge,
+and Firefox. The default development ports are 8080 for the backend, 5173 for
+the frontend, and 5432 for PostgreSQL.

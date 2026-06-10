@@ -12,7 +12,35 @@ organization of the thesis.
 % sales invoicing and last-mile delivery with disconnected Excel files and paper.
 % Consequences: stock inaccuracy, overselling, expired perishable goods (no FEFO),
 % no audit trail, slow approvals. Emphasise urgency/scale (e.g. FMCG distribution).
-[TODO] Describe the practical context and the problem it raises.
+Small and medium-sized distributors play an important role in moving goods from
+manufacturers and wholesalers to retail stores, pharmacies, grocery shops, and
+end customers. Their daily work includes purchasing goods from suppliers,
+receiving stock into warehouses, monitoring inventory, selling to customers,
+issuing invoices, and coordinating delivery. In many companies of this scale,
+these activities are still handled by separated spreadsheets, paper forms,
+phone messages, and manual approval. Such an approach can work when the business
+is small, but it becomes fragile when the number of products, warehouses, sales
+orders, and delivery trips increases.
+
+The main problem is that operational data is fragmented. A purchase staff member
+may record an incoming order in one file, the warehouse may record receipt in
+another file, and the sales team may check stock by asking warehouse staff
+directly. This creates delays and inconsistencies. Sales orders can be accepted
+even when available stock is already committed to other customers. Goods with
+expiry dates can remain in the warehouse because employees pick the most visible
+stock instead of the earliest-expiring stock. When a delivery fails, the company
+must manually restore stock, cancel or adjust invoices, and update order status.
+These manual corrections are slow and error-prone.
+
+The issue is especially serious for fast-moving consumer goods and perishable
+products. In these domains, stock quantity alone is not enough; each batch must
+be tracked with its expiry date, and outbound stock should follow a FEFO
+principle. Without a reliable audit trail, the company has difficulty answering
+basic questions such as which lot was delivered to which customer, why available
+stock differs from physical stock, or whether an invoice still corresponds to a
+successful delivery. Therefore, a unified information system is needed to support
+daily distribution operations and reduce the risks caused by disconnected
+manual management.
 
 \section{Objectives and Scope of the Graduation Thesis}
 % GUIDE: (1) overview existing products (Odoo, SAP Business One, KiotViet, Sapo,
@@ -20,13 +48,57 @@ organization of the thesis.
 % distributor, (4) state what THIS thesis builds: an integrated web system covering
 % purchasing, inventory with FEFO lot tracking, sales & invoicing, and delivery,
 % with role-based access control. List the MAIN functions only (details -> Ch.5).
-[TODO] State objectives, scope and the main functions of the system.
+Several existing products already support inventory and distribution
+management. Odoo provides inventory functions such as expiration-date tracking
+and FEFO removal strategy \cite{odooExpiration,odooFefo}. SAP Business One
+supports batch master data with fields such as expiration date and manufacturing
+date \cite{sapBatch}. Vietnamese retail-oriented systems such as KiotViet,
+Sapo, and MISA also provide lot and expiry-date management features
+\cite{kiotvietLotExpiry,sapoLotExpiry,misaLotExpiry}. These products show that
+the business need is real and that lot-based inventory is an important function
+for distribution companies.
+
+However, such products also have limitations for the target context of this
+thesis. Full ERP solutions are often costly, complex to customize, and excessive
+for a small distributor that needs a focused workflow. Retail POS products are
+convenient for store operations but may not fully match a distributor's combined
+workflow of purchase approval, warehouse receiving, sales order approval,
+inventory reservation, goods issue, delivery trip execution, and invoice
+recovery after failed delivery. The objective of this graduation thesis is
+therefore to design and implement a focused web-based supply-chain management
+system for small and medium-sized distributors.
+
+The scope of the thesis includes five main functional groups. The purchasing
+module supports supplier management, purchase order creation, approval, and
+goods receipt. The inventory module supports multi-warehouse stock records,
+inventory transactions, lot tracking, expiry dates, and FEFO-based outbound
+allocation. The sales module supports customer management, sales order creation,
+approval with stock reservation, goods issue, and sales invoice generation. The
+delivery module supports delivery plans, delivery trips, shipper assignment, and
+delivery status updates. The administration module supports authentication,
+role-based access control, user management, and dashboard reporting. Advanced
+functions such as automatic route optimization, demand forecasting, barcode
+scanning, and a dedicated mobile application are considered future work.
 
 \section{Tentative Solution}
 % GUIDE: (i) name the approach/tech (layered Spring Boot REST backend + React SPA,
 % PostgreSQL, JWT/RBAC, FEFO lot allocation); (ii) 1-2 sentence description;
 % (iii) main contribution & expected results. Do NOT analyse the tech in detail.
-[TODO] Outline the proposed solution direction in a few sentences.
+The proposed solution is a web application based on a layered client-server
+architecture. The backend is implemented with Spring Boot REST services and
+PostgreSQL, while the frontend is implemented as a React single-page
+application. Authentication and authorization are handled by JWT and role-based
+access control so that each actor can access only the functions required by his
+or her responsibility.
+
+The core business direction is to connect procure-to-stock, order-to-cash, and
+delivery execution in one consistent workflow. Goods receipt creates inventory
+lots with batch numbers and expiry dates. Sales order approval reserves
+available stock to prevent overselling. Goods issue confirms the physical
+outbound movement and allocates stock by FEFO. When delivery fails, the system
+restores inventory and adjusts the related order and invoice state. The expected
+result is a working prototype that demonstrates how a small distributor can
+control stock, approvals, deliveries, and traceability in an integrated system.
 
 \section{Thesis Organization}
 % GUIDE: full paragraphs (not bullets); describe Chapters 2-6, NOT Chapter 1.

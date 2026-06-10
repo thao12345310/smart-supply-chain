@@ -9,20 +9,91 @@ and deployment of the system.
 % client-server design — React SPA (presentation) / Spring Boot REST (controller-
 % service-repository) / PostgreSQL (data). Then map the layers to this system.
 \thesisfig{architecture}{Overall system architecture}{fig:architecture}
-[TODO] Justify the layered/3-tier architecture and map it to the system.
+The system adopts a three-tier client-server architecture, as shown in
+Figure~\ref{fig:architecture}. The presentation tier is a React single-page
+application that runs in the user's browser. It is responsible for rendering
+forms, tables, dashboards, navigation, and status feedback. The application tier
+is a Spring Boot REST backend. It exposes API endpoints, authenticates requests,
+checks authorization, executes business rules, and coordinates transactions. The
+data tier is PostgreSQL, which stores master data, business documents,
+inventory, lots, invoices, delivery records, and user-role information.
+
+This architecture was selected because the system contains many business
+workflows that must be consistent across modules. If the frontend directly
+handled inventory rules, each screen would need to repeat the same validation
+logic. Instead, all core rules are centralized in backend services. For example,
+sales order approval checks available inventory and reserves stock; goods
+receipt confirmation updates purchase order progress and creates lots; goods
+issue confirmation deducts stock by FEFO and creates an invoice. The frontend
+only calls the relevant API and displays the result.
+
+The architecture also supports maintainability. Each tier can evolve with a
+clear boundary: the frontend focuses on user experience, the backend focuses on
+business logic, and the database focuses on persistence and integrity. This is
+appropriate for the thesis because the project must demonstrate both a usable
+application and non-trivial business rules without mixing responsibilities.
 
 \subsection{Overall Design}
 % GUIDE: UML package diagram organised by layers; explain each package's responsibility
 % and the dependency rules (upper depends on lower only).
 \thesisfig{package_diagram}{Package diagram (layered backend)}{fig:packages}
-[TODO] Explain each package and the dependency direction.
+Figure~\ref{fig:packages} presents the main backend packages. The
+\texttt{controller} package contains REST controllers for authentication,
+master data, purchase orders, goods receipts, sales orders, goods issues,
+delivery, inventory, invoices, dashboard, and user management. Controllers
+convert HTTP requests into DTOs and delegate processing to services. The
+\texttt{dto} package contains request and response objects used between the
+frontend and backend, preventing entity classes from being exposed directly.
+
+The \texttt{service} package defines business interfaces and the
+\texttt{service.impl} package implements them. This is the main location of
+workflow logic such as purchase approval, sales approval, inventory reservation,
+FEFO goods issue, failed-delivery recovery, and dashboard aggregation. The
+\texttt{repository} package contains Spring Data repositories and custom queries
+for persistence. The \texttt{model} package contains JPA entities, while
+\texttt{model.enums} contains lifecycle states such as purchase order status,
+sales order status, goods receipt status, goods issue status, invoice status,
+payment status, and role type.
+
+Supporting packages are separated from domain packages. The \texttt{security}
+package implements JWT token generation, authentication filtering, custom user
+details, and role annotations. The \texttt{config} package defines security,
+CORS, and API documentation configuration. The \texttt{exception} package
+provides domain exceptions and a global exception handler. The dependency
+direction follows the layered rule: controllers depend on services and DTOs,
+services depend on repositories and models, and repositories depend on models.
+Lower layers do not call upper layers.
 
 \subsection{Detailed Package Design}
 % GUIDE: class diagrams (names + relationships only) per related package group.
 \thesisfig{class_inbound}{Class diagram — inbound (purchasing) flow}{fig:class-in}
 \thesisfig{class_outbound}{Class diagram — outbound (sales) flow}{fig:class-out}
 \thesisfig{class_delivery}{Class diagram — delivery flow}{fig:class-dlv}
-[TODO] Briefly explain the design of each package group.
+The inbound package group in Figure~\ref{fig:class-in} models the
+procure-to-stock process. A supplier is associated with purchase orders, and
+each purchase order contains multiple purchase order items. A goods receipt is
+created from an approved or partially received purchase order and contains goods
+receipt items. When a goods receipt is confirmed, accepted quantities update the
+purchase order items, aggregate inventory, inventory transactions, and lot
+records. This design keeps the original purchase document, the warehouse
+receipt, and the resulting inventory movement traceable.
+
+The outbound package group in Figure~\ref{fig:class-out} models the
+order-to-cash process. A customer places a sales order with sales order items.
+After approval, stock is reserved in the selected warehouse. A goods issue is
+then created from the approved sales order and contains goods issue items. When
+the goods issue is confirmed, stock is deducted, lots are consumed according to
+FEFO, delivered quantities are updated, and a sales invoice is generated. This
+group is the core of the inventory-reservation and FEFO contribution described
+in Chapter~\ref{chapter:Contribution}.
+
+The delivery package group in Figure~\ref{fig:class-dlv} models planning and
+execution after goods issue. Delivery plans group delivery orders and assign
+shipper users through delivery plan shipper records. Delivery trip routes and
+route items represent executable trips. Shippers update delivery status, while
+delivery administrators manage planning and assignment. This separation allows
+delivery execution to reference sales and goods issue documents without changing
+their core structure.
 
 \section{Detailed Design}
 
@@ -30,7 +101,30 @@ and deployment of the system.
 % GUIDE (2-3 pages): state display standards (resolution, colour scheme, button/
 % control conventions, feedback placement). Show UI MOCKUPS (prototypes, e.g. Figma/
 % draw.io), NOT production screenshots (those go in 4.3.3).
-[TODO] Present UI design standards and mockups (insert mockup figures here).
+The user interface is designed as an operational dashboard rather than a
+marketing website. The main layout uses a left navigation menu for modules and a
+content area for lists, forms, detail pages, and dashboards. Tables are used for
+high-volume objects such as purchase orders, sales orders, inventory records,
+goods receipts, goods issues, invoices, customers, suppliers, products, and
+warehouses. Forms are grouped by business meaning: header information appears at
+the top, line items are edited in a table-like section, and action buttons are
+placed near the document status.
+
+The interface follows several standards. First, each business document displays
+its code, status, partner, date, warehouse, monetary values, and line items in a
+consistent order. Second, status is shown with color-coded tags so that users can
+quickly distinguish draft, approved, confirmed, cancelled, partially delivered,
+and completed records. Third, destructive or irreversible actions such as
+confirmation, cancellation, and deletion require confirmation dialogs. Fourth,
+validation errors are displayed close to the relevant form field, while
+operation-level errors are displayed as notifications.
+
+The final thesis version should include prototype mockups for the main screens:
+login, dashboard, purchase order detail, goods receipt confirmation, sales order
+approval, goods issue with FEFO lot display, inventory lots, delivery trip, and
+invoice detail. These mockups should be produced in Figma or a similar design
+tool and inserted here as design figures. Production screenshots are presented
+later in Section~\ref{sec:main-functions} after implementation.
 
 \subsection{Layer Design}
 % GUIDE (3-4 pages): detailed design (attributes + methods) of 2-4 key classes,
@@ -39,12 +133,62 @@ and deployment of the system.
 \thesisfig{seq_so_gi_fefo}{Sequence — confirm Goods Issue with FEFO allocation}{fig:seq-fefo}
 \thesisfig{seq_po_gr}{Sequence — approve PO and confirm Goods Receipt}{fig:seq-pogr}
 \thesisfig{seq_delivery_trip}{Sequence — assign and execute delivery trip}{fig:seq-trip}
-[TODO] Explain the key classes and the message flows.
+Figure~\ref{fig:class-detail} focuses on the key classes that carry the most
+important business rules. \texttt{Inventory} stores aggregate stock quantities,
+including on-hand, reserved, and available quantities. \texttt{InventoryLot}
+stores batch-level quantity and expiry information. \texttt{SalesOrder} and
+\texttt{SalesOrderItem} represent customer demand and delivered progress.
+\texttt{GoodsIssue} and \texttt{GoodsIssueItem} represent the warehouse outbound
+document and record the batch information used during FEFO allocation.
+\texttt{GoodsReceipt} and \texttt{GoodsReceiptItem} represent inbound warehouse
+confirmation and are the source for lot creation.
+
+The sequence in Figure~\ref{fig:seq-fefo} starts when a warehouse staff member
+confirms a goods issue. The controller calls the goods issue service, which
+loads the goods issue with its items, validates the document status, checks
+physical stock, retrieves available lots in FEFO order, deducts lot quantities,
+decreases aggregate inventory, releases reserved stock, updates delivered
+quantities, creates a sales invoice, and updates the sales order delivery
+status. The sequence shows why this operation must be transactional: every
+change belongs to one business event.
+
+The sequence in Figure~\ref{fig:seq-pogr} shows the inbound flow. A purchase
+order is approved first. A warehouse staff member then creates and confirms a
+goods receipt. Confirmation validates the remaining ordered quantity, increases
+aggregate inventory, creates an inventory transaction, creates inventory lots
+from accepted quantities, and updates the purchase order receiving status. The
+sequence in Figure~\ref{fig:seq-trip} shows delivery assignment and execution:
+delivery administrators build a plan and assign shippers, while shippers update
+trip status. Failed delivery triggers the recovery mechanism described in
+Chapter~\ref{chapter:Contribution}.
 
 \subsection{Database Design}
 % GUIDE (2-4 pages): E-R diagram + explanation; then the physical schema (PostgreSQL).
 \thesisfig{er_diagram}{Entity-Relationship diagram}{fig:er}
-[TODO] Explain the entities, keys and relationships.
+The database design in Figure~\ref{fig:er} follows the business document
+structure of a distributor. Master data includes products, warehouses,
+suppliers, customers, delivery addresses, users, and roles. Transactional data
+is organized around document headers and document lines. Purchase orders have
+purchase order items; goods receipts have goods receipt items and refer back to
+purchase orders; sales orders have sales order items; goods issues have goods
+issue items and refer back to sales orders; invoices have invoice items and
+refer to goods issues where applicable.
+
+Inventory is represented at two levels. The aggregate \texttt{inventory} table
+stores stock by product and warehouse, including on-hand, reserved, available,
+reorder level, and average cost. The \texttt{inventory\_lot} table stores lot
+number, expiry date, received quantity, remaining quantity, unit cost, product,
+warehouse, and source goods receipt item. This two-level model allows the system
+to answer both operational questions, such as available stock by warehouse, and
+traceability questions, such as which lot remains close to expiry.
+
+The delivery model contains delivery plans, delivery orders, delivery plan
+orders, delivery plan shippers, delivery trip routes, and delivery trip route
+items. These tables separate planning from execution and allow a shipper to be
+assigned only to specific trips. Foreign keys preserve the relationship between
+delivery records and the sales/goods issue documents they execute. Status fields
+are implemented as enums in the application and persisted as database values,
+which keeps lifecycle transitions explicit in the service layer.
 
 \section{Application Building}
 
@@ -61,7 +205,7 @@ Backend language        & Java                    & 17 \\ \hline
 Backend framework       & Spring Boot             & 3.1.4 \\ \hline
 ORM / data access       & Spring Data JPA (Hibernate) & (Boot 3.1.4) \\ \hline
 Security / tokens       & Spring Security, JJWT   & 0.12.3 \\ \hline
-DB migration            & Flyway                  & (Boot-managed) \\ \hline
+DB migration            & SQL migration scripts   & V1--V7 \\ \hline
 API documentation       & SpringDoc OpenAPI       & 2.1.0 \\ \hline
 Boilerplate reduction   & Lombok                  & (Boot-managed) \\ \hline
 Build tool (backend)    & Maven                   & 3.x \\ \hline
@@ -86,18 +230,34 @@ IDE                     & IntelliJ IDEA / VS Code & -- \\ \hline
 \begin{tabular}{|l|r|}
 \hline
 \textbf{Metric} & \textbf{Value} \\ \hline
-Lines of code (backend) & [TODO from cloc] \\ \hline
-Lines of code (frontend) & [TODO from cloc] \\ \hline
-Number of Java classes & [TODO] \\ \hline
-Number of packages & [TODO] \\ \hline
+Lines of code (backend) & 14,860 \\ \hline
+Lines of code (frontend) & 10,302 \\ \hline
+Number of Java classes & 152 \\ \hline
+Number of packages & 14 \\ \hline
 \end{tabular}
 \end{table}
+The delivered prototype contains the core modules required by the thesis scope:
+purchasing, goods receipt, inventory and lot management, sales order processing,
+goods issue, sales invoice, delivery planning, shipper trip execution, dashboard
+reporting, authentication, and user-role management. The backend source code has
+14,860 Java lines under \texttt{backend/src/main/java}. The frontend source code
+has 10,302 JavaScript/JSX lines under \texttt{frontend/src}. These values were
+computed from the project source tree.
 
 \subsection{Illustration of Main Functions}
+\label{sec:main-functions}
 % GUIDE: real SCREENSHOTS of the running app (login, dashboard, PO/SO, goods issue
 % with FEFO, inventory lots with expiry alerts, delivery plan, invoice). Annotate +
 % explain each. Run the app, capture, save under Figure/ and \includegraphics them.
-[TODO] Insert and explain annotated screenshots of the main functions.
+This section should contain screenshots captured from the running application.
+The required screenshots are: login page, dashboard, purchase order approval,
+goods receipt confirmation with batch and expiry fields, inventory lot list with
+expiry information, sales order approval, goods issue confirmation with FEFO lot
+information, delivery plan/trip execution, and sales invoice detail. Each
+screenshot should be saved under the \texttt{Figure/} directory, inserted with
+\texttt{\textbackslash includegraphics}, and explained in the surrounding
+paragraph. The screenshots are not inserted in this draft because they must be
+captured from the final running version of the application.
 
 \section{Testing}
 % GUIDE (2-3 pages): design test cases for 2-3 critical functions (GI confirm w/FEFO,
@@ -106,18 +266,47 @@ Number of packages & [TODO] \\ \hline
 \begin{table}[H]\centering
 \caption{Sample test cases}
 \label{tab:tests}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{|c|l|l|l|c|}
 \hline
 \textbf{ID} & \textbf{Function} & \textbf{Input} & \textbf{Expected} & \textbf{Result} \\ \hline
-TC01 & Confirm GI (FEFO) & stock with 2 lots & earliest-expiry lot consumed first & [TODO] \\ \hline
-TC02 & Approve SO & qty $\leq$ available & reservation increases & [TODO] \\ \hline
-TC03 & Credit limit & balance+amt $>$ limit & order blocked & [TODO] \\ \hline
-\end{tabular}
+TC01 & Confirm GI (FEFO) & stock with 2 lots & earliest-expiry lot consumed first & To execute \\ \hline
+TC02 & Approve SO & qty $\leq$ available & reservation increases & To execute \\ \hline
+TC03 & Credit limit & balance+amt $>$ limit & order blocked & To execute \\ \hline
+\end{tabular}%
+}
 \end{table}
-[TODO] Describe testing technique and summarise results.
+The testing strategy combines service-level business-rule tests and manual
+end-to-end scenario tests. Service-level tests should focus on functions with
+high consistency risk: approving a sales order, confirming a goods receipt,
+confirming a goods issue with FEFO lots, cancelling an approved sales order, and
+recovering from failed delivery. Manual scenario tests should run the full
+workflow PO $\to$ GR $\to$ SO approval $\to$ GI $\to$ delivery $\to$ invoice and
+verify the database state after each step.
+
+The sample cases in Table~\ref{tab:tests} are prepared for final verification.
+The most important case is TC01 because it checks both aggregate inventory and
+lot-level FEFO deduction. TC02 checks reservation behavior and available stock.
+TC03 represents the financial-control rule and should be executed after the
+credit-limit function is finalized. Detailed final results should be filled in
+after running the completed backend and frontend with a stable test database.
 
 \section{Deployment}
 % GUIDE: deployment model, server/equipment specs, configuration, and any test
 % deployment results (users, response time, load).
 \thesisfig{deployment}{Deployment diagram}{fig:deploy}
-[TODO] Describe the deployment model and environment.
+The deployment model in Figure~\ref{fig:deploy} contains three runtime
+components. The React frontend is served by the Vite development server during
+development at port 5173, or by a static web server in a production-like
+deployment. The Spring Boot backend runs as a Java application at port 8080 and
+exposes REST APIs under \texttt{/api}. PostgreSQL runs as the database server,
+using the default port 5432 in the local development environment.
+
+For local demonstration, the backend is started with \texttt{mvn
+spring-boot:run} and the frontend is started with \texttt{npm run dev}. The
+frontend communicates with the backend through Axios. Authentication requests
+return JWT tokens, and subsequent API calls include the token for authorization.
+The backend connects to PostgreSQL using the configuration in
+\texttt{application.yml}. In a production deployment, the same logical structure
+can be placed behind a reverse proxy, with HTTPS termination at the proxy and
+environment variables used for database credentials and JWT secrets.

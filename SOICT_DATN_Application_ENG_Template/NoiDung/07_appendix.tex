@@ -3,10 +3,51 @@
 % name, event flow main+alternate, pre-conditions, post-conditions).
 
 \section*{Use case: Record Customer Payment}
-[TODO] Specify the use case.
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Actor:} Accountant or Administrator.
+  \item \textbf{Pre-conditions:} Sales invoice exists; invoice status allows
+        payment; payment amount is greater than zero and does not exceed the
+        remaining amount.
+  \item \textbf{Main flow:} actor opens invoice detail $\to$ enters payment
+        amount, payment method, and payment reference $\to$ system validates the
+        amount $\to$ system updates paid amount and remaining amount $\to$
+        invoice status becomes PARTIALLY\_PAID or PAID $\to$ customer balance
+        and sales order payment status are recalculated.
+  \item \textbf{Alternate flow:} payment amount is invalid or exceeds remaining
+        amount $\to$ system rejects the operation and keeps invoice unchanged.
+  \item \textbf{Post-conditions:} payment information is recorded; invoice and
+        related sales order payment statuses are updated.
+\end{itemize}
 
 \section*{Use case: Adjust Stock}
-[TODO] Specify the use case.
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Actor:} Warehouse Staff or Administrator.
+  \item \textbf{Pre-conditions:} Product and warehouse exist; actor has
+        warehouse permission; adjustment reason is provided.
+  \item \textbf{Main flow:} actor selects inventory record $\to$ enters the
+        adjustment quantity and reason $\to$ system validates the quantity $\to$
+        system updates on-hand and available quantity $\to$ system creates an
+        inventory transaction for audit.
+  \item \textbf{Alternate flow:} adjustment would make stock negative $\to$
+        system rejects the operation; actor lacks permission $\to$ system
+        rejects the request.
+  \item \textbf{Post-conditions:} inventory quantity reflects the adjustment and
+        an audit transaction is stored.
+\end{itemize}
 
 \section*{Use case: Monitor Expiring Lots}
-[TODO] Specify the use case.
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Actor:} Warehouse Staff, Sales Staff, Sales Manager, or
+        Administrator.
+  \item \textbf{Pre-conditions:} Inventory lots exist with expiry-date
+        information.
+  \item \textbf{Main flow:} actor opens the inventory lot list $\to$ selects a
+        product, warehouse, or expiry filter $\to$ system returns lots sorted by
+        FEFO $\to$ actor views lot number, remaining quantity, expiry date,
+        days until expiry, and status.
+  \item \textbf{Alternate flow:} actor opens expiring-soon view $\to$ system
+        lists lots whose expiry date is within the selected threshold; actor
+        opens expired view $\to$ system lists expired lots with remaining stock.
+  \item \textbf{Post-conditions:} actor obtains information for replenishment,
+        promotion, return, or disposal decisions; no stock quantity is changed.
+\end{itemize}

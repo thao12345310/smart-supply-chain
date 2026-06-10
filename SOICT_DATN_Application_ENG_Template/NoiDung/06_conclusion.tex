@@ -2,10 +2,64 @@
 \section{Conclusion}
 % GUIDE: compare results with similar products; state what was/was not achieved;
 % identify the main contributions; note lessons learned.
-[TODO] Summarise achievements, comparison and lessons learned.
+This thesis has designed and implemented a web-based supply-chain management
+system for small and medium-sized distributors. Compared with broad ERP products
+such as Odoo and SAP Business One, the system is narrower in scope but more
+focused on the workflow selected for the thesis: purchase approval, goods
+receipt, lot-based inventory, sales order approval, stock reservation, FEFO
+goods issue, delivery execution, invoice generation, dashboard reporting, and
+role-based access control. Compared with retail-oriented systems such as
+KiotViet, Sapo, and MISA, the prototype emphasizes distributor workflow
+integration rather than point-of-sale operation.
+
+The main achieved result is a working application structure that connects the
+procure-to-stock and order-to-cash processes. The backend contains 152 Java
+classes with approximately 14,860 lines of source code, while the frontend
+contains approximately 10,302 lines of JavaScript/JSX source code. The system
+implements the core modules required by the project scope: master data,
+purchasing, goods receipt, inventory, lot management, sales, goods issue,
+invoice, delivery, dashboard, authentication, and user management.
+
+The key contributions are the FEFO lot-allocation mechanism, the inventory
+reservation mechanism at sales order approval, the failed-delivery recovery
+procedure, and the role-based workflow enforcement. These contributions address
+the most important risks of a distributor: expired stock, overselling,
+inconsistent recovery after delivery failure, and uncontrolled access to
+approval and warehouse operations.
+
+Several limitations remain. The project is still a prototype and has not yet
+implemented advanced accounting, automatic route optimization, barcode scanning,
+or demand forecasting. Some verification results should be completed with a
+stable test database and final screenshots of the running application. Through
+the project, an important lesson is that inventory systems require careful
+transaction design: a single business event often changes order status,
+inventory quantity, lot quantity, invoice state, and delivery state at the same
+time.
 
 \section{Future Work}
 % GUIDE: first, work needed to complete existing features; then new directions
 % (e.g. route optimisation for delivery, demand forecasting, barcode/QR scanning,
 % mobile shipper app, multi-warehouse transfer, reporting/BI).
-[TODO] Describe planned completion work and new directions.
+Future work should first complete and harden the existing functions. The testing
+set should be expanded with automated service tests for FEFO allocation,
+inventory reservation, goods receipt confirmation, sales order cancellation, and
+failed-delivery recovery. The failed-delivery mechanism should add an explicit
+database-level recovery marker so repeated calls cannot restore the same goods
+issue twice. The reporting module should be validated with larger sample data,
+and the final thesis should include production screenshots for all main
+functions.
+
+The next development direction is to improve warehouse and delivery efficiency.
+Barcode or QR scanning can reduce manual input errors during goods receipt,
+goods issue, and inventory counting. A mobile-friendly shipper interface or
+dedicated mobile application can make delivery updates easier outside the
+office. Route optimization can help delivery administrators reduce travel time
+and fuel cost when assigning orders to trips. Multi-warehouse transfer should be
+added for distributors that move stock between warehouses before shipment.
+
+Another direction is decision support. Demand forecasting can use historical
+sales data to suggest reorder quantities. Business intelligence dashboards can
+provide deeper analysis of revenue, stock turnover, expired stock, customer
+debt, and supplier performance. Finally, the accounting module can be extended
+with payment matching, automatic accounting entries, and integration with
+external accounting software.
