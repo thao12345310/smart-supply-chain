@@ -1,0 +1,4 @@
+frontend/node_modules/
+frontend/dist/
+backend/target/
+SOICT_DATN_Application_ENG_Template/build/
