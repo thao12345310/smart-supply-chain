@@ -118,4 +118,12 @@ public interface InventoryService {
      */
     void decreaseInventory(Long productId, Long warehouseId, Integer quantity,
                            String referenceType, Long referenceId, String referenceCode);
+
+    /**
+     * Dispose stock (expired/damaged goods write-off)
+     * Reduces on-hand quantity and creates a DISPOSAL transaction record
+     */
+    void disposeInventory(Long productId, Long warehouseId, Integer quantity,
+                          String referenceType, Long referenceId, String referenceCode,
+                          Long userId, String notes);
 }

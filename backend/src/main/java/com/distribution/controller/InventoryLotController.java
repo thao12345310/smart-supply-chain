@@ -2,6 +2,8 @@ package com.distribution.controller;
 
 import com.distribution.dto.ApiResponse;
 import com.distribution.dto.InventoryLotResponse;
+import com.distribution.dto.LotDisposalRequest;
+import com.distribution.dto.LotDisposalResponse;
 import com.distribution.service.InventoryLotService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,5 +55,36 @@ public class InventoryLotController {
         List<InventoryLotResponse> lots = inventoryLotService.getExpired();
         return ResponseEntity.ok(ApiResponse.success(lots,
             "Tìm thấy " + lots.size() + " lô đã hết hạn sử dụng"));
+    }
+
+    @PostMapping("/{lotId}/dispose")
+    @Operation(summary = "Xuất hủy một lô",
+        description = "Hủy toàn bộ tồn còn lại của lô (hết HSD/hư hỏng), trừ tồn kho tổng và ghi transaction DISPOSAL")
+    public ResponseEntity<ApiResponse<LotDisposalResponse>> disposeLot(
+            @PathVariable Long lotId,
+            @RequestBody(required = false) LotDisposalRequest request) {
+        LotDisposalResponse disposal = inventoryLotService.disposeLot(lotId, request);
+        return ResponseEntity.ok(ApiResponse.success(disposal,
+            "Đã xuất hủy " + disposal.getQuantity() + " đơn vị của lô " + disposal.getLotNumber()));
+    }
+
+    @PostMapping("/dispose-expired")
+    @Operation(summary = "Xuất hủy tất cả lô hết HSD",
+        description = "Hủy toàn bộ lô đã hết hạn sử dụng còn tồn kho (lọc theo kho nếu truyền warehouseId)")
+    public ResponseEntity<ApiResponse<List<LotDisposalResponse>>> disposeExpired(
+            @RequestParam(required = false) Long warehouseId,
+            @RequestBody(required = false) LotDisposalRequest request) {
+        List<LotDisposalResponse> disposals = inventoryLotService.disposeExpired(warehouseId, request);
+        return ResponseEntity.ok(ApiResponse.success(disposals,
+            "Đã xuất hủy " + disposals.size() + " lô hết hạn sử dụng"));
+    }
+
+    @GetMapping("/disposals")
+    @Operation(summary = "Lịch sử xuất hủy", description = "Danh sách phiếu xuất hủy lô, mới nhất trước")
+    public ResponseEntity<ApiResponse<List<LotDisposalResponse>>> getDisposals(
+            @RequestParam(required = false) Long warehouseId) {
+        List<LotDisposalResponse> disposals = inventoryLotService.getDisposals(warehouseId);
+        return ResponseEntity.ok(ApiResponse.success(disposals,
+            "Tìm thấy " + disposals.size() + " phiếu xuất hủy"));
     }
 }

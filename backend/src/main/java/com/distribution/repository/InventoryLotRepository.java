@@ -11,11 +11,12 @@ import java.util.List;
 
 public interface InventoryLotRepository extends JpaRepository<InventoryLot, Long> {
 
-    // FEFO query: lots có thể xuất, sort theo expiry_date ASC (null sau cùng)
+    // FEFO query: lots có thể xuất (chưa hết HSD), sort theo expiry_date ASC (null sau cùng)
     @Query("SELECT l FROM InventoryLot l " +
            "WHERE l.product.id = :productId " +
            "AND l.warehouse.id = :warehouseId " +
            "AND l.quantityRemaining > 0 " +
+           "AND (l.expiryDate IS NULL OR l.expiryDate >= CURRENT_DATE) " +
            "ORDER BY (CASE WHEN l.expiryDate IS NULL THEN 1 ELSE 0 END), " +
            "l.expiryDate ASC, l.id ASC")
     List<InventoryLot> findAvailableLotsFEFO(
@@ -23,10 +24,20 @@ public interface InventoryLotRepository extends JpaRepository<InventoryLot, Long
         @Param("warehouseId") Long warehouseId
     );
 
-    // Tổng tồn còn lại theo (product, warehouse)
+    // Tổng tồn còn lại theo (product, warehouse), không tính lô hết HSD
     @Query("SELECT COALESCE(SUM(l.quantityRemaining), 0) FROM InventoryLot l " +
-           "WHERE l.product.id = :productId AND l.warehouse.id = :warehouseId")
+           "WHERE l.product.id = :productId AND l.warehouse.id = :warehouseId " +
+           "AND (l.expiryDate IS NULL OR l.expiryDate >= CURRENT_DATE)")
     BigDecimal sumAvailableQuantity(
+        @Param("productId") Long productId,
+        @Param("warehouseId") Long warehouseId
+    );
+
+    // Còn lô nào có tồn (kể cả hết HSD) — để phân biệt "không quản lý lô" với "chỉ còn lô hết HSD"
+    @Query("SELECT COUNT(l) > 0 FROM InventoryLot l " +
+           "WHERE l.product.id = :productId AND l.warehouse.id = :warehouseId " +
+           "AND l.quantityRemaining > 0")
+    boolean hasLotsWithStock(
         @Param("productId") Long productId,
         @Param("warehouseId") Long warehouseId
     );

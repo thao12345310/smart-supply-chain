@@ -273,6 +273,14 @@ public class GoodsIssueServiceImpl implements GoodsIssueService {
                 List<InventoryLot> availableLots = inventoryLotRepository.findAvailableLotsFEFO(
                     item.getProduct().getId(), warehouseId);
 
+                // Sản phẩm có quản lý lô nhưng toàn bộ lô còn tồn đã hết HSD → chặn xuất
+                if (availableLots.isEmpty()
+                        && inventoryLotRepository.hasLotsWithStock(item.getProduct().getId(), warehouseId)) {
+                    throw new BusinessException(
+                        "Sản phẩm " + item.getProduct().getName() +
+                        ": tồn kho chỉ còn lô đã hết hạn sử dụng, không thể xuất.");
+                }
+
                 if (!availableLots.isEmpty()) {
                     // Có lot data → validate và trừ theo FEFO
                     BigDecimal totalLotAvailable = availableLots.stream()

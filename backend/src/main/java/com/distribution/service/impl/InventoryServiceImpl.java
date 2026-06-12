@@ -272,6 +272,47 @@ public class InventoryServiceImpl implements InventoryService {
         logger.info("Inventory decreased successfully. New quantity: {}", saved.getQuantityOnHand());
     }
 
+    @Override
+    public void disposeInventory(Long productId, Long warehouseId, Integer quantity,
+                                 String referenceType, Long referenceId, String referenceCode,
+                                 Long userId, String notes) {
+        logger.info("Disposing inventory: productId={}, warehouseId={}, quantity={}, ref={}-{}",
+            productId, warehouseId, quantity, referenceType, referenceId);
+
+        // Get inventory with pessimistic lock
+        Inventory inventory = inventoryRepo.findByProductIdAndWarehouseIdForUpdate(productId, warehouseId)
+            .orElseThrow(() -> new InventoryException(
+                String.format("No inventory found for product %d at warehouse %d", productId, warehouseId)));
+
+        // Validate sufficient stock
+        if (inventory.getQuantityOnHand() < quantity) {
+            throw InventoryException.insufficientStock(
+                inventory.getProduct().getName(),
+                inventory.getQuantityOnHand(),
+                quantity
+            );
+        }
+
+        // Record quantity before update
+        Integer quantityBefore = inventory.getQuantityOnHand();
+
+        // Decrease stock (on-hand only, available is managed by reservation)
+        inventory.setQuantityOnHand(inventory.getQuantityOnHand() - quantity);
+        inventory.setQuantityAvailable(inventory.getQuantityOnHand() - inventory.getQuantityReserved());
+        inventory.setLastIssuedDate(java.time.LocalDateTime.now());
+
+        Inventory saved = inventoryRepo.save(inventory);
+
+        createTransaction(
+            productId, warehouseId, TransactionType.DISPOSAL, quantity, inventory.getAverageCost(),
+            quantityBefore, saved.getQuantityOnHand(),
+            referenceType, referenceId, referenceCode, userId,
+            notes != null ? notes : "Stock disposed"
+        );
+
+        logger.info("Inventory disposed successfully. New quantity: {}", saved.getQuantityOnHand());
+    }
+
     // Helper methods
     private Inventory createInventory(Long productId, Long warehouseId) {
         Product product = productRepo.findById(productId)

@@ -88,7 +88,8 @@ public class InventoryTransaction {
         ADJUSTMENT_PLUS("Adjustment +", 1),  // Stock adjustment increase
         ADJUSTMENT_MINUS("Adjustment -", -1), // Stock adjustment decrease
         RETURN_IN("Return In", 1),       // Customer return
-        RETURN_OUT("Return Out", -1);    // Return to supplier
+        RETURN_OUT("Return Out", -1),    // Return to supplier
+        DISPOSAL("Disposal", -1);        // Expired/damaged stock written off
 
         private final String displayName;
         private final int multiplier;
