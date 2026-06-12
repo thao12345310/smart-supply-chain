@@ -36,6 +36,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final SalesOrderRepository salesOrderRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final InventoryRepository inventoryRepository;
+    private final InventoryLotRepository inventoryLotRepository;
     private final InventoryTransactionRepository inventoryTransactionRepository;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
@@ -69,14 +70,16 @@ public class DashboardServiceImpl implements DashboardService {
         long totalPO = purchaseOrderRepository.count();
         long pendingPO = purchaseOrderRepository.countByStatus(PurchaseOrderStatus.ORDER_OPEN);
 
-        // Inventory counts
+        // Inventory counts (khả dụng đã trừ hàng hết hạn chờ hủy)
         List<Inventory> allInventory = inventoryRepository.findAll();
+        Map<String, Integer> expiredMap = buildExpiredQuantityMap();
         long totalProducts = productRepository.count();
         long lowStockItems = allInventory.stream()
-                .filter(i -> i.getQuantityAvailable() != null && i.getQuantityAvailable() <= 10 && i.getQuantityAvailable() > 0)
+                .map(i -> effectiveAvailable(i, expiredMap))
+                .filter(a -> a > 0 && a <= 10)
                 .count();
         long outOfStockItems = allInventory.stream()
-                .filter(i -> i.getQuantityAvailable() == null || i.getQuantityAvailable() <= 0)
+                .filter(i -> effectiveAvailable(i, expiredMap) <= 0)
                 .count();
         BigDecimal totalInventoryValue = allInventory.stream()
                 .filter(i -> i.getAverageCost() != null && i.getQuantityOnHand() != null)
@@ -202,6 +205,9 @@ public class DashboardServiceImpl implements DashboardService {
                 .filter(i -> i.getProduct() != null)
                 .collect(Collectors.groupingBy(i -> i.getProduct().getId()));
 
+        // Tồn hết hạn theo (product, warehouse) để tính khả dụng thực
+        Map<String, Integer> expiredMap = buildExpiredQuantityMap();
+
         // Build report items
         // Merge product IDs from both sources
         Set<Long> allProductIds = new HashSet<>();
@@ -262,7 +268,7 @@ public class DashboardServiceImpl implements DashboardService {
                             .warehouseName(inv.getWarehouse() != null ? inv.getWarehouse().getName() : "N/A")
                             .quantity(inv.getQuantityOnHand() != null ? inv.getQuantityOnHand() : 0)
                             .reserved(inv.getQuantityReserved() != null ? inv.getQuantityReserved() : 0)
-                            .available(inv.getQuantityAvailable() != null ? inv.getQuantityAvailable() : 0)
+                            .available(effectiveAvailable(inv, expiredMap))
                             .build())
                     .collect(Collectors.toList());
 
@@ -451,6 +457,23 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     // ==================== Private Helpers ====================
+
+    // Map "productId:warehouseId" -> tổng tồn của các lô đã hết HSD
+    private Map<String, Integer> buildExpiredQuantityMap() {
+        return inventoryLotRepository.sumExpiredQuantityGrouped().stream()
+                .collect(Collectors.toMap(
+                        row -> row[0] + ":" + row[1],
+                        row -> ((BigDecimal) row[2]).intValue()
+                ));
+    }
+
+    // Khả dụng thực = khả dụng - tồn hết hạn chờ hủy (không âm)
+    private int effectiveAvailable(Inventory inv, Map<String, Integer> expiredMap) {
+        int available = inv.getQuantityAvailable() != null ? inv.getQuantityAvailable() : 0;
+        String key = (inv.getProduct() != null ? inv.getProduct().getId() : null)
+                + ":" + (inv.getWarehouse() != null ? inv.getWarehouse().getId() : null);
+        return Math.max(0, available - expiredMap.getOrDefault(key, 0));
+    }
 
     private BigDecimal calculateRevenue(LocalDate startDate, LocalDate endDate) {
         List<SalesInvoice> invoices = salesInvoiceRepository.findByDateRange(startDate, endDate);

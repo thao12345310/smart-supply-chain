@@ -24,6 +24,7 @@ public class InventoryDTO {
     private Integer quantityOnHand;
     private Integer quantityReserved;
     private Integer quantityAvailable;
+    private Integer quantityExpired;
     
     private Integer reorderLevel;
     private Integer reorderQuantity;
@@ -41,8 +42,11 @@ public class InventoryDTO {
      * Compute calculated fields
      */
     public void computeFields() {
-        this.quantityAvailable = (quantityOnHand != null ? quantityOnHand : 0) 
-            - (quantityReserved != null ? quantityReserved : 0);
+        // Khả dụng = tồn kho - đã giữ chỗ - hàng hết hạn chờ hủy (không âm)
+        this.quantityAvailable = Math.max(0,
+            (quantityOnHand != null ? quantityOnHand : 0)
+            - (quantityReserved != null ? quantityReserved : 0)
+            - (quantityExpired != null ? quantityExpired : 0));
         
         if (averageCost != null && quantityOnHand != null) {
             this.totalValue = averageCost.multiply(BigDecimal.valueOf(quantityOnHand));

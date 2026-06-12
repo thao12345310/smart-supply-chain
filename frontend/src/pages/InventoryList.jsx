@@ -288,6 +288,19 @@ export default function InventoryList() {
       render: (val) => val || 0,
     },
     {
+      title: "Hết hạn chờ hủy",
+      dataIndex: "quantityExpired",
+      width: 130,
+      align: "center",
+      sorter: (a, b) => (a.quantityExpired || 0) - (b.quantityExpired || 0),
+      render: (val) =>
+        val > 0 ? (
+          <span style={{ color: "#ff4d4f", fontWeight: "bold" }}>{val}</span>
+        ) : (
+          0
+        ),
+    },
+    {
       title: "Khả dụng",
       dataIndex: "quantityAvailable",
       width: 100,

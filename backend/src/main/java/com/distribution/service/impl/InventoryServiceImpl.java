@@ -34,6 +34,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryTransactionRepository transactionRepo;
     private final ProductRepository productRepo;
     private final WarehouseRepository warehouseRepo;
+    private final InventoryLotRepository inventoryLotRepo;
 
     @Override
     @Transactional(readOnly = true)
@@ -211,7 +212,12 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional(readOnly = true)
     public Integer getAvailableQuantity(Long productId, Long warehouseId) {
         return inventoryRepo.findByProductIdAndWarehouseId(productId, warehouseId)
-            .map(Inventory::getQuantityAvailable)
+            .map(inv -> {
+                int available = inv.getQuantityAvailable() != null ? inv.getQuantityAvailable() : 0;
+                // Trừ lượng tồn của các lô đã hết HSD (chờ xuất hủy)
+                BigDecimal expired = inventoryLotRepo.sumExpiredQuantity(productId, warehouseId);
+                return Math.max(0, available - (expired != null ? expired.intValue() : 0));
+            })
             .orElse(0);
     }
 
@@ -380,6 +386,13 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     private InventoryDTO toDto(Inventory inventory) {
+        Integer quantityExpired = null;
+        if (inventory.getProduct() != null && inventory.getWarehouse() != null) {
+            BigDecimal expired = inventoryLotRepo.sumExpiredQuantity(
+                inventory.getProduct().getId(), inventory.getWarehouse().getId());
+            quantityExpired = expired != null ? expired.intValue() : 0;
+        }
+
         InventoryDTO dto = InventoryDTO.builder()
             .id(inventory.getId())
             .productId(inventory.getProduct() != null ? inventory.getProduct().getId() : null)
@@ -390,7 +403,7 @@ public class InventoryServiceImpl implements InventoryService {
             .warehouseCode(inventory.getWarehouse() != null ? inventory.getWarehouse().getCode() : null)
             .quantityOnHand(inventory.getQuantityOnHand())
             .quantityReserved(inventory.getQuantityReserved())
-            .quantityAvailable(inventory.getQuantityAvailable())
+            .quantityExpired(quantityExpired)
             .reorderLevel(inventory.getReorderLevel())
             .reorderQuantity(inventory.getReorderQuantity())
             .averageCost(inventory.getAverageCost())
