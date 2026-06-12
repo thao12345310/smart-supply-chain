@@ -9,6 +9,7 @@ import com.distribution.model.InventoryLot;
 import com.distribution.model.LotDisposal;
 import com.distribution.repository.InventoryLotRepository;
 import com.distribution.repository.LotDisposalRepository;
+import com.distribution.repository.UserRepository;
 import com.distribution.service.InventoryLotService;
 import com.distribution.service.InventoryService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class InventoryLotServiceImpl implements InventoryLotService {
     private final InventoryLotRepository inventoryLotRepository;
     private final LotDisposalRepository lotDisposalRepository;
     private final InventoryService inventoryService;
+    private final UserRepository userRepository;
 
     @Override
     public List<InventoryLotResponse> getAll(Long productId, Long warehouseId) {
@@ -157,6 +159,9 @@ public class InventoryLotServiceImpl implements InventoryLotService {
             .unitCost(d.getUnitCost())
             .reason(d.getReason())
             .disposedBy(d.getDisposedBy())
+            .disposedByName(d.getDisposedBy() != null
+                ? userRepository.findById(d.getDisposedBy()).map(u -> u.getFullName()).orElse(null)
+                : null)
             .disposedAt(d.getDisposedAt())
             .build();
     }

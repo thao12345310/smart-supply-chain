@@ -25,5 +25,6 @@ public class LotDisposalResponse {
     private BigDecimal unitCost;
     private String reason;
     private Long disposedBy;
+    private String disposedByName;
     private LocalDateTime disposedAt;
 }

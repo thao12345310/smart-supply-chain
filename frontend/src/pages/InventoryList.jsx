@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from "react";
 import {
   Table, message, Tag, Card, Statistic, Row, Col,
-  Input, InputNumber, Select, Space, Tabs
+  Input, InputNumber, Select, Space, Tabs,
+  Button, Modal, Alert, Descriptions
 } from "antd";
-import { WarningOutlined, SearchOutlined } from "@ant-design/icons";
+import { WarningOutlined, SearchOutlined, DeleteOutlined } from "@ant-design/icons";
 import { inventoryApi, inventoryLotApi } from "../services/api";
 import api from "../services/api";
+import { hasAnyRole, ROLES } from "../services/roleService";
 
 const { TabPane } = Tabs;
 
 export default function InventoryList() {
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Quyền xuất hủy: thủ kho hoặc admin (theo phân quyền nghiệp vụ kho)
+  const canDispose = hasAnyRole([ROLES.WAREHOUSE_STAFF]);
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   // ==================== Tab Tổng quan ====================
   const [inventory, setInventory] = useState([]);
@@ -33,6 +39,18 @@ export default function InventoryList() {
   const [lotWarehouseFilter, setLotWarehouseFilter] = useState(null);
   const [lotStatusFilter, setLotStatusFilter] = useState(null);
   const [lotSearchText, setLotSearchText] = useState("");
+
+  // ==================== Xuất hủy lô ====================
+  const [disposeLot, setDisposeLot] = useState(null); // lô đang xác nhận hủy
+  const [disposeReason, setDisposeReason] = useState("");
+  const [disposing, setDisposing] = useState(false);
+  const [bulkDisposeOpen, setBulkDisposeOpen] = useState(false);
+  const [bulkReason, setBulkReason] = useState("Hết hạn sử dụng");
+
+  // ==================== Tab Lịch sử xuất hủy ====================
+  const [disposals, setDisposals] = useState([]);
+  const [disposalLoading, setDisposalLoading] = useState(false);
+  const [disposalWarehouseFilter, setDisposalWarehouseFilter] = useState(null);
 
   const fetchWarehouses = async () => {
     try {
@@ -109,6 +127,83 @@ export default function InventoryList() {
   useEffect(() => {
     if (activeTab === "lot") fetchLots();
   }, [lotProductFilter, lotWarehouseFilter, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "disposal") fetchDisposals();
+  }, [disposalWarehouseFilter, activeTab]);
+
+  const fetchDisposals = async () => {
+    setDisposalLoading(true);
+    try {
+      const res = await inventoryLotApi.getDisposals(disposalWarehouseFilter);
+      setDisposals(res.data || []);
+    } catch (err) {
+      console.error(err);
+      message.error("Không thể tải lịch sử xuất hủy");
+    } finally {
+      setDisposalLoading(false);
+    }
+  };
+
+  // ==================== Xuất hủy handlers ====================
+  const openDisposeModal = (lot) => {
+    setDisposeLot(lot);
+    setDisposeReason(lot.status === "EXPIRED" ? "Hết hạn sử dụng" : "");
+  };
+
+  const handleDisposeLot = async () => {
+    if (!disposeReason.trim()) {
+      message.warning("Vui lòng nhập lý do xuất hủy");
+      return;
+    }
+    setDisposing(true);
+    try {
+      const res = await inventoryLotApi.disposeLot(disposeLot.id, {
+        reason: disposeReason.trim(),
+        disposedBy: currentUser.id,
+      });
+      message.success(
+        `Đã lập phiếu xuất hủy ${res.data?.code || ""} cho lô ${disposeLot.lotNumber}`
+      );
+      setDisposeLot(null);
+      fetchLots();
+      fetchInventory();
+    } catch (err) {
+      console.error(err);
+      message.error(err.message || "Xuất hủy thất bại");
+    } finally {
+      setDisposing(false);
+    }
+  };
+
+  const handleBulkDispose = async () => {
+    if (!bulkReason.trim()) {
+      message.warning("Vui lòng nhập lý do xuất hủy");
+      return;
+    }
+    setDisposing(true);
+    try {
+      // Hủy lần lượt đúng các lô đang hiển thị trong danh sách xác nhận
+      // (tôn trọng bộ lọc kho/sản phẩm hiện tại), mỗi lô một phiếu xuất hủy
+      let ok = 0;
+      for (const lot of expiredLotsWithStock) {
+        await inventoryLotApi.disposeLot(lot.id, {
+          reason: bulkReason.trim(),
+          disposedBy: currentUser.id,
+        });
+        ok += 1;
+      }
+      message.success(`Đã xuất hủy ${ok} lô hết hạn sử dụng`);
+      setBulkDisposeOpen(false);
+      fetchLots();
+      fetchInventory();
+    } catch (err) {
+      console.error(err);
+      message.error(err.message || "Xuất hủy thất bại");
+    } finally {
+      setDisposing(false);
+    }
+  };
 
   // ==================== Tổng quan helpers ====================
   const getStockStatus = (record) => {
@@ -339,6 +434,104 @@ export default function InventoryList() {
         return (order[a.status] ?? 3) - (order[b.status] ?? 3);
       },
     },
+    ...(canDispose
+      ? [
+          {
+            title: "Thao tác",
+            width: 120,
+            align: "center",
+            fixed: "right",
+            render: (_, record) => {
+              const qty = Number(record.quantityRemaining) || 0;
+              if (qty <= 0) return <Tag>Đã xử lý</Tag>;
+              return (
+                <Button
+                  danger
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  style={{ whiteSpace: "nowrap" }}
+                  onClick={() => openDisposeModal(record)}
+                >
+                  Xuất hủy
+                </Button>
+              );
+            },
+          },
+        ]
+      : []),
+  ];
+
+  // Lô hết hạn còn tồn (theo bộ lọc kho hiện tại) — dùng cho cảnh báo và hủy hàng loạt
+  const expiredLotsWithStock = lots.filter(
+    (l) => l.status === "EXPIRED" && Number(l.quantityRemaining) > 0
+  );
+
+  // ==================== Cột bảng Lịch sử xuất hủy ====================
+  const disposalColumns = [
+    {
+      title: "Mã phiếu",
+      dataIndex: "code",
+      width: 160,
+      render: (text) => <strong>{text}</strong>,
+    },
+    {
+      title: "Thời gian hủy",
+      dataIndex: "disposedAt",
+      width: 150,
+      render: (val) => (val ? new Date(val).toLocaleString("vi-VN") : "-"),
+      sorter: (a, b) => (a.disposedAt || "").localeCompare(b.disposedAt || ""),
+    },
+    { title: "Sản phẩm", dataIndex: "productName", ellipsis: true },
+    {
+      title: "Mã SP",
+      dataIndex: "productCode",
+      width: 100,
+      render: (text) => <strong>{text || "-"}</strong>,
+    },
+    { title: "Kho", dataIndex: "warehouseName", width: 140 },
+    {
+      title: "Số lô",
+      dataIndex: "lotNumber",
+      width: 130,
+      render: (val) => <strong>{val || "-"}</strong>,
+    },
+    {
+      title: "HSD",
+      dataIndex: "expiryDate",
+      width: 110,
+      align: "center",
+      render: (val) => val || "-",
+    },
+    {
+      title: "SL hủy",
+      dataIndex: "quantity",
+      width: 90,
+      align: "center",
+      render: (val) =>
+        val != null ? (
+          <span style={{ color: "#ff4d4f", fontWeight: "bold" }}>
+            {Number(val).toLocaleString("vi-VN")}
+          </span>
+        ) : (
+          "-"
+        ),
+    },
+    {
+      title: "Giá trị hủy",
+      width: 130,
+      align: "right",
+      render: (_, record) => {
+        const value = (Number(record.quantity) || 0) * (record.unitCost || 0);
+        return value ? `${value.toLocaleString("vi-VN")} ₫` : "-";
+      },
+    },
+    { title: "Lý do", dataIndex: "reason", ellipsis: true },
+    {
+      title: "Người hủy",
+      dataIndex: "disposedByName",
+      width: 150,
+      render: (val, record) => val || (record.disposedBy ? `#${record.disposedBy}` : "-"),
+    },
   ];
 
   return (
@@ -442,6 +635,22 @@ export default function InventoryList() {
 
         {/* ==================== Tab Theo lô ==================== */}
         <TabPane tab="Theo lô" key="lot">
+          {canDispose && expiredLotsWithStock.length > 0 && (
+            <Alert
+              type="error"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message={`Có ${expiredLotsWithStock.length} lô đã hết hạn sử dụng còn tồn kho (tổng ${expiredLotsWithStock
+                .reduce((sum, l) => sum + (Number(l.quantityRemaining) || 0), 0)
+                .toLocaleString("vi-VN")} đơn vị)`}
+              description="Theo quy định quản lý hàng hóa có hạn sử dụng, hàng hết hạn phải được cách ly và lập phiếu xuất hủy, không được tiếp tục bán ra."
+              action={
+                <Button danger icon={<DeleteOutlined />} onClick={() => setBulkDisposeOpen(true)}>
+                  Xuất hủy tất cả lô hết hạn
+                </Button>
+              }
+            />
+          )}
           <div
             style={{
               display: "flex",
@@ -511,7 +720,7 @@ export default function InventoryList() {
               showSizeChanger: true,
               showTotal: (total) => `Tổng ${total} lô hàng`,
             }}
-            scroll={{ x: 1300 }}
+            scroll={{ x: 1450 }}
             rowClassName={(record) => {
               if (record.status === "EXPIRED") return "row-lot-expired";
               if (record.status === "EXPIRING_SOON") return "row-lot-expiring";
@@ -519,7 +728,152 @@ export default function InventoryList() {
             }}
           />
         </TabPane>
+
+        {/* ==================== Tab Lịch sử xuất hủy ==================== */}
+        <TabPane tab="Lịch sử xuất hủy" key="disposal">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
+          >
+            <Select
+              placeholder="Lọc theo kho"
+              allowClear
+              style={{ width: 180 }}
+              value={disposalWarehouseFilter}
+              onChange={setDisposalWarehouseFilter}
+            >
+              {warehouses.map((w) => (
+                <Select.Option key={w.id} value={w.id}>
+                  {w.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+
+          <Table
+            dataSource={disposals}
+            columns={disposalColumns}
+            rowKey="id"
+            loading={disposalLoading}
+            pagination={{
+              pageSize: 15,
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng ${total} phiếu xuất hủy`,
+            }}
+            scroll={{ x: 1400 }}
+          />
+        </TabPane>
       </Tabs>
+
+      {/* ==================== Modal xác nhận xuất hủy 1 lô ==================== */}
+      <Modal
+        title="Xác nhận xuất hủy lô hàng"
+        open={!!disposeLot}
+        onCancel={() => setDisposeLot(null)}
+        onOk={handleDisposeLot}
+        okText="Xác nhận xuất hủy"
+        okButtonProps={{ danger: true, loading: disposing }}
+        cancelText="Hủy bỏ"
+      >
+        {disposeLot && (
+          <>
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="Thao tác không thể hoàn tác"
+              description="Toàn bộ số lượng còn lại của lô sẽ bị trừ khỏi tồn kho và ghi nhận vào sổ giao dịch (loại DISPOSAL) để đối soát."
+            />
+            <Descriptions column={1} size="small" bordered>
+              <Descriptions.Item label="Sản phẩm">
+                {disposeLot.productName} ({disposeLot.productCode})
+              </Descriptions.Item>
+              <Descriptions.Item label="Số lô">{disposeLot.lotNumber}</Descriptions.Item>
+              <Descriptions.Item label="Kho">{disposeLot.warehouseName}</Descriptions.Item>
+              <Descriptions.Item label="Hạn sử dụng">
+                {disposeLot.expiryDate || "-"}{" "}
+                {disposeLot.status === "EXPIRED" && <Tag color="red">Hết HSD</Tag>}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số lượng hủy">
+                <strong style={{ color: "#ff4d4f" }}>
+                  {Number(disposeLot.quantityRemaining).toLocaleString("vi-VN")}
+                </strong>
+              </Descriptions.Item>
+            </Descriptions>
+            <div style={{ marginTop: 16 }}>
+              <div style={{ marginBottom: 4 }}>
+                Lý do xuất hủy <span style={{ color: "#ff4d4f" }}>*</span>
+              </div>
+              <Input.TextArea
+                rows={2}
+                maxLength={255}
+                placeholder="VD: Hết hạn sử dụng / Hư hỏng do vận chuyển..."
+                value={disposeReason}
+                onChange={(e) => setDisposeReason(e.target.value)}
+              />
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* ==================== Modal xuất hủy tất cả lô hết hạn ==================== */}
+      <Modal
+        title="Xuất hủy tất cả lô hết hạn sử dụng"
+        open={bulkDisposeOpen}
+        onCancel={() => setBulkDisposeOpen(false)}
+        onOk={handleBulkDispose}
+        okText={`Xác nhận hủy ${expiredLotsWithStock.length} lô`}
+        okButtonProps={{ danger: true, loading: disposing }}
+        cancelText="Hủy bỏ"
+        width={680}
+      >
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="Thao tác không thể hoàn tác"
+          description={`Hệ thống sẽ lập ${expiredLotsWithStock.length} phiếu xuất hủy (mỗi lô một phiếu) cho các lô trong danh sách dưới đây và trừ tồn kho tương ứng.`}
+        />
+        <Table
+          dataSource={expiredLotsWithStock}
+          rowKey="id"
+          size="small"
+          pagination={false}
+          scroll={{ y: 240 }}
+          columns={[
+            { title: "Sản phẩm", dataIndex: "productName", ellipsis: true },
+            { title: "Số lô", dataIndex: "lotNumber", width: 130 },
+            { title: "Kho", dataIndex: "warehouseName", width: 130 },
+            { title: "HSD", dataIndex: "expiryDate", width: 100, align: "center" },
+            {
+              title: "SL hủy",
+              dataIndex: "quantityRemaining",
+              width: 80,
+              align: "center",
+              render: (val) => (
+                <span style={{ color: "#ff4d4f", fontWeight: "bold" }}>
+                  {Number(val).toLocaleString("vi-VN")}
+                </span>
+              ),
+            },
+          ]}
+        />
+        <div style={{ marginTop: 16 }}>
+          <div style={{ marginBottom: 4 }}>
+            Lý do xuất hủy <span style={{ color: "#ff4d4f" }}>*</span>
+          </div>
+          <Input.TextArea
+            rows={2}
+            maxLength={255}
+            value={bulkReason}
+            onChange={(e) => setBulkReason(e.target.value)}
+          />
+        </div>
+      </Modal>
 
       <style>{`
         .row-out-of-stock { background-color: #fff2f0; }

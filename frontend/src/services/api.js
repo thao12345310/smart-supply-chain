@@ -433,6 +433,16 @@ export const inventoryLotApi = {
   getExpiringSoon: (days = 30) =>
     api.get('/inventory-lots/expiring-soon', { params: { days } }),
   getExpired: () => api.get('/inventory-lots/expired'),
+  // Xuất hủy lô (hết HSD / hư hỏng)
+  disposeLot: (lotId, data) => api.post(`/inventory-lots/${lotId}/dispose`, data),
+  disposeExpired: (warehouseId, data) =>
+    api.post('/inventory-lots/dispose-expired', data, {
+      params: warehouseId ? { warehouseId } : {},
+    }),
+  getDisposals: (warehouseId) =>
+    api.get('/inventory-lots/disposals', {
+      params: warehouseId ? { warehouseId } : {},
+    }),
 };
 
 // ==================== Delivery Plan API ====================
