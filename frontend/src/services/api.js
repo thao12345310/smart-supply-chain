@@ -190,6 +190,10 @@ export const inventoryApi = {
   // Get needing reorder
   getNeedingReorder: () => api.get('/inventory/needing-reorder'),
 
+  // Đề xuất mua hàng gom theo nhà cung cấp
+  getPurchaseSuggestions: (warehouseId) =>
+    api.get('/inventory/purchase-suggestions', { params: warehouseId ? { warehouseId } : {} }),
+
   // Update reorder (low-stock alert) level
   updateReorderLevel: (id, reorderLevel, reorderQuantity) =>
     api.patch(`/inventory/${id}/reorder-level`, { reorderLevel, reorderQuantity }),

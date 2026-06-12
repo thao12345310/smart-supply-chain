@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Form, Input, Select, DatePicker, InputNumber, Button, Table, message, Space,
 } from 'antd';
@@ -10,7 +10,10 @@ import dayjs from 'dayjs';
 export default function PurchaseOrderForm() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
   const isEdit = Boolean(id);
+  // Dữ liệu điền sẵn khi đi từ màn "Đề xuất mua hàng"
+  const prefill = location.state?.prefill;
 
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -23,7 +26,27 @@ export default function PurchaseOrderForm() {
   useEffect(() => {
     loadMasterData();
     if (isEdit) loadOrder();
+    else if (prefill) applyPrefill();
   }, [id]);
+
+  const applyPrefill = () => {
+    form.setFieldsValue({
+      supplierId: prefill.supplierId ?? undefined,
+      warehouseId: prefill.warehouseId ?? undefined,
+      notes: prefill.notes,
+    });
+    if (prefill.items?.length > 0) {
+      setItems(prefill.items.map(item => ({
+        productId: item.productId,
+        productCode: item.productCode || '',
+        productName: item.productName || '',
+        unit: '',
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+        costBeforeTax: (item.unitPrice || 0) * (item.quantity || 1),
+      })));
+    }
+  };
 
   const loadMasterData = async () => {
     try {

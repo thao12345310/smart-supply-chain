@@ -2,6 +2,7 @@ package com.distribution.controller;
 
 import com.distribution.dto.ApiResponse;
 import com.distribution.dto.InventoryDTO;
+import com.distribution.dto.PurchaseSuggestionDTO;
 import com.distribution.model.InventoryTransaction;
 import com.distribution.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -97,6 +98,17 @@ public class InventoryController {
         List<InventoryDTO> inventory = inventoryService.getNeedingReorder();
         return ResponseEntity.ok(ApiResponse.success(inventory,
             "Found " + inventory.size() + " items needing reorder"));
+    }
+
+    @GetMapping("/purchase-suggestions")
+    @Operation(summary = "Get Purchase Suggestions",
+               description = "Items at/below reorder level or out of stock, grouped by supplier")
+    public ResponseEntity<ApiResponse<List<PurchaseSuggestionDTO>>> getPurchaseSuggestions(
+            @Parameter(description = "Optional warehouse filter")
+            @RequestParam(required = false) Long warehouseId) {
+        List<PurchaseSuggestionDTO> suggestions = inventoryService.getPurchaseSuggestions(warehouseId);
+        return ResponseEntity.ok(ApiResponse.success(suggestions,
+            "Found " + suggestions.size() + " supplier groups needing purchase"));
     }
 
     @PatchMapping("/{id}/reorder-level")

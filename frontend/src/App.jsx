@@ -23,6 +23,7 @@ import ProductList from "./pages/ProductList";
 import SupplierList from "./pages/SupplierList";
 import PurchaseOrderList from "./pages/PurchaseOrderList";
 import PurchaseOrderDetail from "./pages/PurchaseOrderDetail";
+import PurchaseSuggestions from "./pages/PurchaseSuggestions";
 import GoodsReceiptList from "./pages/GoodsReceiptList";
 import GoodsReceiptDetail from "./pages/GoodsReceiptDetail";
 import InventoryList from "./pages/InventoryList";
@@ -98,6 +99,7 @@ function MainLayout({ children }) {
   // Determine selected key from current path
   const getSelectedKey = () => {
     const path = location.pathname;
+    if (path.includes('/purchase-suggestions')) return 'purchase-suggestions';
     if (path.includes('/purchase-orders')) return 'purchase-orders';
     if (path.includes('/goods-receipts')) return 'goods-receipts';
     if (path.includes('/inventory')) return 'inventory';
@@ -164,6 +166,12 @@ function MainLayout({ children }) {
           label: 'Đơn mua hàng',
           hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.WAREHOUSE_STAFF, ROLES.ACCOUNTANT]),
           onClick: () => navigate('/purchase-orders'),
+        },
+        {
+          key: 'purchase-suggestions',
+          label: 'Đề xuất mua hàng',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER]),
+          onClick: () => navigate('/purchase-suggestions'),
         },
         {
           key: 'goods-receipts',
@@ -501,6 +509,15 @@ export default function App() {
             <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER, ROLES.ACCOUNTANT, ROLES.WAREHOUSE_STAFF]}>
               <MainLayout>
                 <PurchaseOrderList />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/purchase-suggestions" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER]}>
+              <MainLayout>
+                <PurchaseSuggestions />
               </MainLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>

@@ -1,6 +1,7 @@
 package com.distribution.service.impl;
 
 import com.distribution.dto.InventoryDTO;
+import com.distribution.dto.PurchaseSuggestionDTO;
 import com.distribution.exception.InventoryException;
 import com.distribution.exception.ResourceNotFoundException;
 import com.distribution.model.*;
@@ -14,7 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -82,6 +87,101 @@ public class InventoryServiceImpl implements InventoryService {
         return inventoryRepo.findLowStock(threshold).stream()
             .map(this::toDto)
             .collect(Collectors.toList());
+    }
+
+    // Sản phẩm chưa gán nhà cung cấp được gom vào nhóm riêng với key này
+    private static final Long NO_SUPPLIER_KEY = -1L;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PurchaseSuggestionDTO> getPurchaseSuggestions(Long warehouseId) {
+        List<Inventory> inventories = warehouseId != null
+            ? inventoryRepo.findByWarehouseId(warehouseId)
+            : inventoryRepo.findAll();
+
+        // Tồn hết hạn theo (product, warehouse) trong 1 query
+        Map<String, Integer> expiredMap = inventoryLotRepo.sumExpiredQuantityGrouped().stream()
+            .collect(Collectors.toMap(
+                row -> row[0] + ":" + row[1],
+                row -> ((BigDecimal) row[2]).intValue()
+            ));
+
+        Map<Long, List<PurchaseSuggestionDTO.Item>> itemsBySupplier = new HashMap<>();
+        Map<Long, String> supplierNames = new HashMap<>();
+
+        for (Inventory inv : inventories) {
+            Product product = inv.getProduct();
+            Warehouse warehouse = inv.getWarehouse();
+            if (product == null || warehouse == null) continue;
+
+            int onHand = inv.getQuantityOnHand() != null ? inv.getQuantityOnHand() : 0;
+            int reserved = inv.getQuantityReserved() != null ? inv.getQuantityReserved() : 0;
+            int expired = expiredMap.getOrDefault(product.getId() + ":" + warehouse.getId(), 0);
+            int available = Math.max(0, onHand - reserved - expired);
+
+            Integer reorderLevel = inv.getReorderLevel();
+            boolean needsBuy = available <= 0 || (reorderLevel != null && available <= reorderLevel);
+            if (!needsBuy) continue;
+
+            // SL gợi ý: ưu tiên định mức đặt hàng, không thì bù về mức cảnh báo
+            int suggested;
+            if (inv.getReorderQuantity() != null && inv.getReorderQuantity() > 0) {
+                suggested = inv.getReorderQuantity();
+            } else if (reorderLevel != null && reorderLevel > available) {
+                suggested = reorderLevel - available;
+            } else {
+                suggested = 1;
+            }
+
+            BigDecimal unitPrice = product.getPrice() != null
+                ? BigDecimal.valueOf(product.getPrice())
+                : BigDecimal.ZERO;
+
+            PurchaseSuggestionDTO.Item item = PurchaseSuggestionDTO.Item.builder()
+                .productId(product.getId())
+                .productCode(product.getCode())
+                .productName(product.getName())
+                .warehouseId(warehouse.getId())
+                .warehouseName(warehouse.getName())
+                .quantityOnHand(onHand)
+                .quantityAvailable(available)
+                .quantityExpired(expired)
+                .reorderLevel(reorderLevel)
+                .reorderQuantity(inv.getReorderQuantity())
+                .suggestedQuantity(suggested)
+                .unitPrice(unitPrice)
+                .estimatedAmount(unitPrice.multiply(BigDecimal.valueOf(suggested)))
+                .build();
+
+            Supplier supplier = product.getSupplier();
+            Long key = supplier != null ? supplier.getId() : NO_SUPPLIER_KEY;
+            supplierNames.put(key, supplier != null ? supplier.getName() : null);
+            itemsBySupplier.computeIfAbsent(key, k -> new ArrayList<>()).add(item);
+        }
+
+        List<PurchaseSuggestionDTO> result = new ArrayList<>();
+        for (Map.Entry<Long, List<PurchaseSuggestionDTO.Item>> entry : itemsBySupplier.entrySet()) {
+            List<PurchaseSuggestionDTO.Item> items = entry.getValue();
+            items.sort(Comparator.comparing(PurchaseSuggestionDTO.Item::getProductName,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+
+            BigDecimal totalEstimated = items.stream()
+                .map(PurchaseSuggestionDTO.Item::getEstimatedAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            result.add(PurchaseSuggestionDTO.builder()
+                .supplierId(NO_SUPPLIER_KEY.equals(entry.getKey()) ? null : entry.getKey())
+                .supplierName(supplierNames.get(entry.getKey()))
+                .itemCount(items.size())
+                .totalEstimated(totalEstimated)
+                .items(items)
+                .build());
+        }
+
+        // NCC có tên xếp theo tên, nhóm "chưa có NCC" xuống cuối
+        result.sort(Comparator.comparing(PurchaseSuggestionDTO::getSupplierName,
+            Comparator.nullsLast(Comparator.naturalOrder())));
+        return result;
     }
 
     @Override

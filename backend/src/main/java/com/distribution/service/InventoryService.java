@@ -1,6 +1,7 @@
 package com.distribution.service;
 
 import com.distribution.dto.InventoryDTO;
+import com.distribution.dto.PurchaseSuggestionDTO;
 import com.distribution.model.Inventory;
 import com.distribution.model.InventoryTransaction;
 
@@ -41,6 +42,13 @@ public interface InventoryService {
      * Get low stock items
      */
     List<InventoryDTO> getLowStock(Integer threshold);
+
+    /**
+     * Get purchase suggestions: items at/below reorder level or out of stock,
+     * grouped by the product's default supplier.
+     * @param warehouseId optional filter, null = all warehouses
+     */
+    List<PurchaseSuggestionDTO> getPurchaseSuggestions(Long warehouseId);
 
     /**
      * Update reorder (low-stock alert) level for an inventory record.
