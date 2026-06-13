@@ -24,4 +24,16 @@ public class DeliveryOrder {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sales_order_id")
     private SalesOrder salesOrder; // đơn bán hàng nguồn của vận đơn này
+
+    @Column(name = "recipient_name")
+    private String recipientName;
+
+    @Column(name = "recipient_phone")
+    private String recipientPhone;
+
+    @Column(name = "planned_date")
+    private java.time.LocalDate plannedDate;
+
+    @Column(name = "goods_issue_id")
+    private Long goodsIssueId;
 }

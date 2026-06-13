@@ -6,6 +6,7 @@ import com.distribution.model.GoodsIssue;
 import com.distribution.repository.DeliveryOrderRepository;
 import com.distribution.repository.DeliveryPlanOrderRepository;
 import com.distribution.repository.DeliveryTripRouteItemRepository;
+import com.distribution.exception.ResourceNotFoundException;
 import com.distribution.repository.GoodsIssueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -73,6 +74,59 @@ public class DeliveryOrderService {
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Chi tiết một vận đơn kèm danh sách mặt hàng (lấy từ phiếu xuất liên kết).
+     */
+    @Transactional(readOnly = true)
+    public DeliveryOrderDTO getDetail(Long id) {
+        DeliveryOrder order = deliveryOrderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery Order", id));
+
+        // Tìm phiếu xuất liên kết: ưu tiên goodsIssueId, fallback theo mã (cùng code với GI).
+        GoodsIssue gi = null;
+        if (order.getGoodsIssueId() != null) {
+            gi = goodsIssueRepository.findByIdWithItems(order.getGoodsIssueId()).orElse(null);
+        }
+        if (gi == null && order.getCode() != null) {
+            gi = goodsIssueRepository.findByCode(order.getCode())
+                    .flatMap(found -> goodsIssueRepository.findByIdWithItems(found.getId()))
+                    .orElse(null);
+        }
+
+        DeliveryOrderDTO.DeliveryOrderDTOBuilder builder = DeliveryOrderDTO.builder()
+                .id(order.getId())
+                .code(order.getCode())
+                .salesOrderCode(salesOrderCode(order, gi))
+                .status(order.getStatus())
+                .customerName(customerName(gi))
+                .deliveryAddress(gi != null && formatAddress(gi) != null
+                        ? formatAddress(gi) : order.getDestinationAddress())
+                .recipientName(order.getRecipientName())
+                .recipientPhone(order.getRecipientPhone())
+                .plannedDate(order.getPlannedDate())
+                .goodsIssueId(order.getGoodsIssueId());
+
+        if (gi != null) {
+            builder.goodsIssueCode(gi.getCode());
+            if (order.getGoodsIssueId() == null) {
+                builder.goodsIssueId(gi.getId());
+            }
+            List<DeliveryOrderDTO.Item> items = gi.getItems().stream()
+                    .map(it -> DeliveryOrderDTO.Item.builder()
+                            .productCode(it.getProduct() != null ? it.getProduct().getCode() : null)
+                            .productName(it.getProduct() != null ? it.getProduct().getName() : null)
+                            .quantity(it.getIssuedQuantity())
+                            .unit(it.getUnit())
+                            .build())
+                    .collect(Collectors.toList());
+            builder.items(items);
+        } else {
+            builder.items(new ArrayList<>());
+        }
+
+        return builder.build();
     }
 
     private DeliveryOrderDTO toDTO(DeliveryOrder order, GoodsIssue gi) {

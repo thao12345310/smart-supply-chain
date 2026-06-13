@@ -24,4 +24,9 @@ public class DeliveryOrderController {
     public ResponseEntity<List<DeliveryOrderDTO>> all() {
         return ResponseEntity.ok(deliveryOrderService.listAvailable());
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<DeliveryOrderDTO> detail(@PathVariable Long id) {
+        return ResponseEntity.ok(deliveryOrderService.getDetail(id));
+    }
 }
