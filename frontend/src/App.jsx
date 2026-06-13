@@ -46,6 +46,10 @@ import SalesInvoiceList from "./pages/SalesInvoiceList";
 import SalesInvoiceDetail from "./pages/SalesInvoiceDetail";
 import LoginPage from "./pages/LoginPage";
 
+// Import pages - Accounting Module
+import PaymentList from "./pages/PaymentList";
+import LedgerPage from "./pages/LedgerPage";
+
 // Import pages - Dashboard & Reporting (Phân hệ 5)
 import DashboardPage from "./pages/DashboardPage";
 
@@ -112,6 +116,9 @@ function MainLayout({ children }) {
     if (path.includes('/sales-orders')) return 'sales-orders';
     if (path.includes('/goods-issues')) return 'goods-issues';
     if (path.includes('/sales-invoices')) return 'sales-invoices';
+    if (path.includes('/payments')) return 'payments';
+    if (path.includes('/ledger')) return 'ledger';
+    if (path.includes('/dashboard/accounting')) return 'accounting-dashboard';
     if (path.includes('/admin/users')) return 'admin-users';
     if (path === '/') return 'dashboard';
     return 'dashboard';
@@ -151,6 +158,33 @@ function MainLayout({ children }) {
           label: 'Hóa đơn & Thanh toán',
           hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.ACCOUNTANT]),
           onClick: () => navigate('/sales-invoices'),
+        },
+      ].filter(item => !item.hidden),
+    },
+    // Accounting Module
+    {
+      key: 'accounting',
+      icon: <DollarOutlined />,
+      label: 'Kế toán',
+      hidden: !hasAnyRole([ROLES.ADMIN, ROLES.ACCOUNTANT]),
+      children: [
+        {
+          key: 'payments',
+          label: 'Phiếu thu/chi',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.ACCOUNTANT]),
+          onClick: () => navigate('/payments'),
+        },
+        {
+          key: 'ledger',
+          label: 'Sổ cái',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.ACCOUNTANT]),
+          onClick: () => navigate('/ledger'),
+        },
+        {
+          key: 'accounting-dashboard',
+          label: 'Dashboard Kế toán',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.ACCOUNTANT]),
+          onClick: () => navigate('/dashboard/accounting'),
         },
       ].filter(item => !item.hidden),
     },
@@ -359,7 +393,7 @@ function MainLayout({ children }) {
         <Menu
           mode="inline"
           selectedKeys={[getSelectedKey()]}
-          defaultOpenKeys={['sales', 'purchasing', 'warehouse', 'master-data', 'delivery', 'admin']}
+          defaultOpenKeys={['sales', 'accounting', 'purchasing', 'warehouse', 'master-data', 'delivery', 'admin']}
           style={{ borderRight: 0, paddingTop: 8 }}
           items={menuItems}
         />
@@ -487,6 +521,26 @@ export default function App() {
             <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.ACCOUNTANT, ROLES.SALES_MANAGER]}>
               <MainLayout>
                 <SalesInvoiceDetail />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+
+        {/* Accounting: Payments & Ledger */}
+        <Route path="/payments" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.ACCOUNTANT]}>
+              <MainLayout>
+                <PaymentList />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/ledger" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.ACCOUNTANT]}>
+              <MainLayout>
+                <LedgerPage />
               </MainLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>

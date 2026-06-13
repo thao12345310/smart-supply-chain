@@ -499,4 +499,16 @@ export const dashboardApi = {
     api.get('/dashboard/top-products', { params: { startDate, endDate, limit } }),
 };
 
+// ==================== Payment & Accounting API ====================
+export const paymentApi = {
+  getAll: (type) => api.get('/payments', { params: type ? { type } : {} }),
+  create: (data) => api.post('/payments', data),
+};
+
+export const accountingApi = {
+  getTransactions: (startDate, endDate) =>
+    api.get('/accounting/transactions', { params: { startDate, endDate } }),
+  getLedger: (account) => api.get('/accounting/ledger', { params: { account } }),
+};
+
 export default api;
