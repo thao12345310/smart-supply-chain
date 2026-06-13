@@ -1,4 +1,24 @@
+# Build output
 frontend/node_modules/
 frontend/dist/
 backend/target/
 SOICT_DATN_Application_ENG_Template/build/
+
+# OS / editor junk
+.DS_Store
+
+# Logs
+*.log
+
+# Database dumps & backups
+*.sql.bak
+backup_*.sql
+**/db_backup_*.sql
+
+# Archives & large binaries (sản phẩm/tài liệu, không để trong git)
+*.zip
+*.xlsx
+
+# Local secrets
+.env
+.env.local
