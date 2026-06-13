@@ -111,8 +111,8 @@ Mỗi đóng góp = (i) vấn đề, (ii) giải pháp, (iii) kết quả. Đã 
 - [ ] **Screenshot app thật** (mục 4.3.3): login, dashboard, tạo/duyệt PO & SO, goods issue (thể hiện FEFO), danh sách lô tồn kho + cảnh báo hết hạn, kế hoạch giao hàng, hóa đơn.
 - [ ] **UI mockup** (mục 4.2.1) cho vài màn hình quan trọng.
 - [ ] **Thống kê mã nguồn** (mục 4.3.2) — số liệu thật của dự án bạn:
-  - Backend Java: **~152 file, ~14.860 dòng, 14 package**.
-  - Frontend (jsx/js): **~33 file, ~10.302 dòng**.
+  - Backend Java: **~157 file, ~15.461 dòng, 12 package** (số liệu 06/2026).
+  - Frontend (jsx/js): **~34 file, ~10.991 dòng**.
   - Muốn bảng đẹp tách theo ngôn ngữ: `brew install cloc && cloc backend/src frontend/src`.
 - [ ] **Test case** (mục 4.4) cho 3 chức năng: Confirm GI (FEFO), Approve SO (reservation), kiểm tra hạn mức tín dụng.
 - [ ] **Thông số triển khai** (mục 4.5): cấu hình server, port (8080/5432/5173).

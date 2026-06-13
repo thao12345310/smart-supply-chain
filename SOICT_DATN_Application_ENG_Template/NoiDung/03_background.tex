@@ -77,14 +77,16 @@ JPA was selected because most project operations are entity-centric, while
 custom repository queries are still available for cases such as FEFO lot
 selection and pessimistic locking for stock updates.
 
-Flyway-style migration files under \texttt{db/migration} define the database
-schema and seed data. Migration-based schema management was selected because
-database changes must be repeatable across development and demonstration
-environments. Flyway documentation describes migrations as versioned scripts that
-capture incremental database changes and run in a consistent order
-\cite{flywayMigrations}. This directly supports the requirement that the system
-be deployable and maintainable without manually editing the database for each
-environment.
+The database schema and seed data are defined by versioned SQL migration files
+under \texttt{db/migration}, named after the Flyway convention
+(\texttt{V1}, \texttt{V2}, \dots). Migration-based schema management was
+selected because database changes must be repeatable across development and
+demonstration environments. Flyway documentation describes migrations as
+versioned scripts that capture incremental database changes and run in a
+consistent order \cite{flywayMigrations}; the project follows this convention,
+with the scripts applied to PostgreSQL in version order when an environment is
+prepared. This directly supports the requirement that the system be deployable
+and maintainable without manually editing the database for each environment.
 
 \section{Frontend Technologies}
 % GUIDE: React 18 (component model, SPA), Vite, Ant Design, Axios, Recharts.

@@ -59,7 +59,10 @@ Supporting packages are separated from domain packages. The \texttt{security}
 package implements JWT token generation, authentication filtering, custom user
 details, and role annotations. The \texttt{config} package defines security,
 CORS, and API documentation configuration. The \texttt{exception} package
-provides domain exceptions and a global exception handler. The dependency
+provides domain exceptions and a global exception handler. The
+\texttt{scheduler} package contains scheduled background jobs; currently it
+holds the overdue-invoice job, which runs daily and marks unpaid invoices past
+their due date as overdue. The dependency
 direction follows the layered rule: controllers depend on services and DTOs,
 services depend on repositories and models, and repositories depend on models.
 Lower layers do not call upper layers.
@@ -195,6 +198,9 @@ which keeps lifecycle transitions explicit in the service layer.
 \subsection{Libraries and Tools}
 % GUIDE: list every language/library/tool WITH VERSION. (Pre-filled from pom.xml +
 % package.json — verify versions against your project.)
+Table~\ref{tab:tools} lists the languages, frameworks, libraries, and tools used
+to build the system, together with their versions as declared in the backend
+\texttt{pom.xml} and the frontend \texttt{package.json}.
 \begin{table}[H]\centering
 \caption{Libraries, frameworks and tools used}
 \label{tab:tools}
@@ -205,7 +211,7 @@ Backend language        & Java                    & 17 \\ \hline
 Backend framework       & Spring Boot             & 3.1.4 \\ \hline
 ORM / data access       & Spring Data JPA (Hibernate) & (Boot 3.1.4) \\ \hline
 Security / tokens       & Spring Security, JJWT   & 0.12.3 \\ \hline
-DB migration            & SQL migration scripts   & V1--V7 \\ \hline
+DB migration            & SQL migration scripts   & V1--V8 \\ \hline
 API documentation       & SpringDoc OpenAPI       & 2.1.0 \\ \hline
 Boilerplate reduction   & Lombok                  & (Boot-managed) \\ \hline
 Build tool (backend)    & Maven                   & 3.x \\ \hline
@@ -230,19 +236,20 @@ IDE                     & IntelliJ IDEA / VS Code & -- \\ \hline
 \begin{tabular}{|l|r|}
 \hline
 \textbf{Metric} & \textbf{Value} \\ \hline
-Lines of code (backend) & 14,860 \\ \hline
-Lines of code (frontend) & 10,302 \\ \hline
-Number of Java classes & 152 \\ \hline
-Number of packages & 14 \\ \hline
+Lines of code (backend) & 15,461 \\ \hline
+Lines of code (frontend) & 10,991 \\ \hline
+Number of Java classes & 157 \\ \hline
+Number of packages & 12 \\ \hline
 \end{tabular}
 \end{table}
 The delivered prototype contains the core modules required by the thesis scope:
 purchasing, goods receipt, inventory and lot management, sales order processing,
 goods issue, sales invoice, delivery planning, shipper trip execution, dashboard
-reporting, authentication, and user-role management. The backend source code has
-14,860 Java lines under \texttt{backend/src/main/java}. The frontend source code
-has 10,302 JavaScript/JSX lines under \texttt{frontend/src}. These values were
-computed from the project source tree.
+reporting, authentication, and user-role management. Table~\ref{tab:loc}
+summarises the source-code statistics. The backend source code has 15,461 Java
+lines in 157 classes under \texttt{backend/src/main/java}, organised into 12
+packages. The frontend source code has 10,991 JavaScript/JSX lines under
+\texttt{frontend/src}. These values were computed from the project source tree.
 
 \subsection{Illustration of Main Functions}
 \label{sec:main-functions}
