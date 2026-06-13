@@ -30,6 +30,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
     private final SalesInvoiceRepository salesInvoiceRepository;
     private final CustomerRepository customerRepository;
     private final SalesOrderRepository salesOrderRepository;
+    private final com.distribution.service.AccountingService accountingService;
 
     @Override
     @Transactional(readOnly = true)
@@ -136,7 +137,18 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         
         invoice = salesInvoiceRepository.save(invoice);
         log.info("Invoice {} issued", invoice.getCode());
-        
+
+        // Bút toán ghi nhận doanh thu: Nợ Phải thu KH / Có Doanh thu
+        if (invoice.getTotalAmount() != null) {
+            accountingService.post(
+                java.time.LocalDateTime.now(),
+                "Hóa đơn bán hàng " + invoice.getCode(),
+                "INVOICE", invoice.getId(),
+                com.distribution.model.enums.AccountCode.AR,
+                com.distribution.model.enums.AccountCode.REVENUE,
+                invoice.getTotalAmount()
+            );
+        }
         return mapToDTO(invoice);
     }
 

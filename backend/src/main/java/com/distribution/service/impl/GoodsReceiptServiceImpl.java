@@ -53,6 +53,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     private final InventoryService inventoryService;
     private final PurchaseOrderService purchaseOrderService;
     private final InventoryLotRepository inventoryLotRepo;
+    private final com.distribution.service.AccountingService accountingService;
 
     @Override
     public GoodsReceiptDTO create(GoodsReceiptDTO dto) {
@@ -364,7 +365,18 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
         purchaseOrderService.updateReceivingStatus(po.getId());
         
         logger.info("Confirmed Goods Receipt: {}. Inventory updated.", saved.getCode());
-        
+
+        // Bút toán nhập kho: Nợ Hàng tồn / Có Phải trả NCC (giá trị hàng nhận)
+        if (saved.getTotalAmount() != null) {
+            accountingService.post(
+                java.time.LocalDateTime.now(),
+                "Nhập kho " + saved.getCode(),
+                "GR", saved.getId(),
+                com.distribution.model.enums.AccountCode.INVENTORY,
+                com.distribution.model.enums.AccountCode.AP,
+                saved.getTotalAmount()
+            );
+        }
         return toDto(saved);
     }
 
