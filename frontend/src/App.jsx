@@ -30,6 +30,9 @@ import InventoryList from "./pages/InventoryList";
 import DeliveryPlanList from "./pages/DeliveryPlanList";
 import DeliveryPlanDetail from "./pages/DeliveryPlanDetail";
 import AssignedTrips from "./pages/AssignedTrips";
+import DeliveryOrderList from "./pages/DeliveryOrderList";
+import DeliveryOrderDetail from "./pages/DeliveryOrderDetail";
+import WaybillPrint from "./pages/WaybillPrint";
 import PurchaseOrderForm from "./pages/PurchaseOrderForm";
 import GoodsReceiptForm from "./pages/GoodsReceiptForm";
 import DeliveryPlanForm from "./pages/DeliveryPlanForm";
@@ -111,6 +114,7 @@ function MainLayout({ children }) {
     if (path.includes('/products')) return 'products';
     if (path.includes('/suppliers')) return 'suppliers';
     if (path.includes('/assigned-trips')) return 'assigned-trips';
+    if (path.includes('/delivery-orders')) return 'delivery-orders';
     if (path.includes('/delivery-plans')) return 'delivery-plans';
     if (path.includes('/customers')) return 'customers';
     if (path.includes('/sales-orders')) return 'sales-orders';
@@ -248,6 +252,12 @@ function MainLayout({ children }) {
           label: 'Kế hoạch giao hàng',
           hidden: !hasAnyRole([ROLES.ADMIN, ROLES.DELIVERY_ADMIN]),
           onClick: () => navigate('/delivery-plans'),
+        },
+        {
+          key: 'delivery-orders',
+          label: 'Vận đơn',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.DELIVERY_ADMIN]),
+          onClick: () => navigate('/delivery-orders'),
         },
         {
           key: 'assigned-trips',
@@ -719,6 +729,31 @@ export default function App() {
             <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN, ROLES.SHIPPER]}>
               <MainLayout>
                 <AssignedTrips />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+
+        {/* Delivery Orders (Vận đơn) */}
+        <Route path="/delivery-orders/:id/print" element={
+          <ProtectedRoute>
+            <WaybillPrint />
+          </ProtectedRoute>
+        } />
+        <Route path="/delivery-orders" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN]}>
+              <MainLayout>
+                <DeliveryOrderList />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/delivery-orders/:id" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN]}>
+              <MainLayout>
+                <DeliveryOrderDetail />
               </MainLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>

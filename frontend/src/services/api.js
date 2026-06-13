@@ -511,4 +511,10 @@ export const accountingApi = {
   getLedger: (account) => api.get('/accounting/ledger', { params: { account } }),
 };
 
+// ==================== Delivery Order (Vận đơn) API ====================
+export const deliveryOrderApi = {
+  getAll: () => api.get('/delivery-orders'),
+  getById: (id) => api.get(`/delivery-orders/${id}`),
+};
+
 export default api;
