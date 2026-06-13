@@ -4,6 +4,7 @@ import com.distribution.dto.DashboardDTO;
 import com.distribution.model.*;
 import com.distribution.model.enums.*;
 import com.distribution.repository.*;
+import com.distribution.service.AccountingService;
 import com.distribution.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,9 @@ public class DashboardServiceImpl implements DashboardService {
     private final InventoryTransactionRepository inventoryTransactionRepository;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
+    private final DeliveryTripRouteRepository deliveryTripRouteRepository;
+    private final PaymentRepository paymentRepository;
+    private final AccountingService accountingService;
 
     // ==================== Overview Summary ====================
 
@@ -456,7 +460,247 @@ public class DashboardServiceImpl implements DashboardService {
                 .collect(Collectors.toList());
     }
 
+    // ==================== Per-Cluster Dashboards ====================
+
+    @Override
+    public DashboardDTO.PurchaseDashboard getPurchaseDashboard() {
+        List<PurchaseOrder> all = purchaseOrderRepository.findAll();
+        LocalDate today = LocalDate.now();
+        LocalDate firstDayThisMonth = today.with(TemporalAdjusters.firstDayOfMonth());
+
+        long totalPO = all.size();
+        long pendingApproval = all.stream()
+                .filter(po -> po.getStatus() == PurchaseOrderStatus.ORDER_OPEN)
+                .count();
+        long pendingReceipt = all.stream()
+                .filter(po -> po.getStatus() == PurchaseOrderStatus.ORDER_APPROVED
+                        || po.getStatus() == PurchaseOrderStatus.ORDER_PARTIALLY_RECEIVED)
+                .count();
+
+        BigDecimal purchaseValueThisMonth = all.stream()
+                .filter(po -> po.getCreatedDate() != null
+                        && !po.getCreatedDate().isBefore(firstDayThisMonth)
+                        && !po.getCreatedDate().isAfter(today))
+                .map(po -> po.getTotalAmount() != null ? po.getTotalAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<DashboardDTO.ClusterChartPoint> poByStatus = all.stream()
+                .filter(po -> po.getStatus() != null)
+                .collect(Collectors.groupingBy(po -> po.getStatus().name(), Collectors.counting()))
+                .entrySet().stream()
+                .map(e -> DashboardDTO.ClusterChartPoint.builder()
+                        .label(e.getKey())
+                        .value(BigDecimal.valueOf(e.getValue()))
+                        .build())
+                .collect(Collectors.toList());
+
+        List<DashboardDTO.ClusterChartPoint> topSuppliers = all.stream()
+                .filter(po -> po.getSupplier() != null)
+                .collect(Collectors.groupingBy(
+                        po -> po.getSupplier().getName() != null ? po.getSupplier().getName() : "N/A",
+                        Collectors.reducing(BigDecimal.ZERO,
+                                po -> po.getTotalAmount() != null ? po.getTotalAmount() : BigDecimal.ZERO,
+                                BigDecimal::add)))
+                .entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .limit(5)
+                .map(e -> DashboardDTO.ClusterChartPoint.builder()
+                        .label(e.getKey()).value(e.getValue()).build())
+                .collect(Collectors.toList());
+
+        return DashboardDTO.PurchaseDashboard.builder()
+                .totalPO(totalPO)
+                .pendingApproval(pendingApproval)
+                .pendingReceipt(pendingReceipt)
+                .purchaseValueThisMonth(purchaseValueThisMonth)
+                .poByStatus(poByStatus)
+                .topSuppliers(topSuppliers)
+                .build();
+    }
+
+    @Override
+    public DashboardDTO.SalesDashboard getSalesDashboard() {
+        List<SalesOrder> all = salesOrderRepository.findAll();
+        LocalDate today = LocalDate.now();
+        LocalDate firstDayThisMonth = today.with(TemporalAdjusters.firstDayOfMonth());
+
+        long totalSO = all.size();
+
+        // Revenue this month from issued sales invoices (excludes draft/cancelled)
+        BigDecimal revenueThisMonth = salesInvoiceRepository.findByDateRange(firstDayThisMonth, today).stream()
+                .filter(si -> si.getTotalAmount() != null)
+                .map(SalesInvoice::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<DashboardDTO.ClusterChartPoint> soByStatus = all.stream()
+                .filter(so -> so.getStatus() != null)
+                .collect(Collectors.groupingBy(so -> so.getStatus().name(), Collectors.counting()))
+                .entrySet().stream()
+                .map(e -> DashboardDTO.ClusterChartPoint.builder()
+                        .label(e.getKey())
+                        .value(BigDecimal.valueOf(e.getValue()))
+                        .build())
+                .collect(Collectors.toList());
+
+        List<DashboardDTO.ClusterChartPoint> topCustomers = all.stream()
+                .filter(so -> so.getCustomer() != null)
+                .collect(Collectors.groupingBy(
+                        so -> so.getCustomer().getName() != null ? so.getCustomer().getName() : "N/A",
+                        Collectors.reducing(BigDecimal.ZERO,
+                                so -> so.getTotalAmount() != null ? so.getTotalAmount() : BigDecimal.ZERO,
+                                BigDecimal::add)))
+                .entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .limit(5)
+                .map(e -> DashboardDTO.ClusterChartPoint.builder()
+                        .label(e.getKey()).value(e.getValue()).build())
+                .collect(Collectors.toList());
+
+        return DashboardDTO.SalesDashboard.builder()
+                .totalSO(totalSO)
+                .revenueThisMonth(revenueThisMonth)
+                .soByStatus(soByStatus)
+                .topCustomers(topCustomers)
+                .build();
+    }
+
+    @Override
+    public DashboardDTO.InventoryDashboard getInventoryDashboard() {
+        List<Inventory> all = inventoryRepository.findAll();
+        Map<String, Integer> expiredMap = buildExpiredQuantityMap();
+
+        BigDecimal totalStockValue = all.stream()
+                .filter(i -> i.getAverageCost() != null && i.getQuantityOnHand() != null)
+                .map(i -> i.getAverageCost().multiply(BigDecimal.valueOf(i.getQuantityOnHand())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long lowStockCount = all.stream()
+                .filter(i -> {
+                    int avail = effectiveAvailable(i, expiredMap);
+                    if (i.getReorderLevel() != null) {
+                        return avail <= i.getReorderLevel();
+                    }
+                    return avail > 0 && avail <= 10;
+                })
+                .count();
+
+        LocalDate threshold = LocalDate.now().plusDays(30);
+        long expiringSoonCount = inventoryLotRepository.findExpiringSoon(threshold).size();
+        long expiredCount = inventoryLotRepository.findExpired().size();
+
+        List<DashboardDTO.ClusterChartPoint> stockByWarehouse = all.stream()
+                .filter(i -> i.getWarehouse() != null)
+                .collect(Collectors.groupingBy(
+                        i -> i.getWarehouse().getName() != null ? i.getWarehouse().getName() : "N/A",
+                        Collectors.reducing(BigDecimal.ZERO,
+                                i -> {
+                                    if (i.getAverageCost() != null && i.getQuantityOnHand() != null) {
+                                        return i.getAverageCost().multiply(BigDecimal.valueOf(i.getQuantityOnHand()));
+                                    }
+                                    return BigDecimal.ZERO;
+                                },
+                                BigDecimal::add)))
+                .entrySet().stream()
+                .map(e -> DashboardDTO.ClusterChartPoint.builder()
+                        .label(e.getKey()).value(e.getValue()).build())
+                .collect(Collectors.toList());
+
+        return DashboardDTO.InventoryDashboard.builder()
+                .totalStockValue(totalStockValue)
+                .lowStockCount(lowStockCount)
+                .expiringSoonCount(expiringSoonCount)
+                .expiredCount(expiredCount)
+                .stockByWarehouse(stockByWarehouse)
+                .build();
+    }
+
+    @Override
+    public DashboardDTO.DeliveryDashboard getDeliveryDashboard() {
+        List<DeliveryTripRoute> all = deliveryTripRouteRepository.findAll();
+
+        long totalTrips = all.size();
+        long completedTrips = all.stream()
+                .filter(t -> t.getStatus() == DeliveryTripRoute.TripStatus.COMPLETED)
+                .count();
+        double successRate = totalTrips > 0
+                ? (completedTrips * 100.0) / totalTrips
+                : 0.0;
+
+        List<DashboardDTO.ClusterChartPoint> tripsByStatus = all.stream()
+                .filter(t -> t.getStatus() != null)
+                .collect(Collectors.groupingBy(t -> t.getStatus().name(), Collectors.counting()))
+                .entrySet().stream()
+                .map(e -> DashboardDTO.ClusterChartPoint.builder()
+                        .label(e.getKey())
+                        .value(BigDecimal.valueOf(e.getValue()))
+                        .build())
+                .collect(Collectors.toList());
+
+        // Trips grouped by shipper (shipperName legacy field, fall back to shipperUser username)
+        List<DashboardDTO.ClusterChartPoint> ordersByShipper = all.stream()
+                .collect(Collectors.groupingBy(this::resolveShipperName, Collectors.counting()))
+                .entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .map(e -> DashboardDTO.ClusterChartPoint.builder()
+                        .label(e.getKey())
+                        .value(BigDecimal.valueOf(e.getValue()))
+                        .build())
+                .collect(Collectors.toList());
+
+        return DashboardDTO.DeliveryDashboard.builder()
+                .totalTrips(totalTrips)
+                .completedTrips(completedTrips)
+                .successRate(successRate)
+                .tripsByStatus(tripsByStatus)
+                .ordersByShipper(ordersByShipper)
+                .build();
+    }
+
+    @Override
+    public DashboardDTO.AccountingDashboard getAccountingDashboard() {
+        BigDecimal totalReceivable = lastRunningBalance(AccountCode.AR);
+        BigDecimal totalPayable = lastRunningBalance(AccountCode.AP).abs();
+
+        BigDecimal cashIn = paymentRepository.findByTypeOrderByIdDesc(PaymentType.RECEIPT).stream()
+                .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal cashOut = paymentRepository.findByTypeOrderByIdDesc(PaymentType.DISBURSEMENT).stream()
+                .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long overdueInvoices = salesInvoiceRepository.findOverdue(LocalDate.now()).size();
+
+        return DashboardDTO.AccountingDashboard.builder()
+                .totalReceivable(totalReceivable)
+                .totalPayable(totalPayable)
+                .cashIn(cashIn)
+                .cashOut(cashOut)
+                .overdueInvoices(overdueInvoices)
+                .cashFlowByMonth(java.util.List.of())
+                .build();
+    }
+
     // ==================== Private Helpers ====================
+
+    private String resolveShipperName(DeliveryTripRoute trip) {
+        if (trip.getShipperName() != null && !trip.getShipperName().isBlank()) {
+            return trip.getShipperName();
+        }
+        if (trip.getShipperUser() != null && trip.getShipperUser().getUsername() != null) {
+            return trip.getShipperUser().getUsername();
+        }
+        return "Unassigned";
+    }
+
+    private BigDecimal lastRunningBalance(AccountCode account) {
+        List<AccountingService.LedgerLine> ledger = accountingService.getLedger(account);
+        if (ledger == null || ledger.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal bal = ledger.get(ledger.size() - 1).runningBalance();
+        return bal != null ? bal : BigDecimal.ZERO;
+    }
+
 
     // Map "productId:warehouseId" -> tổng tồn của các lô đã hết HSD
     private Map<String, Integer> buildExpiredQuantityMap() {

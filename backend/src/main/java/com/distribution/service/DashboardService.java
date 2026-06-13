@@ -51,4 +51,12 @@ public interface DashboardService {
      * @param limit max products to return
      */
     java.util.List<DashboardDTO.TopProductDTO> getTopSellingProducts(LocalDate startDate, LocalDate endDate, int limit);
+
+    // ==================== Per-Cluster Dashboards ====================
+
+    DashboardDTO.PurchaseDashboard getPurchaseDashboard();
+    DashboardDTO.SalesDashboard getSalesDashboard();
+    DashboardDTO.InventoryDashboard getInventoryDashboard();
+    DashboardDTO.DeliveryDashboard getDeliveryDashboard();
+    DashboardDTO.AccountingDashboard getAccountingDashboard();
 }

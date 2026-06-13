@@ -91,4 +91,31 @@ public class DashboardController {
         List<DashboardDTO.TopProductDTO> topProducts = dashboardService.getTopSellingProducts(startDate, endDate, limit);
         return ResponseEntity.ok(ApiResponse.success(topProducts, "Top products loaded"));
     }
+
+    // ==================== Per-Cluster Dashboards ====================
+
+    @GetMapping("/purchase")
+    public ResponseEntity<ApiResponse<DashboardDTO.PurchaseDashboard>> purchase() {
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getPurchaseDashboard(), "OK"));
+    }
+
+    @GetMapping("/sales")
+    public ResponseEntity<ApiResponse<DashboardDTO.SalesDashboard>> sales() {
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getSalesDashboard(), "OK"));
+    }
+
+    @GetMapping("/inventory")
+    public ResponseEntity<ApiResponse<DashboardDTO.InventoryDashboard>> inventory() {
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getInventoryDashboard(), "OK"));
+    }
+
+    @GetMapping("/delivery")
+    public ResponseEntity<ApiResponse<DashboardDTO.DeliveryDashboard>> delivery() {
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getDeliveryDashboard(), "OK"));
+    }
+
+    @GetMapping("/accounting")
+    public ResponseEntity<ApiResponse<DashboardDTO.AccountingDashboard>> accounting() {
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getAccountingDashboard(), "OK"));
+    }
 }

@@ -187,4 +187,58 @@ public class DashboardDTO {
         private Integer totalQuantitySold;
         private BigDecimal totalRevenue;
     }
+
+    // ==================== Per-Cluster Dashboards ====================
+
+    @Getter @Setter @Builder
+    public static class ClusterChartPoint {
+        private String label;
+        private java.math.BigDecimal value;
+    }
+
+    @Getter @Setter @Builder
+    public static class PurchaseDashboard {
+        private long totalPO;
+        private long pendingApproval;
+        private long pendingReceipt;
+        private java.math.BigDecimal purchaseValueThisMonth;
+        private java.util.List<ClusterChartPoint> poByStatus;     // label=status name, value=count
+        private java.util.List<ClusterChartPoint> topSuppliers;   // label=supplier name, value=amount
+    }
+
+    @Getter @Setter @Builder
+    public static class SalesDashboard {
+        private long totalSO;
+        private java.math.BigDecimal revenueThisMonth;
+        private java.util.List<ClusterChartPoint> soByStatus;
+        private java.util.List<ClusterChartPoint> topCustomers;
+    }
+
+    @Getter @Setter @Builder
+    public static class InventoryDashboard {
+        private java.math.BigDecimal totalStockValue;
+        private long lowStockCount;
+        private long expiringSoonCount;
+        private long expiredCount;
+        private java.util.List<ClusterChartPoint> stockByWarehouse;
+    }
+
+    @Getter @Setter @Builder
+    public static class DeliveryDashboard {
+        private long totalTrips;
+        private long completedTrips;
+        private double successRate;
+        private java.util.List<ClusterChartPoint> tripsByStatus;
+        private java.util.List<ClusterChartPoint> ordersByShipper;
+    }
+
+    @Getter @Setter @Builder
+    public static class AccountingDashboard {
+        private java.math.BigDecimal totalReceivable;
+        private java.math.BigDecimal totalPayable;
+        private java.math.BigDecimal cashIn;
+        private java.math.BigDecimal cashOut;
+        private long overdueInvoices;
+        private java.util.List<ClusterChartPoint> cashFlowByMonth;
+    }
 }
