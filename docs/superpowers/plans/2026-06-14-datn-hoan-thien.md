@@ -12,7 +12,14 @@
 
 ## ⚠️ Ràng buộc bắt buộc đọc trước khi code
 
-1. **Flyway BẬT + `ddl-auto: validate`** (xem `backend/src/main/resources/application.yml`). Mọi entity/cột mới **phải** có file migration `V{n}__*.sql` (migration cuối hiện tại là `V8`). Không có migration → app fail khi khởi động vì Hibernate `validate` không khớp schema.
+1. **Flyway KHÔNG có trên classpath** (không có dependency trong `backend/pom.xml`; `flyway.enabled: true` trong `application.yml` là config chết, `flyway_schema_history` chỉ tới V3). Migration V4-V8 và mọi migration mới được **apply THỦ CÔNG bằng psql** — KHÔNG tự chạy khi khởi động app. Vì `ddl-auto: validate`, mọi entity/cột mới **phải** có file `V{n}__*.sql` (migration cuối hiện tại là `V8`) **và phải apply bằng psql trước khi chạy app**, nếu không Hibernate `validate` fail vì schema không khớp.
+
+   Lệnh apply chuẩn (DB local, role `postgres`/`123`, DB `distribution_db`):
+   ```bash
+   PGPASSWORD=123 psql -h localhost -U postgres -d distribution_db \
+     --single-transaction -v ON_ERROR_STOP=1 \
+     -f backend/src/main/resources/db/migration/V{n}__*.sql
+   ```
 2. **Response API bọc trong `ApiResponse`** (`{success, message, data}`). Controller mới nên trả `ApiResponse.success(payload, msg)`. Frontend interceptor (`services/api.js`) đã tự bóc `.data` khi thấy field `success` — nên ở frontend chỉ cần đọc `res.data`.
 3. **Convention DTO**: dùng nested static class trong 1 DTO theo nhóm (xem `DashboardDTO`), hoặc DTO riêng kèm `@Builder`. Map thủ công trong service (không dùng MapStruct).
 4. **RBAC**: role `ACCOUNTANT` đã có trong `RoleType`. Bảo vệ endpoint kế toán bằng `@PreAuthorize("hasAnyRole('ACCOUNTANT','ADMIN')")` (method security đã bật).
@@ -318,10 +325,16 @@ COMMENT ON TABLE accounting_transaction IS 'Bút toán Nợ/Có đơn giản, si
 COMMENT ON TABLE payment IS 'Phiếu thu (RECEIPT) / phiếu chi (DISBURSEMENT)';
 ```
 
-- [ ] **Step 2: Chạy app để Flyway apply + Hibernate validate**
+- [ ] **Step 2: Apply migration bằng psql, rồi chạy app để Hibernate validate**
 
-Run: `cd backend && mvn -q spring-boot:run` (Ctrl+C sau khi thấy "Started")
-Expected: log Flyway "Migrating schema ... to version 9" và app khởi động không lỗi `SchemaManagementException`. Nếu lỗi validate → đối chiếu kiểu cột với entity (Task 1.2).
+Run (apply thủ công — Flyway KHÔNG tự chạy):
+```bash
+PGPASSWORD=123 psql -h localhost -U postgres -d distribution_db \
+  --single-transaction -v ON_ERROR_STOP=1 \
+  -f backend/src/main/resources/db/migration/V9__accounting_module.sql
+```
+Expected: `CREATE TABLE` / `INSERT 0 6` không lỗi.
+Sau đó: `cd backend && mvn -q spring-boot:run` (Ctrl+C sau khi thấy "Started") → app khởi động không lỗi `SchemaManagementException`. Nếu lỗi validate → đối chiếu kiểu cột SQL với entity (Task 1.2).
 
 - [ ] **Step 3: Commit**
 
@@ -1203,10 +1216,15 @@ ALTER TABLE delivery_order ADD COLUMN IF NOT EXISTS goods_issue_id  BIGINT;
 
 > Kiểm tra trước tên bảng thật: `grep -n '@Table' backend/src/main/java/com/distribution/model/DeliveryOrder.java` → hiện là `delivery_order`. Khớp tên trong SQL.
 
-- [ ] **Step 3: Chạy app verify Flyway V10 + validate**
+- [ ] **Step 3: Apply migration bằng psql, rồi chạy app verify validate**
 
-Run: `cd backend && mvn -q spring-boot:run` (Ctrl+C sau "Started")
-Expected: "Migrating schema ... to version 10", app start OK.
+Run:
+```bash
+PGPASSWORD=123 psql -h localhost -U postgres -d distribution_db \
+  --single-transaction -v ON_ERROR_STOP=1 \
+  -f backend/src/main/resources/db/migration/V10__delivery_order_fields.sql
+```
+Expected: `ALTER TABLE` không lỗi. Sau đó `cd backend && mvn -q spring-boot:run` (Ctrl+C sau "Started") → app start OK (Hibernate validate khớp cột mới).
 
 - [ ] **Step 4: Commit**
 
