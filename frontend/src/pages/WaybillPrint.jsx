@@ -7,15 +7,21 @@ const fmtDate = (d) => d || '';
 export default function WaybillPrint() {
   const { id } = useParams();
   const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     (async () => {
-      const res = await deliveryOrderApi.getById(id);
-      setData(res.data);
-      setTimeout(() => window.print(), 400);
+      try {
+        const res = await deliveryOrderApi.getById(id);
+        setData(res.data);
+        setTimeout(() => window.print(), 400);
+      } catch (e) {
+        setError(e.message || 'Không tải được vận đơn');
+      }
     })();
   }, [id]);
 
+  if (error) return <p style={{ padding: 24, color: '#cf1322' }}>Lỗi: {error}</p>;
   if (!data) return <p style={{ padding: 24 }}>Đang tải vận đơn...</p>;
 
   return (
