@@ -85,7 +85,7 @@ export default function PaymentList() {
             )}
           </Form.Item>
           <Form.Item name="amount" label="Số tiền" rules={[{ required: true }]}>
-            <InputNumber style={{ width: '100%' }} min={1} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} />
+            <InputNumber style={{ width: '100%' }} min={1} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(v) => `${v}`.replace(/,/g, '')} />
           </Form.Item>
           <Form.Item name="paymentDate" label="Ngày" rules={[{ required: true }]}>
             <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
