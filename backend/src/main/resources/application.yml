@@ -1,6 +1,7 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/distribution_db}
+    # Ưu tiên DB_URL nếu được set; nếu không thì ghép từ host/port/name (tiện cho Render).
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:distribution_db}}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:123}
   flyway:
@@ -15,7 +16,7 @@ spring:
       hibernate:
         format_sql: true
 server:
-  port: 8080
+  port: ${PORT:8080}
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

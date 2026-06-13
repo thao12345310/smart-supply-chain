@@ -1,0 +1,48 @@
+# Render Blueprint — deploy backend Spring Boot + PostgreSQL
+# Dùng tại: https://dashboard.render.com  ->  New  ->  Blueprint  ->  chọn repo này.
+# Render sẽ tự đọc file này để tạo Database + Web Service.
+
+databases:
+  - name: distribution-db
+    plan: free
+    databaseName: distribution_db
+    user: distribution
+
+services:
+  - type: web
+    name: distribution-backend
+    runtime: docker
+    plan: free
+    region: singapore          # gần Việt Nam nhất
+    rootDir: backend           # Dockerfile nằm trong thư mục backend/
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    envVars:
+      # Thông tin DB lấy tự động từ database ở trên
+      - key: DB_HOST
+        fromDatabase:
+          name: distribution-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: distribution-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: distribution-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: distribution-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: distribution-db
+          property: password
+      # JWT secret: Render tự sinh chuỗi ngẫu nhiên an toàn
+      - key: JWT_SECRET
+        generateValue: true
+      # CORS: điền URL frontend Vercel sau khi deploy xong (vd https://xxx.vercel.app)
+      # Tạm để trống/localhost; cập nhật lại ở tab Environment sau.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false

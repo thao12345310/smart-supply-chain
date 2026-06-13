@@ -1,8 +1,12 @@
 import axios from 'axios';
 
+// Base URL lấy từ biến môi trường khi build (Vercel: VITE_API_BASE_URL).
+// Khi dev local không set biến thì mặc định trỏ về backend localhost:8080.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

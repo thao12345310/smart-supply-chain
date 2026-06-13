@@ -1,0 +1,7 @@
+target/
+*.sql
+.env
+.env.*
+.git
+*.md
+HELP.md
