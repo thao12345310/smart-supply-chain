@@ -46,6 +46,7 @@ public class DeliveryOrderService {
                             .status("Pending")
                             .destinationAddress(formatAddress(gi))
                             .salesOrder(gi.getSalesOrder())
+                            .goodsIssueId(gi.getId())
                             .build()));
             // Gán liên kết đơn bán cho các vận đơn được tạo trước khi có liên kết này
             if (order.getSalesOrder() == null && gi.getSalesOrder() != null) {
