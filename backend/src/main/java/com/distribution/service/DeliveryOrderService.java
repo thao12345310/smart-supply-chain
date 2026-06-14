@@ -13,7 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -38,23 +42,36 @@ public class DeliveryOrderService {
      */
     @Transactional
     public List<DeliveryOrderDTO> listAvailable() {
+        // Gom 3 query một lần để tránh N+1: vận đơn theo mã, id vận đơn đã có đợt,
+        // và phiếu xuất đã xác nhận (fetch sẵn salesOrder/customer/deliveryAddress).
+        Map<String, DeliveryOrder> orderByCode = new HashMap<>();
+        for (DeliveryOrder o : deliveryOrderRepository.findAll()) {
+            if (o.getCode() != null) {
+                orderByCode.put(o.getCode(), o);
+            }
+        }
+        Set<Long> plannedOrderIds = new HashSet<>(deliveryPlanOrderRepository.findAllPlannedDeliveryOrderIds());
+
         List<DeliveryOrderDTO> result = new ArrayList<>();
-        for (GoodsIssue gi : goodsIssueRepository.findConfirmed()) {
-            DeliveryOrder order = deliveryOrderRepository.findByCode(gi.getCode())
-                    .orElseGet(() -> deliveryOrderRepository.save(DeliveryOrder.builder()
-                            .code(gi.getCode())
-                            .status("Pending")
-                            .destinationAddress(formatAddress(gi))
-                            .salesOrder(gi.getSalesOrder())
-                            .goodsIssueId(gi.getId())
-                            .build()));
-            // Gán liên kết đơn bán cho các vận đơn được tạo trước khi có liên kết này
-            if (order.getSalesOrder() == null && gi.getSalesOrder() != null) {
+        for (GoodsIssue gi : goodsIssueRepository.findConfirmedWithDetails()) {
+            DeliveryOrder order = orderByCode.get(gi.getCode());
+            if (order == null) {
+                // Vận đơn chưa được materialize: tạo mới (hiếm, chỉ cho phiếu xuất mới).
+                order = deliveryOrderRepository.save(DeliveryOrder.builder()
+                        .code(gi.getCode())
+                        .status("Pending")
+                        .destinationAddress(formatAddress(gi))
+                        .salesOrder(gi.getSalesOrder())
+                        .goodsIssueId(gi.getId())
+                        .build());
+                orderByCode.put(gi.getCode(), order);
+            } else if (order.getSalesOrder() == null && gi.getSalesOrder() != null) {
+                // Gán liên kết đơn bán cho vận đơn cũ chưa có liên kết.
                 order.setSalesOrder(gi.getSalesOrder());
                 deliveryOrderRepository.save(order);
             }
             // Lọc: bỏ qua vận đơn đã thuộc một đợt giao hàng
-            if (deliveryPlanOrderRepository.existsByDeliveryOrderId(order.getId())) {
+            if (plannedOrderIds.contains(order.getId())) {
                 continue;
             }
             result.add(toDTO(order, gi));

@@ -30,7 +30,18 @@ public interface GoodsIssueRepository extends JpaRepository<GoodsIssue, Long> {
     
     @Query("SELECT gi FROM GoodsIssue gi WHERE gi.status = 'CONFIRMED' ORDER BY gi.confirmedDate DESC")
     List<GoodsIssue> findConfirmed();
-    
+
+    /**
+     * Như findConfirmed nhưng fetch sẵn salesOrder + customer + deliveryAddress để tránh N+1
+     * khi build danh sách vận đơn (listAvailable).
+     */
+    @Query("SELECT gi FROM GoodsIssue gi " +
+           "LEFT JOIN FETCH gi.salesOrder so " +
+           "LEFT JOIN FETCH so.customer " +
+           "LEFT JOIN FETCH gi.deliveryAddress " +
+           "WHERE gi.status = 'CONFIRMED' ORDER BY gi.confirmedDate DESC")
+    List<GoodsIssue> findConfirmedWithDetails();
+
     @Query("SELECT gi FROM GoodsIssue gi LEFT JOIN FETCH gi.items WHERE gi.id = :id")
     Optional<GoodsIssue> findByIdWithItems(@Param("id") Long id);
     
