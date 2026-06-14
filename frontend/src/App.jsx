@@ -55,6 +55,11 @@ import LedgerPage from "./pages/LedgerPage";
 
 // Import pages - Dashboard & Reporting (Phân hệ 5)
 import DashboardPage from "./pages/DashboardPage";
+import PurchaseDashboard from "./pages/dashboards/PurchaseDashboard";
+import SalesDashboard from "./pages/dashboards/SalesDashboard";
+import InventoryDashboard from "./pages/dashboards/InventoryDashboard";
+import DeliveryDashboard from "./pages/dashboards/DeliveryDashboard";
+import AccountingDashboard from "./pages/dashboards/AccountingDashboard";
 
 // Import pages - Warehouse (Phân hệ 3 bổ sung)
 import WarehouseList from "./pages/WarehouseList";
@@ -106,6 +111,11 @@ function MainLayout({ children }) {
   // Determine selected key from current path
   const getSelectedKey = () => {
     const path = location.pathname;
+    if (path.includes('/dashboard/purchase')) return 'purchase-dashboard';
+    if (path.includes('/dashboard/sales')) return 'sales-dashboard';
+    if (path.includes('/dashboard/inventory')) return 'inventory-dashboard';
+    if (path.includes('/dashboard/delivery')) return 'delivery-dashboard';
+    if (path.includes('/dashboard/accounting')) return 'accounting-dashboard';
     if (path.includes('/purchase-suggestions')) return 'purchase-suggestions';
     if (path.includes('/purchase-orders')) return 'purchase-orders';
     if (path.includes('/goods-receipts')) return 'goods-receipts';
@@ -122,7 +132,6 @@ function MainLayout({ children }) {
     if (path.includes('/sales-invoices')) return 'sales-invoices';
     if (path.includes('/payments')) return 'payments';
     if (path.includes('/ledger')) return 'ledger';
-    if (path.includes('/dashboard/accounting')) return 'accounting-dashboard';
     if (path.includes('/admin/users')) return 'admin-users';
     if (path === '/') return 'dashboard';
     return 'dashboard';
@@ -162,6 +171,12 @@ function MainLayout({ children }) {
           label: 'Hóa đơn & Thanh toán',
           hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.ACCOUNTANT]),
           onClick: () => navigate('/sales-invoices'),
+        },
+        {
+          key: 'sales-dashboard',
+          label: 'Dashboard Bán hàng',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.SALES_STAFF, ROLES.SALES_MANAGER]),
+          onClick: () => navigate('/dashboard/sales'),
         },
       ].filter(item => !item.hidden),
     },
@@ -217,6 +232,12 @@ function MainLayout({ children }) {
           hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.WAREHOUSE_STAFF]),
           onClick: () => navigate('/goods-receipts'),
         },
+        {
+          key: 'purchase-dashboard',
+          label: 'Dashboard Mua hàng',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.PURCHASE_STAFF, ROLES.PURCHASE_MANAGER]),
+          onClick: () => navigate('/dashboard/purchase'),
+        },
       ].filter(item => !item.hidden),
     },
     // Warehouse & Inventory
@@ -237,6 +258,12 @@ function MainLayout({ children }) {
           label: 'Danh sách kho',
           hidden: !hasAnyRole([ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]),
           onClick: () => navigate('/warehouses'),
+        },
+        {
+          key: 'inventory-dashboard',
+          label: 'Dashboard Kho',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]),
+          onClick: () => navigate('/dashboard/inventory'),
         },
       ].filter(item => !item.hidden),
     },
@@ -264,6 +291,12 @@ function MainLayout({ children }) {
           label: 'Chuyến giao hàng',
           hidden: !hasAnyRole([ROLES.SHIPPER]),
           onClick: () => navigate('/assigned-trips'),
+        },
+        {
+          key: 'delivery-dashboard',
+          label: 'Dashboard Giao hàng',
+          hidden: !hasAnyRole([ROLES.ADMIN, ROLES.DELIVERY_ADMIN]),
+          onClick: () => navigate('/dashboard/delivery'),
         },
       ].filter(item => !item.hidden),
     },
@@ -765,6 +798,53 @@ export default function App() {
             <RoleProtectedRoute roles={[ROLES.ADMIN]}>
               <MainLayout>
                 <UserManagement />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+
+        {/* Per-cluster Dashboards */}
+        <Route path="/dashboard/purchase" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.PURCHASE_STAFF]}>
+              <MainLayout>
+                <PurchaseDashboard />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/sales" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.SALES_STAFF]}>
+              <MainLayout>
+                <SalesDashboard />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/inventory" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.WAREHOUSE_STAFF]}>
+              <MainLayout>
+                <InventoryDashboard />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/delivery" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.DELIVERY_ADMIN]}>
+              <MainLayout>
+                <DeliveryDashboard />
+              </MainLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/accounting" element={
+          <ProtectedRoute>
+            <RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.ACCOUNTANT]}>
+              <MainLayout>
+                <AccountingDashboard />
               </MainLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>

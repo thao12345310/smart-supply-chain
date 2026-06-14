@@ -497,6 +497,13 @@ export const dashboardApi = {
   // Get top selling products
   getTopProducts: (startDate, endDate, limit = 10) =>
     api.get('/dashboard/top-products', { params: { startDate, endDate, limit } }),
+
+  // Per-cluster dashboards
+  getPurchase: () => api.get('/dashboard/purchase'),
+  getSales: () => api.get('/dashboard/sales'),
+  getInventory: () => api.get('/dashboard/inventory'),
+  getDelivery: () => api.get('/dashboard/delivery'),
+  getAccounting: () => api.get('/dashboard/accounting'),
 };
 
 // ==================== Payment & Accounting API ====================
