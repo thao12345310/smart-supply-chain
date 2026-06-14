@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @ActiveProfiles("test")
-class CoreFlowIT {
+class CoreFlowTest {
 
     @Test
     void application_context_loads_with_accounting_wired() {
