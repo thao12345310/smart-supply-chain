@@ -60,10 +60,10 @@ Dựa trên phạm vi dự án và tiến độ hiện tại, đây là danh sá
 - Theo dõi trạng thái giao hàng của Shipper.
 - Trang quản lý kho hàng.
 
-### Phân hệ 4: Kế toán & Tài chính (Accounting) — 🔜 Tạm hoãn
-- **Bút toán tự động (Accounting Transactions)**: Tự động hạch toán khi Nhập/Xuất/Hóa đơn.
-- **Quản lý Thanh toán (Payments)**: Quy trình thanh toán chi tiết, khớp lệnh hóa đơn.
-> ⚠️ *Phân hệ này tạm hoãn thực hiện để tập trung hoàn thiện các phân hệ nghiệp vụ chính.*
+### Phân hệ 4: Kế toán & Tài chính (Accounting) ✅ HOÀN THÀNH
+- **Bút toán tự động (Accounting Transactions)**: Tự động hạch toán khi Nhập kho (Nợ Hàng tồn/Có Phải trả NCC), phát hành Hóa đơn (Nợ Phải thu/Có Doanh thu), và Thu/Chi tiền.
+- **Quản lý Thanh toán (Payments)**: Phiếu thu (RECEIPT) / phiếu chi (DISBURSEMENT), khớp với hóa đơn và cập nhật trạng thái thanh toán.
+- **Sổ cái (Ledger)**: Danh sách bút toán + số dư lũy kế theo từng tài khoản (CASH/AR/AP/REVENUE/INVENTORY/EXPENSE).
 
 ### Phân hệ 5: Báo cáo & Dashboard (Reporting) ✅ MỚI HOÀN THÀNH
 - Dashboard tổng quan doanh thu, tồn kho.
@@ -101,3 +101,28 @@ Dựa trên phạm vi dự án và tiến độ hiện tại, đây là danh sá
 - Xác minh dữ liệu Dashboard phản ánh đúng số liệu thực.
 - Kiểm tra báo cáo Nhập-Xuất-Tồn với nhiều kho khác nhau.
 - Kiểm tra báo cáo Công nợ với các hóa đơn quá hạn.
+
+---
+
+## Cập nhật Hoàn thiện (06/2026) — bám Phiếu giao nhiệm vụ
+
+Thực hiện theo plan `docs/superpowers/plans/2026-06-14-datn-hoan-thien.md`, nhánh `feat/datn-phase1-accounting`.
+
+### 1. Module Kế toán ✅
+Bút toán tự động (GR/Invoice/Payment), phiếu thu/chi, sổ cái theo tài khoản — xem Phân hệ 4 ở trên.
+
+### 2. Vận đơn (Delivery Order) ✅
+- Trang quản lý vận đơn (danh sách + tìm kiếm), trang chi tiết kèm danh sách mặt hàng (lấy từ phiếu xuất liên kết).
+- **In vận đơn** (phiếu in trình duyệt — `window.print`, xuất PDF).
+
+### 3. Dashboard từng cụm nghiệp vụ ✅
+- 5 dashboard riêng: Mua hàng, Bán hàng, Kho & Logistics, Giao hàng, Kế toán — mỗi cụm có KPI + biểu đồ đặc thù (Recharts).
+
+### 4. Đo hiệu năng (Test & Evaluation - WP5) ✅
+- Interceptor Micrometer ghi thời gian mỗi API; endpoint `GET /api/metrics/summary`; script `scripts/perf/run.sh` sinh bảng avg/max.
+- **Kết quả đo (N=8):** đa số endpoint 13–47 ms.
+- **Tối ưu hiệu năng:** phát hiện `GET /api/delivery-orders` chậm **~2380 ms** do N+1 trong `listAvailable()`; sửa bằng gom bulk query + `JOIN FETCH` → **47 ms (~50× nhanh hơn)**.
+
+### 5. Kiểm thử (WP5) ✅
+- `backend/src/test` với H2 in-memory + profile `test`.
+- Unit test logic sổ cái (`AccountingServiceTest`), integration test context-load (`CoreFlowTest`), test bảo mật RBAC chặn truy cập không xác thực (`RbacSecurityTest`). Chạy: `cd backend && mvn test` → 4 test PASS.
