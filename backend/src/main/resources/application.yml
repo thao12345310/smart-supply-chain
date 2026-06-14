@@ -24,3 +24,11 @@ app:
     secret: ${JWT_SECRET:distribution-logistics-jwt-secret-key-2024-very-secure}
     expiration-ms: 86400000
     refresh-expiration-ms: 604800000
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  metrics:
+    tags:
+      application: distribution-backend
