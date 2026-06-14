@@ -4,6 +4,7 @@
 1. Chạy backend: `cd backend && mvn spring-boot:run`
 2. `chmod +x scripts/perf/run.sh`
 3. `N=50 ./scripts/perf/run.sh` → in bảng endpoint | n | avg(ms) | max(ms). Copy vào báo cáo (mục WP5).
+   - Tùy chọn đăng nhập khác mặc định: `APP_USER=admin APP_PASS=admin123 N=50 ./scripts/perf/run.sh` (dùng `APP_USER`, KHÔNG dùng `USER` vì đó là biến môi trường có sẵn của shell).
 
 ## Cách 2 — đọc Micrometer
 Sau khi đã tạo tải (chạy script hoặc dùng app), gọi (token ADMIN):

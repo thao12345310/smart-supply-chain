@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Đo response time các endpoint chính. Cần backend chạy ở localhost:8080.
-# Dùng: BASE=http://localhost:8080 USER=admin PASS=admin123 N=50 ./scripts/perf/run.sh
+# Dùng: BASE=http://localhost:8080 APP_USER=admin APP_PASS=admin123 N=50 ./scripts/perf/run.sh
+# Lưu ý: dùng APP_USER chứ KHÔNG dùng USER — USER là biến môi trường có sẵn của shell (tên user OS).
 set -euo pipefail
 BASE="${BASE:-http://localhost:8080}"
-USER="${USER:-admin}"
-PASS="${PASS:-admin123}"
+APP_USER="${APP_USER:-admin}"
+APP_PASS="${APP_PASS:-admin123}"
 N="${N:-50}"
 
-LOGIN=$(curl -s -X POST "$BASE/api/auth/login" -H "Content-Type: application/json" -d "{\"username\":\"$USER\",\"password\":\"$PASS\"}")
+LOGIN=$(curl -s -X POST "$BASE/api/auth/login" -H "Content-Type: application/json" -d "{\"username\":\"$APP_USER\",\"password\":\"$APP_PASS\"}")
 TOKEN=$(echo "$LOGIN" | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
-if [ -z "$TOKEN" ]; then echo "Login thất bại — kiểm tra USER/PASS. Response: $LOGIN"; exit 1; fi
+if [ -z "$TOKEN" ]; then echo "Login thất bại — kiểm tra APP_USER/APP_PASS. Response: $LOGIN"; exit 1; fi
 
 ENDPOINTS=(
   "/api/purchase-orders"
