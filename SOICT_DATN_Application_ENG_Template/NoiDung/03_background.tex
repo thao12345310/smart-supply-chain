@@ -28,9 +28,11 @@ and improving warehouse discipline \cite{richards2021warehouse}. FIFO
 (First-In-First-Out) issues the oldest received stock first, while LIFO
 (Last-In-First-Out) issues the newest received stock first and is mainly an
 inventory valuation convention. In contrast, FEFO (First-Expired-First-Out)
-issues the stock with the earliest expiry date first. FEFO is more appropriate
-for food, medicine, cosmetics, and other perishable goods because the receiving
-date and the expiry date are not always aligned. Odoo's inventory documentation,
+issues the stock with the earliest expiry date first. The management of
+perishable stock, whose value falls as the expiry date approaches, has long been
+studied in inventory theory~\cite{nahmias1982perishable}. FEFO is more
+appropriate for food, medicine, cosmetics, and other perishable goods because the
+receiving date and the expiry date are not always aligned. Odoo's inventory documentation,
 for example, separates expiration-date tracking from the FEFO removal strategy,
 which reflects the same principle \cite{odooExpiration,odooFefo}. This thesis
 therefore models both aggregate inventory and per-lot inventory, then performs
@@ -58,7 +60,9 @@ REST services, but Spring Boot fits the project's domain better because the
 business rules are transaction-heavy and map naturally to service classes,
 repositories, and declarative transaction management.
 
-The backend follows a layered architecture. Controllers receive HTTP requests
+The backend follows a layered architecture, an established enterprise
+application pattern that separates presentation, domain logic, and data
+access~\cite{fowler2002poeaa}. Controllers receive HTTP requests
 and validate input DTOs; services implement business rules such as purchase
 approval, goods receipt confirmation, inventory reservation, FEFO allocation,
 and delivery-status recovery; repositories encapsulate database access through

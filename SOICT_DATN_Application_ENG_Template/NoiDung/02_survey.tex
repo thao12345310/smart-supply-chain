@@ -127,63 +127,79 @@ invoice state.
 % GUIDE: pick 4-7 most important use cases; for each give name, event flow
 % (main + alternate), pre-conditions, post-conditions. Add activity diagrams only
 % when a use case is complex. Extra ones -> Appendix (NoiDung/07_appendix.tex).
+This section specifies the use cases that carry the most important business
+rules. For each use case, the actor, the pre-conditions, the main and alternate
+event flows, and the post-conditions are presented in a structured form.
+Tables~\ref{tab:uc-gi}, \ref{tab:uc-so}, \ref{tab:uc-gr},
+and~\ref{tab:uc-trip} describe four core use cases of the procure-to-stock and
+order-to-cash workflows. Additional, less central use cases are specified in
+Appendix~\ref{appendix:usecase}.
 
 \subsection{Confirm Goods Issue (FEFO)}
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Pre-conditions:} Sales Order is APPROVED; on-hand stock $\geq$ issued qty.
-  \item \textbf{Main flow:} validate stock $\to$ allocate by FEFO lots $\to$ decrease
-        inventory and release reservation $\to$ update delivered quantity $\to$
-        auto-generate invoice $\to$ update SO status.
-  \item \textbf{Alternate flow:} insufficient lot stock $\to$ reject with error.
-  \item \textbf{Post-conditions:} inventory and lots reduced; invoice issued.
-\end{itemize}
+The goods issue confirmation use case is the outbound operation that deducts
+stock and triggers invoice generation. Its specification is given in
+Table~\ref{tab:uc-gi}.
+\begin{table}[H]\centering
+\caption{Use case specification --- Confirm Goods Issue (FEFO)}
+\label{tab:uc-gi}
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Actor} & Warehouse staff. \\ \hline
+\textbf{Pre-conditions} & Sales order is APPROVED; on-hand stock $\geq$ issued quantity. \\ \hline
+\textbf{Main flow} & (i)~validate stock; (ii)~allocate the requested quantity from FEFO lots; (iii)~decrease aggregate inventory and release the reservation; (iv)~update the delivered quantity; (v)~auto-generate the sales invoice; (vi)~update the sales order status. \\ \hline
+\textbf{Alternate flow} & Insufficient lot stock: the confirmation is rejected with an error and no stock is changed. \\ \hline
+\textbf{Post-conditions} & Aggregate inventory and lots are reduced; a sales invoice is issued. \\ \hline
+\end{tabular}
+\end{table}
 
 \subsection{Approve Sales Order (Inventory Reservation)}
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Pre-conditions:} Sales Order is ORDER\_OPEN; customer is active;
-        warehouse is selected; order items are valid.
-  \item \textbf{Main flow:} load SO with items $\to$ verify status allows
-        approval $\to$ check available quantity for each product and warehouse
-        $\to$ reserve inventory $\to$ set status to ORDER\_APPROVED $\to$ store
-        approver and approval time.
-  \item \textbf{Alternate flow:} insufficient available stock $\to$ reject
-        approval and keep SO unchanged; invalid status $\to$ reject transition.
-  \item \textbf{Post-conditions:} SO is approved; reserved quantity increases;
-        available quantity decreases; on-hand quantity is unchanged.
-\end{itemize}
+The sales order approval use case is the commercial control that reserves stock
+before shipment. Its specification is given in Table~\ref{tab:uc-so}.
+\begin{table}[H]\centering
+\caption{Use case specification --- Approve Sales Order (Inventory Reservation)}
+\label{tab:uc-so}
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Actor} & Sales manager or accountant. \\ \hline
+\textbf{Pre-conditions} & Sales order is ORDER\_OPEN; the customer is active; a warehouse is selected; order items are valid. \\ \hline
+\textbf{Main flow} & (i)~load the sales order with its items; (ii)~verify that the status allows approval; (iii)~check the available quantity for each product and warehouse; (iv)~reserve inventory; (v)~set the status to ORDER\_APPROVED; (vi)~store the approver and the approval time. \\ \hline
+\textbf{Alternate flow} & Insufficient available stock: the approval is rejected and the order is kept unchanged. Invalid status: the transition is rejected. \\ \hline
+\textbf{Post-conditions} & The order is approved; the reserved quantity increases; the available quantity decreases; the on-hand quantity is unchanged. \\ \hline
+\end{tabular}
+\end{table}
 
 \subsection{Confirm Goods Receipt}
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Pre-conditions:} Purchase Order is APPROVED or
-        PARTIALLY\_RECEIVED; Goods Receipt is DRAFT; warehouse and receipt items
-        are provided.
-  \item \textbf{Main flow:} load GR with items $\to$ validate status $\to$ check
-        remaining ordered quantity $\to$ update PO item received quantity $\to$
-        add accepted quantity to inventory $\to$ create inventory transaction
-        $\to$ create inventory lot with batch number and expiry date $\to$
-        update PO receiving status.
-  \item \textbf{Alternate flow:} received quantity exceeds remaining quantity
-        $\to$ reject confirmation; missing batch number for lot-managed receipt
-        $\to$ reject confirmation.
-  \item \textbf{Post-conditions:} GR is CONFIRMED; inventory and lots increase;
-        purchase order receiving progress is updated.
-\end{itemize}
+The goods receipt confirmation use case is the inbound operation that increases
+stock and creates inventory lots. Its specification is given in
+Table~\ref{tab:uc-gr}.
+\begin{table}[H]\centering
+\caption{Use case specification --- Confirm Goods Receipt}
+\label{tab:uc-gr}
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Actor} & Warehouse staff. \\ \hline
+\textbf{Pre-conditions} & Purchase order is APPROVED or PARTIALLY\_RECEIVED; the goods receipt is DRAFT; a warehouse and receipt items are provided. \\ \hline
+\textbf{Main flow} & (i)~load the goods receipt with its items; (ii)~validate the status; (iii)~check the remaining ordered quantity; (iv)~update the purchase order item received quantity; (v)~add the accepted quantity to aggregate inventory; (vi)~create an inventory transaction; (vii)~create an inventory lot with batch number and expiry date; (viii)~update the purchase order receiving status. \\ \hline
+\textbf{Alternate flow} & Received quantity exceeds the remaining quantity: the confirmation is rejected. Missing batch number for a lot-managed receipt: the confirmation is rejected. \\ \hline
+\textbf{Post-conditions} & The goods receipt is CONFIRMED; inventory and lots increase; the purchase order receiving progress is updated. \\ \hline
+\end{tabular}
+\end{table}
 
 \subsection{Assign and Execute Delivery Trip}
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Pre-conditions:} Goods Issue or delivery order is ready for
-        delivery; shipper user exists and has SHIPPER role.
-  \item \textbf{Main flow:} delivery administrator creates delivery plan $\to$
-        selects orders to deliver $\to$ assigns shipper $\to$ system creates
-        trip route and route items $\to$ shipper views assigned trips $\to$
-        shipper updates each delivery item as delivered or failed.
-  \item \textbf{Alternate flow:} delivery failed $\to$ trigger failed-delivery
-        recovery for the related goods issue; unauthorized shipper access $\to$
-        reject request.
-  \item \textbf{Post-conditions:} delivery status is updated; successful trips
-        remain linked to completed delivery, while failed trips restore stock and
-        require follow-up handling.
-\end{itemize}
+The delivery trip use case covers planning by the delivery administrator and
+execution by the shipper. Its specification is given in Table~\ref{tab:uc-trip}.
+\begin{table}[H]\centering
+\caption{Use case specification --- Assign and Execute Delivery Trip}
+\label{tab:uc-trip}
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Actor} & Delivery administrator and shipper. \\ \hline
+\textbf{Pre-conditions} & A goods issue or delivery order is ready for delivery; a shipper user exists and has the SHIPPER role. \\ \hline
+\textbf{Main flow} & (i)~the delivery administrator creates a delivery plan; (ii)~selects the orders to deliver; (iii)~assigns a shipper; (iv)~the system creates the trip route and route items; (v)~the shipper views the assigned trips; (vi)~the shipper updates each delivery item as delivered or failed. \\ \hline
+\textbf{Alternate flow} & Delivery failed: the failed-delivery recovery is triggered for the related goods issue. Unauthorized shipper access: the request is rejected. \\ \hline
+\textbf{Post-conditions} & The delivery status is updated; successful trips remain linked to a completed delivery, while failed trips restore stock and require follow-up handling. \\ \hline
+\end{tabular}
+\end{table}
 
 \section{Non-Functional Requirements}
 % GUIDE: performance, reliability, usability, maintainability, security, plus

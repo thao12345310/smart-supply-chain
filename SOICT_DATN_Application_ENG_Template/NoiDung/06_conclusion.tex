@@ -13,12 +13,13 @@ KiotViet, Sapo, and MISA, the prototype emphasizes distributor workflow
 integration rather than point-of-sale operation.
 
 The main achieved result is a working application structure that connects the
-procure-to-stock and order-to-cash processes. The backend contains 157 Java
-classes with approximately 15,461 lines of source code, while the frontend
-contains approximately 10,991 lines of JavaScript/JSX source code. The system
-implements the core modules required by the project scope: master data,
-purchasing, goods receipt, inventory, lot management, sales, goods issue,
-invoice, delivery, dashboard, authentication, and user management.
+procure-to-stock and order-to-cash processes. The backend contains 176 Java
+classes with 11,821 lines of source code, while the frontend contains 10,575
+lines of JavaScript/JSX source code, measured with the \texttt{cloc} tool
+excluding blank and comment lines. The system implements the core modules
+required by the project scope: master data, purchasing, goods receipt,
+inventory, lot management, sales, goods issue, invoice, accounting, customer
+payment, delivery, dashboard, authentication, and user management.
 
 The key contributions are the FEFO lot-allocation mechanism, the inventory
 reservation mechanism at sales order approval, the failed-delivery recovery
@@ -27,9 +28,13 @@ the most important risks of a distributor: expired stock, overselling,
 inconsistent recovery after delivery failure, and uncontrolled access to
 approval and warehouse operations.
 
-Several limitations remain. The project is still a prototype and has not yet
-implemented advanced accounting, automatic route optimization, barcode scanning,
-or demand forecasting. Some verification results should be completed with a
+Several limitations remain. The project is still a prototype. Although it
+includes an accounting module that records simplified double-entry journal
+entries (each with a debit and a credit account) automatically from source
+documents and tracks customer payments, it has not yet implemented full
+financial reporting such as balance sheets and income statements, period-end
+closing, or integration with external accounting software, and it does not yet
+support automatic route optimization, barcode scanning, or demand forecasting. Some verification results should be completed with a
 stable test database and final screenshots of the running application. Through
 the project, an important lesson is that inventory systems require careful
 transaction design: a single business event often changes order status,
@@ -61,5 +66,5 @@ Another direction is decision support. Demand forecasting can use historical
 sales data to suggest reorder quantities. Business intelligence dashboards can
 provide deeper analysis of revenue, stock turnover, expired stock, customer
 debt, and supplier performance. Finally, the accounting module can be extended
-with payment matching, automatic accounting entries, and integration with
-external accounting software.
+with financial statements, period-end closing, payment reconciliation, and
+integration with external accounting software.

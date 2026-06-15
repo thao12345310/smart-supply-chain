@@ -20,8 +20,8 @@ of expired goods remaining in the warehouse. This thesis proposes and implements
 a web-based Smart Supply Chain Management System for distributor operations. The
 system uses a layered architecture with a Spring Boot REST backend, a React
 single-page frontend, and a PostgreSQL database. It integrates procure-to-stock,
-order-to-cash, inventory, invoice, delivery, reporting, and role-based
-administration modules in one application. The core solution maintains both
+order-to-cash, inventory, invoice, accounting, delivery, reporting, and
+role-based administration modules in one application. The core solution maintains both
 aggregate inventory and lot-level inventory with batch numbers and expiry dates.
 Goods receipt creates inventory lots, sales order approval reserves available
 stock to prevent overselling, and goods issue deducts stock according to the
@@ -30,9 +30,9 @@ for failed delivery by restoring inventory, adjusting delivered quantity,
 updating order status, and handling the related invoice state. Role-Based Access
 Control is implemented for nine business roles, separating document creation,
 approval, warehouse confirmation, delivery assignment, shipper execution, and
-administration. The completed prototype includes 157 backend Java classes,
-approximately 15,461 backend source lines, and approximately 10,991 frontend
-source lines. The main contribution of the thesis is the integration of FEFO lot
+administration. The completed prototype includes 176 backend Java classes in
+twelve packages, with 11,821 lines of backend source code and 10,575 lines of
+frontend source code, measured with cloc excluding blank and comment lines. The main contribution of the thesis is the integration of FEFO lot
 allocation, inventory reservation, failed-delivery recovery, and role-based
 workflow enforcement into a focused distribution-management system.
 

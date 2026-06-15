@@ -1,53 +1,60 @@
 % ===================== APPENDIX — ADDITIONAL USE CASE DESCRIPTIONS =====================
 % GUIDE: detailed specs for use cases that did not fit in Chapter 2 (same format:
 % name, event flow main+alternate, pre-conditions, post-conditions).
+\label{appendix:usecase}
+This appendix specifies additional use cases that are not central to the main
+procure-to-stock and order-to-cash workflows but that complete the functional
+description of the system. Tables~\ref{tab:uc-payment}, \ref{tab:uc-adjust},
+and~\ref{tab:uc-explot} present the record-customer-payment, adjust-stock, and
+monitor-expiring-lots use cases respectively.
 
 \section*{Use case: Record Customer Payment}
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Actor:} Accountant or Administrator.
-  \item \textbf{Pre-conditions:} Sales invoice exists; invoice status allows
-        payment; payment amount is greater than zero and does not exceed the
-        remaining amount.
-  \item \textbf{Main flow:} actor opens invoice detail $\to$ enters payment
-        amount, payment method, and payment reference $\to$ system validates the
-        amount $\to$ system updates paid amount and remaining amount $\to$
-        invoice status becomes PARTIALLY\_PAID or PAID $\to$ customer balance
-        and sales order payment status are recalculated.
-  \item \textbf{Alternate flow:} payment amount is invalid or exceeds remaining
-        amount $\to$ system rejects the operation and keeps invoice unchanged.
-  \item \textbf{Post-conditions:} payment information is recorded; invoice and
-        related sales order payment statuses are updated.
-\end{itemize}
+The record-customer-payment use case registers a payment against a sales invoice
+and updates the customer balance. Its specification is given in
+Table~\ref{tab:uc-payment}.
+\begin{table}[H]\centering
+\caption{Use case specification --- Record Customer Payment}
+\label{tab:uc-payment}
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Actor} & Accountant or administrator. \\ \hline
+\textbf{Pre-conditions} & A sales invoice exists; the invoice status allows payment; the payment amount is greater than zero and does not exceed the remaining amount. \\ \hline
+\textbf{Main flow} & (i)~the actor opens the invoice detail; (ii)~enters the payment amount, payment method, and payment reference; (iii)~the system validates the amount; (iv)~the system updates the paid amount and the remaining amount; (v)~the invoice status becomes PARTIALLY\_PAID or PAID; (vi)~the customer balance and the sales order payment status are recalculated. \\ \hline
+\textbf{Alternate flow} & The payment amount is invalid or exceeds the remaining amount: the operation is rejected and the invoice is kept unchanged. \\ \hline
+\textbf{Post-conditions} & The payment is recorded; the invoice and the related sales order payment status are updated. \\ \hline
+\end{tabular}
+\end{table}
 
 \section*{Use case: Adjust Stock}
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Actor:} Warehouse Staff or Administrator.
-  \item \textbf{Pre-conditions:} Product and warehouse exist; actor has
-        warehouse permission; adjustment reason is provided.
-  \item \textbf{Main flow:} actor selects inventory record $\to$ enters the
-        adjustment quantity and reason $\to$ system validates the quantity $\to$
-        system updates on-hand and available quantity $\to$ system creates an
-        inventory transaction for audit.
-  \item \textbf{Alternate flow:} adjustment would make stock negative $\to$
-        system rejects the operation; actor lacks permission $\to$ system
-        rejects the request.
-  \item \textbf{Post-conditions:} inventory quantity reflects the adjustment and
-        an audit transaction is stored.
-\end{itemize}
+The adjust-stock use case lets warehouse staff correct an inventory record and
+keeps an audit trail of the change. Its specification is given in
+Table~\ref{tab:uc-adjust}.
+\begin{table}[H]\centering
+\caption{Use case specification --- Adjust Stock}
+\label{tab:uc-adjust}
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Actor} & Warehouse staff or administrator. \\ \hline
+\textbf{Pre-conditions} & The product and warehouse exist; the actor has warehouse permission; an adjustment reason is provided. \\ \hline
+\textbf{Main flow} & (i)~the actor selects an inventory record; (ii)~enters the adjustment quantity and reason; (iii)~the system validates the quantity; (iv)~the system updates the on-hand and available quantity; (v)~the system creates an inventory transaction for audit. \\ \hline
+\textbf{Alternate flow} & The adjustment would make stock negative: the operation is rejected. The actor lacks permission: the request is rejected. \\ \hline
+\textbf{Post-conditions} & The inventory quantity reflects the adjustment and an audit transaction is stored. \\ \hline
+\end{tabular}
+\end{table}
 
 \section*{Use case: Monitor Expiring Lots}
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Actor:} Warehouse Staff, Sales Staff, Sales Manager, or
-        Administrator.
-  \item \textbf{Pre-conditions:} Inventory lots exist with expiry-date
-        information.
-  \item \textbf{Main flow:} actor opens the inventory lot list $\to$ selects a
-        product, warehouse, or expiry filter $\to$ system returns lots sorted by
-        FEFO $\to$ actor views lot number, remaining quantity, expiry date,
-        days until expiry, and status.
-  \item \textbf{Alternate flow:} actor opens expiring-soon view $\to$ system
-        lists lots whose expiry date is within the selected threshold; actor
-        opens expired view $\to$ system lists expired lots with remaining stock.
-  \item \textbf{Post-conditions:} actor obtains information for replenishment,
-        promotion, return, or disposal decisions; no stock quantity is changed.
-\end{itemize}
+The monitor-expiring-lots use case gives staff visibility of stock that is close
+to expiry so that they can act before loss occurs. Its specification is given in
+Table~\ref{tab:uc-explot}.
+\begin{table}[H]\centering
+\caption{Use case specification --- Monitor Expiring Lots}
+\label{tab:uc-explot}
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Actor} & Warehouse staff, sales staff, sales manager, or administrator. \\ \hline
+\textbf{Pre-conditions} & Inventory lots exist with expiry-date information. \\ \hline
+\textbf{Main flow} & (i)~the actor opens the inventory lot list; (ii)~selects a product, warehouse, or expiry filter; (iii)~the system returns lots sorted by FEFO; (iv)~the actor views the lot number, remaining quantity, expiry date, days until expiry, and status. \\ \hline
+\textbf{Alternate flow} & The actor opens the expiring-soon view: the system lists lots whose expiry date is within the selected threshold. The actor opens the expired view: the system lists expired lots with remaining stock. \\ \hline
+\textbf{Post-conditions} & The actor obtains information for replenishment, promotion, return, or disposal decisions; no stock quantity is changed. \\ \hline
+\end{tabular}
+\end{table}

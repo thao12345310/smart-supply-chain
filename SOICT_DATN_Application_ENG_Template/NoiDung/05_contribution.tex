@@ -15,12 +15,18 @@ results achieved.
 % (iii) Results: oldest stock exits first; full traceability; expiry alerts.
 \thesisfig{flowchart_fefo}{FEFO allocation algorithm}{fig:fefo}
 The first contribution is the lot-allocation mechanism for perishable goods.
-Many inventory systems keep only an aggregate quantity for each product and
-warehouse. This model is sufficient for simple stock checking, but it cannot
-answer which batch should be picked first, which expiry date was delivered to a
-customer, or which remaining lots are close to expiry. For a distributor that
-handles food, medicine, cosmetics, or other date-sensitive goods, this limitation
-directly creates waste and traceability risk.
+For date-sensitive stock, inventory theory recommends issuing the
+earliest-expiring units first so that shrinkage from expiry is
+minimised~\cite{silver1998inventory, richards2021warehouse}. Commercial
+distribution systems therefore provide batch and expiry tracking, for example the
+lot and removal-strategy features of Odoo~\cite{odooFefo} and the batch
+management of SAP Business One~\cite{sapBatch}. Many lighter-weight systems,
+however, keep only an aggregate quantity for each product and warehouse. This
+model is sufficient for simple stock checking, but it cannot answer which batch
+should be picked first, which expiry date was delivered to a customer, or which
+remaining lots are close to expiry. For a distributor that handles food,
+medicine, cosmetics, or other date-sensitive goods, this limitation directly
+creates waste and traceability risk.
 
 The proposed solution extends the aggregate inventory model with an
 \texttt{InventoryLot} entity. Each lot stores the product, warehouse, lot number,
@@ -79,7 +85,9 @@ approved. In a manual process, two sales staff members may check the same
 physical stock and both promise it to different customers. Even if the stock is
 physically sufficient at the first check, the company can oversell before the
 warehouse confirms goods issue. This problem appears in the interval between
-sales approval and physical shipment.
+sales approval and physical shipment, and it corresponds to the
+available-to-promise concept in supply chain planning, where committed stock must
+be separated from free stock before an order is confirmed~\cite{chopra2019supply}.
 
 The system addresses this issue by separating on-hand, reserved, and available
 quantities. When a sales order is approved, the service checks available
@@ -140,7 +148,10 @@ accountants approve them, warehouse staff confirm physical stock movements,
 delivery administrators assign trips, and shippers update only their assigned
 deliveries. If all users could access all operations, the system would lose
 separation of duties and approval would become only a visual status rather than
-a real control.
+a real control. This requirement is an instance of the role-based access control
+model, in which permissions are assigned to roles rather than to individual
+users, and which supports separation of duties and least
+privilege~\cite{sandhu2000nist}.
 
 The system defines nine roles and applies access control at three levels. At the
 endpoint level, Spring Security restricts URL patterns and HTTP methods, for
@@ -178,3 +189,45 @@ only on organizational discipline. It also improves usability because each user
 sees a smaller set of relevant actions. The result is a least-privilege
 prototype that supports approval chains, warehouse control, delivery assignment,
 and financial visibility while keeping administrative functions restricted.
+
+\section{Eliminating N+1 Queries in Delivery Listing}
+% (i) Problem: object-relational N+1 — one extra query per row + lazy loads made the
+%     available-delivery-order listing scale linearly with data and become slow.
+% (ii) Solution: replace per-row queries with three bulk queries (orders mapped by code,
+%     planned order ids as a set, confirmed goods issues with fetch-joined associations).
+% (iii) Results: endpoint latency 2380 ms -> 47 ms on the same dataset (~50x).
+The fifth contribution is a performance optimisation of the screen that lists the
+delivery orders available for planning. This endpoint is opened frequently by the
+delivery administrator, so its responsiveness affects daily operation directly.
+The original implementation iterated over every confirmed goods issue and, for
+each one, executed a separate query to look up the matching delivery order by
+code and another query to check whether that order already belonged to a delivery
+plan. Because the sales order, customer, and delivery address of each goods issue
+were mapped lazily, accessing them inside the loop triggered further queries. This
+is the well-known object-relational \emph{N+1 select} problem documented in the
+object-relational mapping literature~\cite{bauer2015hibernate}: the number of
+database round trips grows linearly with the number of rows, so the response time
+degrades as the data set grows. On the development data set the listing endpoint
+took approximately 2380~ms.
+
+The optimisation replaces the per-row queries with three bulk queries executed
+once before the loop. The first loads every delivery order and indexes it by code
+in an in-memory map, so the matching order is resolved by a hash lookup instead of
+a database query. The second loads the identifiers of all delivery orders that
+already belong to a plan as a single projection and stores them in a set, so the
+``already planned'' test becomes a set membership check. The third loads the
+confirmed goods issues with their sales order, customer, and delivery address
+eagerly through a \texttt{JOIN FETCH} query, which removes the lazy-loading round
+trips inside the loop. The loop then only creates a delivery order in the rare
+case that one has not yet been materialised for a newly confirmed goods issue.
+
+The result is a substantial latency reduction: on the same data set and
+environment the endpoint response time fell from approximately 2380~ms to
+47~ms, an improvement of roughly fifty times, while the returned data is
+unchanged. The number of database round trips no longer depends on the number of
+goods issues, so the listing remains responsive as the volume of confirmed
+shipments grows. This contribution demonstrates that the system was not only
+built to be functionally correct but was also profiled and tuned at the data
+access layer, which is a common source of performance problems in applications
+built on an object-relational mapping framework such as Spring Data JPA and
+Hibernate~\cite{springboot314}.

@@ -40,7 +40,8 @@ application and non-trivial business rules without mixing responsibilities.
 Figure~\ref{fig:packages} presents the main backend packages. The
 \texttt{controller} package contains REST controllers for authentication,
 master data, purchase orders, goods receipts, sales orders, goods issues,
-delivery, inventory, invoices, dashboard, and user management. Controllers
+delivery, inventory, invoices, accounting, payments, dashboard, and user
+management. Controllers
 convert HTTP requests into DTOs and delegate processing to services. The
 \texttt{dto} package contains request and response objects used between the
 frontend and backend, preventing entity classes from being exposed directly.
@@ -211,7 +212,7 @@ Backend language        & Java                    & 17 \\ \hline
 Backend framework       & Spring Boot             & 3.1.4 \\ \hline
 ORM / data access       & Spring Data JPA (Hibernate) & (Boot 3.1.4) \\ \hline
 Security / tokens       & Spring Security, JJWT   & 0.12.3 \\ \hline
-DB migration            & SQL migration scripts   & V1--V8 \\ \hline
+DB migration            & SQL migration scripts   & V1--V10 \\ \hline
 API documentation       & SpringDoc OpenAPI       & 2.1.0 \\ \hline
 Boilerplate reduction   & Lombok                  & (Boot-managed) \\ \hline
 Build tool (backend)    & Maven                   & 3.x \\ \hline
@@ -236,20 +237,22 @@ IDE                     & IntelliJ IDEA / VS Code & -- \\ \hline
 \begin{tabular}{|l|r|}
 \hline
 \textbf{Metric} & \textbf{Value} \\ \hline
-Lines of code (backend) & 15,461 \\ \hline
-Lines of code (frontend) & 10,991 \\ \hline
-Number of Java classes & 157 \\ \hline
-Number of packages & 12 \\ \hline
+Lines of code (backend, Java) & 11,821 \\ \hline
+Lines of code (frontend, JS/JSX) & 10,575 \\ \hline
+Number of Java classes & 176 \\ \hline
+Number of backend packages & 12 \\ \hline
+Database migration scripts & V1--V10 \\ \hline
 \end{tabular}
 \end{table}
 The delivered prototype contains the core modules required by the thesis scope:
 purchasing, goods receipt, inventory and lot management, sales order processing,
-goods issue, sales invoice, delivery planning, shipper trip execution, dashboard
-reporting, authentication, and user-role management. Table~\ref{tab:loc}
-summarises the source-code statistics. The backend source code has 15,461 Java
-lines in 157 classes under \texttt{backend/src/main/java}, organised into 12
-packages. The frontend source code has 10,991 JavaScript/JSX lines under
-\texttt{frontend/src}. These values were computed from the project source tree.
+goods issue, sales invoice, accounting and customer payment, delivery planning,
+shipper trip execution, dashboard reporting, authentication, and user-role
+management. Table~\ref{tab:loc} summarises the source-code statistics. The
+backend source code has 11,821 lines of Java in 176 classes under
+\texttt{backend/src/main/java}, organised into 12 packages. The frontend source
+code has 10,575 lines of JavaScript/JSX under \texttt{frontend/src}. These values
+were measured with the \texttt{cloc} tool and exclude blank and comment lines.
 
 \subsection{Illustration of Main Functions}
 \label{sec:main-functions}
