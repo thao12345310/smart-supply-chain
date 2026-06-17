@@ -75,6 +75,74 @@ traceability.
 % You may also typeset the algorithm with algorithm2e, e.g.:
 % \begin{algorithm}[H]\caption{FEFO allocation}\dots\end{algorithm}
 
+\section{Concurrency Control for Lot-Level Stock Deduction}
+% (i) Problem: the FEFO lot deduction is a read-modify-write on InventoryLot, which has
+%     no version/row lock. Two simultaneous goods-issue confirmations on the same scarce
+%     product can both pass validation and both deduct -> lost update at lot level; the
+%     per-lot ledger over-draws and diverges from the aggregate.
+% (ii) Solution: acquire a pessimistic write lock (SELECT ... FOR UPDATE) on the single
+%      aggregate Inventory row at the start of confirm(), before any lot is read, ordered
+%      by ascending productId to prevent deadlock. (lockInventoryForUpdate.)
+% (iii) Results: the conflicting confirmations are serialized at the database; the lot
+%       ledger stays consistent with the aggregate.
+The next contribution hardens the goods-issue path against a concurrency
+hazard in the lot deduction described earlier in this chapter. The FEFO
+allocation is a read-modify-write sequence: the service reads the remaining
+quantity of each lot, computes how much to take, and writes the reduced
+quantity back. The aggregate \texttt{Inventory} row is already protected, both
+by an optimistic version field and by a pessimistic read in
+\texttt{decreaseInventory} that issues a \texttt{SELECT~\dots~FOR~UPDATE}. The
+per-lot \texttt{InventoryLot} entity, however, carries neither a version column
+nor a row lock. When two warehouse staff confirm goods issues for the same
+scarce product at almost the same time, both transactions can read the same lot
+quantities, both can pass the validation that the remaining lot quantity covers
+the requested amount, and both can deduct from the same lots. The second write
+silently overwrites the first, which is the classic lost-update anomaly. The
+result is a per-lot ledger that over-draws a lot or drives its remaining
+quantity negative, so the sum of lot quantities no longer reconciles with the
+aggregate on-hand quantity, defeating the traceability the lot model was built
+to provide.
+
+The proposed solution serializes the entire deduction of a product behind the
+aggregate inventory row, which is the only record shared by every goods issue
+for that product and warehouse. At the very start of the confirmation, before
+any lot is read, the service acquires a pessimistic write lock on each
+relevant \texttt{Inventory} row through a dedicated
+\texttt{lockInventoryForUpdate} operation. This operation reuses the existing
+\texttt{SELECT~\dots~FOR~UPDATE} query but does not modify the row; its only
+purpose is to claim the lock. Because the lock is taken inside the
+confirmation's transaction, the database holds it until that transaction
+commits or rolls back~\cite{postgresql14}. A competing confirmation for the
+same product therefore blocks on this single row, and when it finally proceeds
+it re-reads the lots with the already-updated quantities rather than the stale
+ones. In effect, the aggregate row acts as a gate that protects not only the
+aggregate deduction but the unguarded lot read-modify-write as well. This is an
+application of the pessimistic offline lock pattern, in which a shared record is
+locked for the whole duration of a business transaction to prevent concurrent
+modification~\cite{fowler2002poeaa, bauer2015hibernate}.
+
+A goods issue may contain several products, so a single confirmation can lock
+several inventory rows. To avoid a deadlock in which one transaction holds the
+lock on product A while waiting for product B and a second transaction holds B
+while waiting for A, the service collects the distinct product identifiers and
+acquires the locks in ascending identifier order. Because every confirmation
+takes the locks in the same global order, a cycle of mutual waiting cannot
+form, which is the standard ordered-locking discipline for deadlock
+prevention~\cite{fowler2002poeaa}.
+
+The result is that two conflicting goods-issue confirmations for the same
+product no longer interleave; the second is queued at the database until the
+first completes, after which it observes a consistent state. The lot ledger
+stays reconciled with the aggregate on-hand quantity even under concurrent
+issue, which closes the lost-update gap while keeping the database schema
+unchanged, since the fix reuses the existing aggregate row rather than adding a
+version column to every lot. The accepted trade-off is reduced parallelism for
+issues that touch the same product; this is acceptable because such operations
+are inherently conflicting and must be ordered for correctness. A deterministic
+two-thread integration test that drives both confirmations through a shared
+barrier is identified as future work to provide an automated regression guard
+for this behaviour.
+
 \section{Inventory Reservation on Order Approval}
 % (i) Problem: overselling between approval and shipment.
 % (ii) Solution: reserve stock at SO approval (quantityReserved up, quantityAvailable

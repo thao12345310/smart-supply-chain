@@ -22,3 +22,8 @@ backup_*.sql
 # Local secrets
 .env
 .env.local
+
+# Tài liệu ôn tập sinh ra từ scripts/build_on_tap_combined.py (output, không commit)
+LUONG_HE_THONG.html
+ON_TAP_DATN_TONG_HOP.html
+ON_TAP_PHAN_BIEN_TRUC_QUAN.html

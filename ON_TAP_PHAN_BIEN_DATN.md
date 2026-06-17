@@ -423,12 +423,12 @@ Mỗi chứng từ có vòng đời trạng thái và **luật chuyển trạng 
 Nguyên tắc: **không giấu — chủ động nhận diện + nêu hướng khắc phục.** Hội đồng đánh giá cao sinh viên hiểu hạn chế của chính mình.
 
 1. **Secret JWT & mật khẩu DB hardcode trong `application.yml`** → đúng ra dùng biến môi trường/Vault. Trả lời: "em để trong file cấu hình cho môi trường phát triển; production sẽ externalize qua env var."
-2. **Không có automated tests** (repo không có `src/test`) → hạn chế đã nêu, hướng phát triển.
+2. **Độ phủ test còn mỏng** (đã có `src/test`, chưa phủ rộng) → ĐÃ có 3 lớp test, đừng nói "không có test": (a) `AccountingServiceTest` — unit test thuần Mockito kiểm tra ledger tính *running balance* đúng (AR: 100 → thu 30 → còn 70) và `post()` bỏ qua bút toán amount ≤ 0; (b) `RbacSecurityTest` — security test, gọi endpoint không kèm token phải trả 401; (c) `CoreFlowTest` — integration test trên H2, kiểm tra Spring context load được với accounting đã wire. Hạn chế thật là *coverage chưa rộng* (chưa test hết FEFO/concurrency); hướng phát triển: bổ sung test cho `GoodsIssueServiceImpl.confirm()` và khóa tồn kho.
 3. **Flyway không thực chạy** (yml bật nhưng pom thiếu `flyway-core`; migration apply tay bằng psql) → nói "schema quản lý phiên bản theo chuẩn Flyway, apply thủ công" — đừng demo câu "Flyway tự migrate khi khởi động".
 4. **Token trong localStorage** → trade-off XSS vs CSRF, đã chuẩn bị câu trả lời (D3).
 5. **JWT không thu hồi được trước hạn** → access 24h là khá dài; hướng cải thiện: rút ngắn còn 15–30 phút + refresh rotation/blacklist.
 6. **Chưa có phân trang (pagination) nhất quán** cho các API danh sách (đa số trả List đầy đủ) → dữ liệu lớn sẽ chậm; hướng cải thiện: `Pageable` của Spring Data.
-7. **Phân hệ kế toán (bút toán tự động) ngoài phạm vi** → đã ghi rõ trong phạm vi đồ án, không phải "làm thiếu".
+7. **Phân hệ kế toán đã làm — mức ghi sổ kép đơn giản** (đừng nói "ngoài phạm vi" nữa) → ĐÃ có `AccountingService.post()` ghi bút toán Nợ/Có tự động khi: nhập kho (GR), xuất hóa đơn (SalesInvoice), thu/chi tiền (Payment). `getLedger(account)` tính số dư lũy kế từng tài khoản; API `/api/accounting/transactions` và `/ledger` chỉ cho role `ACCOUNTANT`/`ADMIN`. Hạn chế thật: dùng enum `AccountCode` cố định (AR/AP/CASH/REVENUE/INVENTORY...), chưa có hệ thống tài khoản tùy biến theo TT200; hướng phát triển: bảng chart-of-accounts động + báo cáo tài chính (cân đối, KQKD).
 8. **"Thông minh" chưa có ML** → định vị đúng: tự động hóa dựa trên luật; demand forecasting là hướng phát triển.
 
 ---
@@ -437,7 +437,8 @@ Nguyên tắc: **không giấu — chủ động nhận diện + nêu hướng k
 
 **Phải làm:**
 - [ ] Tự chạy lại toàn bộ luồng demo: login từng role → tạo PO → duyệt → GR (nhập lô + HSD) → tạo SO → duyệt → GI (xem FEFO chọn lô nào) → Invoice → Dashboard. Ghi lại mật khẩu các tài khoản demo.
-- [ ] Mở và đọc lướt 5 file then chốt để "nói có sách": `SecurityConfig.java`, `JwtAuthenticationFilter.java`, `GoodsIssueServiceImpl.confirm()` (dòng ~233–300), `InventoryLotRepository.findAvailableLotsFEFO`, `DataFilterAspect.java`.
+- [ ] Mở và đọc lướt các file then chốt để "nói có sách": `SecurityConfig.java`, `JwtAuthenticationFilter.java`, `GoodsIssueServiceImpl.confirm()` (dòng ~233–300), `InventoryLotRepository.findAvailableLotsFEFO`, `DataFilterAspect.java`, `AccountingServiceImpl` (post + getLedger), `GoodsIssueRepository.findConfirmedWithDetails` (chỗ fix N+1).
+- [ ] **Điểm khoe hiệu năng — thuộc finding này:** danh sách vận đơn (`DeliveryOrderService.listAvailable`) trước bị **N+1**: với mỗi GoodsIssue lại query thêm salesOrder/customer/deliveryAddress → **2380ms**. Khắc phục bằng `LEFT JOIN FETCH` trong `findConfirmedWithDetails` để nạp sẵn 1 query → **47ms** (~50× nhanh hơn). Nói được: "em phát hiện qua log Hibernate thấy hàng loạt query lặp, dùng JOIN FETCH gộp lại."
 - [ ] Đọc lại migration V1–V8 để thuộc danh sách bảng + các index/constraint chính.
 - [ ] Vẽ tay được 3 sơ đồ không nhìn tài liệu: (1) kiến trúc tổng thể, (2) luồng JWT login→request, (3) luồng PO→GR→SO→GI→Invoice kèm trạng thái.
 - [ ] Tập trả lời to thành tiếng 5 câu: A1 (monolith), B1 (luồng request), D1 (JWT), E1 (concurrency), E2 (FEFO).
@@ -446,6 +447,172 @@ Nguyên tắc: **không giấu — chủ động nhận diện + nêu hướng k
 **Thuộc lòng các con số:**
 - Spring Boot **3.1.4**, Java **17**, jjwt **0.12.3**, React **18**, Vite **5**, Ant Design **5**, PostgreSQL, port BE **8080** / FE **5173**.
 - JWT: access **24h**, refresh **7 ngày**, thuật toán **HS256**.
-- **9 vai trò** RBAC; **8 file migration** (V1 purchasing, V2 sales, V3 security/RBAC, V4 sample data, V5 inventory lot, V6 fix passwords, V7 fix FK, V8 lot disposal).
-- ~**157 file Java** backend, ~**31 trang** React.
+- **9 vai trò** RBAC; **10 file migration** (V1 purchasing, V2 sales, V3 security/RBAC, V4 sample data, V5 inventory lot, V6 fix passwords, V7 fix FK, V8 lot disposal, **V9 accounting**, **V10 delivery_order fields**).
+- Backend ~**16.5K dòng Java**; React ~**31 trang**.
+- **3 lớp test**: `AccountingServiceTest` (unit), `RbacSecurityTest` (security), `CoreFlowTest` (integration trên H2).
 - Scheduler quét hóa đơn quá hạn: **01:00 hằng ngày**.
+- **Finding hiệu năng**: N+1 danh sách vận đơn **2380ms → 47ms** nhờ JOIN FETCH.
+
+---
+
+# PHẦN 8 — CÂU HỎI HỤT TRONG MOCK (ưu tiên ôn lại)
+
+> Phần này ghi các câu tôi (mock examiner) hỏi mà chưa trả lời được. Đọc kỹ đáp án mẫu, **tự nói lại thành tiếng** đến khi trôi.
+
+## 8.1. Concurrency ở cấp độ LÔ — khóa `Inventory` có bảo vệ `InventoryLot` không? ⭐ KHÓ
+
+**Câu hỏi gốc (nguyên văn — Câu 1):**
+> Em trình bày giúp tôi: khi nhân viên bấm **"Xác nhận xuất kho" (confirm GoodsIssue)** cho một đơn hàng, từ lúc request chạm tới backend cho đến lúc tồn kho bị trừ, hệ thống đi qua những bước nào? Tôi đặc biệt muốn nghe: **hệ thống quyết định trừ vào lô hàng nào, dựa trên cái gì, và nếu hai nhân viên cùng xác nhận xuất một mặt hàng gần hết tồn cùng lúc thì điều gì xảy ra?**
+
+**Câu hỏi xoáy (nguyên văn — Câu 1b):**
+> Em vừa (được tôi nhắc) rằng dòng `Inventory` được khóa bằng `PESSIMISTIC_WRITE`. Tốt. Nhưng nhìn lại `confirm()`: phần **trừ tồn theo lô** (`findAvailableLotsFEFO` → `lot.setQuantityRemaining(...)` → `inventoryLotRepository.save(lot)`) chạy **trước** `decreaseInventory()`. Và tôi mở `InventoryLot.java` ra — **nó không có `@Version`, cũng không có `@Lock`**.
+>
+> Vậy tôi hỏi: hai nhân viên xác nhận xuất **cùng một mặt hàng, cùng lúc**, tổng tồn vẫn đủ — thì **số lượng trong từng lô (`quantityRemaining`)** có thể bị trừ sai (vd âm, hoặc trừ trùng một lô) không? **Khóa trên dòng `Inventory` có cứu được tính đúng đắn ở cấp độ LÔ không?** Giải thích cơ chế, rồi nói cho tôi cách em sẽ vá.
+
+**Đáp án mẫu (PHẢI hiểu, không học vẹt):**
+
+**1) Trả lời thẳng: KHÔNG. Khóa trên `Inventory` KHÔNG bảo vệ tính đúng đắn ở cấp lô.**
+- Lock `PESSIMISTIC_WRITE` chỉ khóa **dòng `Inventory`** (tổng `quantityOnHand`), và nó chỉ được lấy bên trong `decreaseInventory()` — tức **sau** khi vòng lặp trừ lô đã chạy xong.
+- Đường trừ lô (`InventoryLot`) **không có khóa, không có version** → dính **lost update** kinh điển.
+
+**2) Kịch bản đua cụ thể** (tổng onHand = 10: lô A=5 HSD sớm, lô B=5):
+- T1 đọc lots `[A=5, B=5]`, định lấy 5 từ A → A=0.
+- T2 đọc lots `[A=5, B=5]` (T1 **chưa** commit) → cũng định lấy 5 từ A → A=0.
+- Cả hai `save(A=0)`. Một lần ghi **đè mất** lần kia (last-write-wins).
+- Sau đó `decreaseInventory`: T1 khóa `Inventory`, onHand 10→5, commit; T2 chờ rồi 5→0, commit. **Tổng onHand = 0 đúng.**
+- **NHƯNG** lô: A=0, B=5 → tổng theo lô = 5 ≠ onHand = 0. **Sổ lô lệch sổ tổng**; batch number ghi lên `GoodsIssueItem` cũng sai. Trường hợp số lượng khác nhau còn có thể đẩy `quantityRemaining` xuống **âm**.
+
+→ Chốt ý: **Sổ tổng (`Inventory`) nhất quán nhờ pessimistic lock + `@Version`; nhưng sổ chi tiết theo lô (`InventoryLot`) thì KHÔNG được bảo vệ** vì các write lô xảy ra trước và ngoài phạm vi khóa đó.
+
+**3) Các hướng vá đã cân nhắc (nêu được 2–3 hướng + trade-off là ăn điểm):**
+- **C1 — `@Version` cho `InventoryLot`** (optimistic): T2 `save` sẽ ném `OptimisticLockException` → bắt và **retry**. Nhẹ, nhưng phải viết logic retry.
+- **C2 — Khóa pessimistic chính các lô**: thêm `@Lock(PESSIMISTIC_WRITE)` cho `findAvailableLotsFEFO` (`SELECT ... FOR UPDATE`, Postgres chạy được kèm `ORDER BY`). Lô bị khóa suốt lúc trừ → T2 chờ. Đơn giản nhất, nhưng blocking.
+- **C3 (đã chọn & đã cài) — Lấy khóa dòng `Inventory` của (product, warehouse) NGAY ĐẦU** mỗi item, trước cả vòng trừ lô. Dòng `Inventory` đóng vai "cổng" serialize cho **cả** sổ tổng lẫn sổ lô → hai luồng không bao giờ đọc lô cũ đồng thời. Chọn C3 vì tận dụng được khóa đã có sẵn trên `Inventory`, không phải đổi schema (`InventoryLot`) và không cần viết retry.
+
+### ĐÃ VÁ (C3) — cơ chế chi tiết
+
+**Code đã thêm (3 chỗ):**
+1. `InventoryService.lockInventoryForUpdate(productId, warehouseId)` — interface.
+2. `InventoryServiceImpl`: gọi `inventoryRepo.findByProductIdAndWarehouseIdForUpdate(...)` (vốn có `@Lock(PESSIMISTIC_WRITE)` → `SELECT ... FOR UPDATE`), chỉ chiếm khóa, không sửa gì.
+3. `GoodsIssueServiceImpl.confirm()`: ngay sau khi xác định `warehouseId`, khóa **tất cả** dòng `Inventory` liên quan theo `productId` **tăng dần**, *trước* vòng validate và vòng trừ lô:
+```java
+goodsIssue.getItems().stream()
+    .map(item -> item.getProduct().getId())
+    .distinct().sorted()
+    .forEach(productId -> inventoryService.lockInventoryForUpdate(productId, warehouseId));
+```
+
+**Cơ chế hoạt động (mức DB):**
+1. `SELECT ... FOR UPDATE` đặt **row-level write lock** trên dòng `inventory` của (product, warehouse). Transaction khác muốn khóa cùng dòng phải **CHỜ**.
+2. Khóa pessimistic **sống theo transaction** — giữ tới khi `confirm()` COMMIT/ROLLBACK.
+3. Vì khóa lấy NGAY ĐẦU, toàn bộ phần sau (đọc lô FEFO → trừ `quantityRemaining` → trừ sổ tổng) đều nằm trong vùng được bảo vệ. `decreaseInventory()` bên dưới chỉ **tái dùng** đúng khóa đó (không khóa thêm lần nữa).
+
+**Vì sao vá được lost-update cấp lô** (lại kịch bản A=5, B=5):
+- T1 vào `confirm()` → khóa dòng `Inventory(sp)` → đọc lô, trừ A=0.
+- T2 vào `confirm()` → cố khóa dòng `Inventory(sp)` → **BỊ CHẶN**, chờ T1 commit.
+- T1 commit → nhả khóa → T2 mới chạy tiếp → đọc lô thấy **A=0 (giá trị mới sau commit của T1)** → trừ sang B.
+- Kết quả: A=0, B=0 → **sổ lô khớp sổ tổng. Hết lost update.**
+- Mấu chốt: dòng `Inventory` đóng vai **mutex** cho cả thao tác lô lẫn tổng, dù bản thân `InventoryLot` không có khóa riêng.
+
+**Vì sao khóa theo `productId` tăng dần (chống deadlock):**
+- Phiếu P1 xuất {sp#5, sp#9}, P2 xuất {sp#9, sp#5}. Nếu khóa theo thứ tự xuất hiện: P1 giữ #5 chờ #9; P2 giữ #9 chờ #5 → **deadlock**.
+- Khóa theo `productId` tăng dần: cả hai đều khóa #5 trước rồi #9 → không ôm chéo → **không deadlock**.
+
+**Đánh đổi (phải thừa nhận):**
+- Pessimistic = blocking: hai phiếu xuất cùng mặt hàng chạy tuần tự, giảm throughput. Chấp nhận được vì đúng-đắn dữ liệu kho quan trọng hơn và xuất kho không phải thao tác siêu tần suất.
+- Khóa giữ tới hết transaction → `confirm()` nên ngắn gọn, tránh I/O chậm khi đang giữ khóa.
+
+**Câu nói gọn (sau khi vá):** *"Em phát hiện đường trừ theo lô không được khóa nên có thể lost-update ở cấp lô. Em đã vá bằng cách lấy pessimistic write lock trên dòng `Inventory` ngay đầu `confirm()`, trước khi trừ lô — dòng `Inventory` trở thành cổng serialize cho cả sổ tổng lẫn sổ lô. Em khóa các mặt hàng theo `productId` tăng dần để tránh deadlock. Tồn kho giờ nhất quán ở cả hai cấp."*
+
+## 8.2. Quyền lấy từ token hay DB? Thu hồi quyền vs thu hồi token ⭐ BẪY KINH ĐIỂN
+
+**Câu hỏi gốc (nguyên văn — Câu 2):**
+> Tôi nhìn `JwtAuthenticationFilter.doFilterInternal()`. Với mỗi request có token hợp lệ, em gọi `userDetailsService.loadUserByUsername(username)` rồi `new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities())`.
+>
+> **(a)** Trên mỗi request, danh sách quyền (authorities/roles) của user được lấy từ **đâu** — từ **claims trong token JWT**, hay từ **database**? Chỉ rõ dòng nào quyết định.
+> **(b)** Tôi là Admin, **ngay bây giờ gỡ vai trò `WAREHOUSE_STAFF`** của một nhân viên (đổi trong DB). Token họ còn hạn 20 tiếng. **Request kế tiếp** của họ có **mất quyền ngay** không, hay đợi token hết hạn? Vì sao?
+> **(c)** Nếu thay vì gỡ quyền, tôi muốn **thu hồi (revoke) chính token đó** giữa chừng — hệ thống làm được không? Nếu không thì vì sao, đó là điểm yếu gì?
+
+**Đáp án mẫu:**
+
+**(a) Quyền lấy từ DATABASE, KHÔNG phải từ claims token.**
+- Lưu ý bẫy: token CỦA hệ thống *có* chứa quyền — `JwtTokenProvider` dòng 69: `.claim("roles", roles)`. Nên dễ tưởng lấy từ token.
+- **NHƯNG** luồng xác thực không đọc claim đó. `JwtAuthenticationFilter` dòng **41** `loadUserByUsername(username)` (truy vấn DB) → dòng **49** `userDetails.getAuthorities()` → quyền **lấy từ DB mỗi request**. Hàm `getRolesFromToken()` có nhưng **không được gọi** trong luồng này.
+- Token chỉ mang `subject = username`; quyền do DB quyết định.
+- 🔑 Câu khoe: *"Roles có lưu trong token cho tiện, nhưng **source of truth là DB** — mỗi request nạp lại quyền mới nhất qua `loadUserByUsername`."*
+
+**(b) CÓ — mất quyền NGAY request kế tiếp.** Vì quyền nạp lại từ DB mỗi request, gỡ role xong là request sau bị chặn ngay, không đợi 20h.
+
+**(c) KHÔNG revoke được token cụ thể giữa chừng.**
+- Lý do đúng: JWT **stateless** — server không lưu session/danh sách token, chỉ kiểm **chữ ký + hạn**, nên không có bản ghi phía server để vô hiệu hóa trước hạn.
+- Muốn revoke: thêm **blacklist/denylist** (lưu `jti` vào Redis/DB) → đánh đổi tính stateless.
+- ❌ ĐỪNG nói "vì khóa public": token ký bằng **HS256 = HMAC khóa BÍ MẬT đối xứng** (`Keys.hmacShaKeyFor`, dòng 43), không có public/private key; và loại khóa cũng không liên quan tới revoke.
+- Đây là điểm yếu #5 trong tài liệu ("JWT không thu hồi được trước hạn").
+
+**Bảng phân biệt PHẢI thuộc:**
+| | Gỡ **VAI TRÒ** của user | Thu hồi **chính TOKEN** đó |
+|---|---|---|
+| Chặn được giữa chừng? | ✅ Ngay request sau (quyền nạp từ DB) | ❌ Không, đợi hết hạn (stateless) |
+| Vì sao | `loadUserByUsername` mỗi request | Không session/denylist phía server |
+
+## 8.3. Mật khẩu lưu thế nào — BCrypt, salt, work factor ⭐ CHẮC CHẮN HỎI
+
+**Câu hỏi gốc (nguyên văn — Câu 3):**
+> **(a)** Mật khẩu user lưu trong DB dưới dạng gì? Là **mã hóa (encryption)** hay **băm (hashing)** — khác nhau chỗ nào? Giải ngược ra mật khẩu gốc được không?
+> **(b)** Hai nhân viên đặt **cùng mật khẩu `"123456"`** — hai chuỗi trong cột `password` có **giống hệt** nhau không? Vì sao?
+> **(c)** Lúc đăng nhập, hệ thống không giải ngược được hash. Vậy nó **đối chiếu** mật khẩu gõ vào với hash đã lưu **bằng cách nào**?
+> **(d)** Tại sao dùng **BCrypt** mà không dùng **MD5/SHA-256** cho nhanh?
+
+**Đáp án mẫu:**
+
+**(a)** Băm **một chiều (hashing)**, không phải mã hóa. Khác nhau ở **chiều**: mã hóa = 2 chiều, có khóa giải ngược; băm = 1 chiều, **không giải ngược** về bản gốc. → trộm được DB cũng không đọc ra mật khẩu.
+
+**(b) KHÔNG giống nhau.** Mỗi lần `.encode()`, BCrypt sinh **salt ngẫu nhiên** riêng, trộn vào trước khi băm → cùng mật khẩu, salt khác → hash khác. **Mục đích salt:** chống **rainbow table** và che việc hai người trùng mật khẩu. Định dạng `$2a$10$<22 ký tự salt><31 ký tự hash>` — salt nhúng ngay trong chuỗi.
+
+**(c)** `passwordEncoder.matches(raw, storedHash)`: **lấy salt nhúng trong hash đã lưu** → băm mật khẩu vừa gõ **với đúng salt đó** → so sánh hai hash. Không cần (và không thể) giải ngược.
+
+**(d)** Vì **BCrypt cố tình CHẬM**: có **work/cost factor** (code để mặc định **strength = 10 → 2¹⁰ = 1024 vòng**). MD5/SHA-256 quá nhanh → kẻ tấn công thử hàng tỷ mật khẩu/giây (brute-force). BCrypt chậm có chủ đích + tự kèm salt + thích nghi được (tăng cost khi phần cứng mạnh lên). Lưu ý: "không giải ngược" KHÔNG phải lý do chọn BCrypt vì MD5/SHA cũng không giải ngược.
+
+**3 từ khóa phải thuộc:** một chiều (irreversible) — salt ngẫu nhiên — chậm có chủ đích (work factor).
+
+**Câu nói gọn:** *"Mật khẩu băm một chiều bằng BCrypt, không giải ngược được. Mỗi mật khẩu có salt ngẫu nhiên riêng nên hai người trùng mật khẩu vẫn ra hash khác, chống rainbow table. Khi login, `matches()` lấy salt trong hash đã lưu, băm lại mật khẩu gõ vào rồi so. Chọn BCrypt vì nó chậm có chủ đích (cost 10), chống brute-force — khác MD5/SHA vốn quá nhanh."*
+
+## 8.4. Tại sao tắt CSRF (`csrf.disable()`) mà vẫn an toàn ⭐ CÂU GÀI
+
+**Câu hỏi gốc (nguyên văn — Câu 4):**
+> **(a)** CSRF (Cross-Site Request Forgery) là tấn công kiểu gì? Mô tả kịch bản lừa nạn nhân đang đăng nhập.
+> **(b)** Em tắt CSRF (`csrf.disable()`). Bình thường tắt là nguy hiểm — vậy tại sao trong hệ thống em lại không sao? (liên quan token để ở đâu, gửi bằng cách nào)
+> **(c)** Chính vì để token kiểu đó nên tránh được CSRF nhưng mở ra tấn công KHÁC — là gì, token nằm ở đâu khiến dính?
+
+**Đáp án mẫu:**
+
+**(a) Bản chất CSRF = lợi dụng trình duyệt TỰ ĐỘNG gắn cookie.** Kịch bản: nạn nhân đăng nhập `bank.com` (có session cookie) → bị dụ mở `evil.com` → `evil.com` tự gửi `POST bank.com/transfer?to=hacker` → **trình duyệt tự đính cookie bank.com** vào request đó (cookie gắn theo domain, gửi kèm cả request từ site khác) → bank.com tưởng nạn nhân thao tác → chuyển tiền. → CSRF chỉ nguy hiểm khi xác thực **bằng cookie**.
+
+**(b) An toàn vì hệ thống KHÔNG xác thực bằng cookie.** JWT để trong **localStorage**, gửi qua header `Authorization: Bearer` do **JS chủ động thêm**. Trình duyệt **không tự động** gắn localStorage/header Authorization vào request cross-site; **same-origin policy** chặn JS của `evil.com` đọc localStorage domain em. → Request giả mạo không có token → **401**. Cộng thêm session **STATELESS** + **CORS** giới hạn origin. **Chốt:** *"CSRF token bảo vệ xác thực dựa-trên-cookie; em xác thực stateless bằng JWT trong header nên không có bề mặt CSRF → disable là hợp lý, không phải ẩu."*
+
+**(c) Đánh đổi: tránh CSRF nhưng dính XSS.** Token ở localStorage → nếu chèn được JS độc (input không escape) chạy trong origin em → đọc localStorage → cắp token. Cookie HttpOnly thì JS không đọc được (chống XSS cắp token) nhưng lại dính CSRF — ngược nhau.
+
+| Lưu token ở | Dính CSRF? | Dính XSS cắp token? |
+|---|---|---|
+| Cookie (HttpOnly) | ✅ Có | ❌ Không (JS không đọc được) |
+| localStorage (của em) | ❌ Không | ✅ Có |
+
+→ Là điểm yếu #4. Phòng XSS: React tự escape mặc định, validate input, CSP header.
+
+## 8.5. CORS KHÔNG phải tường lửa của API ⭐ HIỂU LẦM PHỔ BIẾN NHẤT
+
+**Câu hỏi gốc (nguyên văn — Câu 5):**
+> **(a)** CORS là gì? Bảo vệ **server** hay **người dùng/trình duyệt**? Ai **thực thi** quy tắc CORS?
+> **(b)** Kẻ tấn công gọi thẳng API bằng **Postman/curl** (không qua trình duyệt) — CORS có chặn được không? Nếu không, **cái gì** mới bảo vệ API?
+> **(c)** Code có `setAllowCredentials(true)` — vậy `setAllowedOrigins("*")` có được phép không? Vì sao?
+
+**Đáp án mẫu:**
+
+**(a) CORS KHÔNG bảo vệ server. Người thực thi = TRÌNH DUYỆT.**
+- **Same-Origin Policy (SOP)**: mặc định trình duyệt chặn JS ở origin A đọc response từ origin B. Đây là lớp chặn mặc định, **do trình duyệt** làm.
+- **CORS = server B NỚI LỎNG SOP có kiểm soát** (cho phép origin A đọc) — nó *mở cửa* chọn lọc, **không thêm bảo mật**.
+- Backend chỉ **gửi header** (`Access-Control-Allow-Origin...`); **trình duyệt đọc header và quyết định** chặn/cho. → CORS **bảo vệ người dùng**, không bảo vệ server.
+
+**(b) KHÔNG chặn được Postman/curl.** CORS chỉ trình duyệt thực thi; curl/Postman/server-to-server bỏ qua hoàn toàn, nhận đủ response. ⇒ CORS bảo vệ API = 0 trước client ngoài trình duyệt. **Cái bảo vệ API thật = JWT + Spring Security** (`requestMatchers`, `@PreAuthorize`) → không token hợp lệ thì 401/403. **Chốt:** *"CORS không phải bảo mật server, nó là cơ chế trình duyệt nới lỏng SOP, không chặn curl. Bảo vệ API là JWT và phân quyền; CORS chỉ kiểm soát origin nào TRONG trình duyệt được đọc response."*
+
+**(c) KHÔNG.** Spec CORS cấm kết hợp wildcard `*` với credentials. `allowCredentials(true)` + origin `"*"` → trình duyệt từ chối. Phải liệt kê **origin cụ thể** (code đang đúng: `localhost:5173`). Khi bị hỏi "sao không để `*`?" → *"Vì bật `allowCredentials`, spec không cho `*`, phải chỉ định origin tường minh."*

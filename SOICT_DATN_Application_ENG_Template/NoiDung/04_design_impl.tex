@@ -149,12 +149,15 @@ confirmation and are the source for lot creation.
 
 The sequence in Figure~\ref{fig:seq-fefo} starts when a warehouse staff member
 confirms a goods issue. The controller calls the goods issue service, which
-loads the goods issue with its items, validates the document status, checks
-physical stock, retrieves available lots in FEFO order, deducts lot quantities,
-decreases aggregate inventory, releases reserved stock, updates delivered
-quantities, creates a sales invoice, and updates the sales order delivery
-status. The sequence shows why this operation must be transactional: every
-change belongs to one business event.
+loads the goods issue with its items, validates the document status, acquires a
+pessimistic write lock on the aggregate inventory row of each product,
+checks physical stock, retrieves available lots in FEFO order, deducts lot
+quantities, decreases aggregate inventory, releases reserved stock, updates
+delivered quantities, creates a sales invoice, and updates the sales order
+delivery status. The lock taken before any lot is read serializes concurrent
+confirmations of the same product, as analysed in
+Chapter~\ref{chapter:Contribution}. The sequence shows why this operation must be
+transactional: every change belongs to one business event.
 
 The sequence in Figure~\ref{fig:seq-pogr} shows the inbound flow. A purchase
 order is approved first. A warehouse staff member then creates and confirms a
