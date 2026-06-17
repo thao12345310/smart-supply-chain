@@ -242,7 +242,25 @@ public class GoodsIssueServiceImpl implements GoodsIssueService {
         
         SalesOrder salesOrder = goodsIssue.getSalesOrder();
         Long warehouseId = goodsIssue.getWarehouse() != null ? goodsIssue.getWarehouse().getId() : null;
-        
+
+        // ── Concurrency guard (vá lost-update ở cấp LÔ) ──────────────────────────────
+        // Khóa trước tất cả dòng Inventory liên quan, theo thứ tự productId TĂNG DẦN.
+        //  • Vì sao khóa ở đây: dòng Inventory (product, warehouse) trở thành "cổng" serialize
+        //    cho TOÀN BỘ thao tác trừ tồn của mặt hàng — kể cả vòng trừ theo lô bên dưới
+        //    (InventoryLot vốn KHÔNG có @Version/@Lock riêng). Khóa PESSIMISTIC_WRITE lấy ở đây
+        //    được giữ tới hết transaction, nên hai phiếu xuất song song cho cùng (product,
+        //    warehouse) không thể cùng đọc-rồi-ghi quantityRemaining của một lô → hết lost update.
+        //    decreaseInventory() phía dưới chỉ tái dùng lại đúng khóa này (không khóa thêm lần nữa).
+        //  • Vì sao tăng dần: nhiều phiếu xuất có thể khóa nhiều mặt hàng; khóa theo cùng một thứ
+        //    tự (productId tăng dần) loại bỏ nguy cơ deadlock do khóa chéo thứ tự.
+        if (warehouseId != null) {
+            goodsIssue.getItems().stream()
+                .map(item -> item.getProduct().getId())
+                .distinct()
+                .sorted()
+                .forEach(productId -> inventoryService.lockInventoryForUpdate(productId, warehouseId));
+        }
+
         // Validate inventory and issue each item
         for (GoodsIssueItem item : goodsIssue.getItems()) {
             // Check physical inventory on hand.

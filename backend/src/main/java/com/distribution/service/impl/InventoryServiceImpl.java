@@ -337,9 +337,20 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    public void lockInventoryForUpdate(Long productId, Long warehouseId) {
+        // SELECT ... FOR UPDATE: giữ row-lock trên dòng Inventory tới hết transaction hiện tại.
+        // Không sửa gì — chỉ để chiếm khóa. Vì chạy trong transaction của caller (confirm()),
+        // khóa được giữ suốt quá trình trừ lô + trừ tổng bên dưới.
+        inventoryRepo.findByProductIdAndWarehouseIdForUpdate(productId, warehouseId)
+            .orElseThrow(() -> new InventoryException(
+                String.format("No inventory found for product %d at warehouse %d", productId, warehouseId)));
+        logger.debug("Acquired write lock on inventory: productId={}, warehouseId={}", productId, warehouseId);
+    }
+
+    @Override
     public void decreaseInventory(Long productId, Long warehouseId, Integer quantity,
                                   String referenceType, Long referenceId, String referenceCode) {
-        logger.info("Decreasing inventory: productId={}, warehouseId={}, quantity={}, ref={}-{}", 
+        logger.info("Decreasing inventory: productId={}, warehouseId={}, quantity={}, ref={}-{}",
             productId, warehouseId, quantity, referenceType, referenceId);
 
         // Get inventory with pessimistic lock

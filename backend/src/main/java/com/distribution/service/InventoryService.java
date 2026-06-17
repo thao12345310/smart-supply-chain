@@ -121,6 +121,17 @@ public interface InventoryService {
     void releaseReservedInventory(Long productId, Long warehouseId, Integer quantity);
     
     /**
+     * Acquire a pessimistic write lock (SELECT ... FOR UPDATE) on the inventory row
+     * of (product, warehouse) WITHOUT modifying it.
+     *
+     * Mục đích: biến dòng {@code Inventory} thành "cổng" serialize cho TOÀN BỘ thao tác
+     * trừ tồn của mặt hàng — gồm cả vòng trừ theo lô ({@code InventoryLot}, vốn không có
+     * khóa/version riêng). Gọi hàm này NGAY ĐẦU mỗi nghiệp vụ xuất kho, trước khi đọc/ghi
+     * lô, để chống lost-update ở cấp lô khi hai phiếu xuất chạy song song.
+     */
+    void lockInventoryForUpdate(Long productId, Long warehouseId);
+
+    /**
      * Decrease inventory when goods are issued
      * Reduces on-hand quantity and creates transaction record
      */
