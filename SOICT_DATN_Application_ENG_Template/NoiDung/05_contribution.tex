@@ -138,10 +138,12 @@ issue, which closes the lost-update gap while keeping the database schema
 unchanged, since the fix reuses the existing aggregate row rather than adding a
 version column to every lot. The accepted trade-off is reduced parallelism for
 issues that touch the same product; this is acceptable because such operations
-are inherently conflicting and must be ordered for correctness. A deterministic
-two-thread integration test that drives both confirmations through a shared
-barrier is identified as future work to provide an automated regression guard
-for this behaviour.
+are inherently conflicting and must be ordered for correctness. This behaviour
+is guarded by a deterministic two-thread integration test
+(\texttt{ConcurrencyLotTest}) in which both confirmations are released
+simultaneously through a shared barrier: with the lock in place exactly one
+issue succeeds and the lot ledger stays consistent with the aggregate on-hand
+quantity, whereas removing the lock reintroduces the lost update.
 
 \section{Inventory Reservation on Order Approval}
 % (i) Problem: overselling between approval and shipment.

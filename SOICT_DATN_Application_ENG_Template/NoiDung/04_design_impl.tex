@@ -273,36 +273,74 @@ paragraph. The screenshots are not inserted in this draft because they must be
 captured from the final running version of the application.
 
 \section{Testing}
-% GUIDE (2-3 pages): design test cases for 2-3 critical functions (GI confirm w/FEFO,
-% SO approval reservation, credit-limit check). State techniques, summarise total
-% test cases & results, analyse failures. Extra cases -> appendix.
+The system was verified with two complementary techniques: automated tests that
+pin down the business rules with the highest consistency risk, and manual
+end-to-end scenario tests that exercise the full workflow through the user
+interface.
+
+\subsection{Automated tests}
+The automated suite contains thirteen tests grouped into seven classes. It runs
+on an in-memory H2 database under the \texttt{test} Spring profile, so it is
+self-contained and repeatable without an external database. Table~\ref{tab:autotests}
+summarises the suite; all thirteen tests pass. The tests deliberately target the
+points where correctness is hardest to guarantee: first-expired-first-out (FEFO)
+lot allocation, stock reservation, concurrent stock deduction, double-entry
+ledger balances, the credit-limit rule, and endpoint authorisation.
+
 \begin{table}[H]\centering
-\caption{Sample test cases}
+\caption{Automated test suite (all passing)}
+\label{tab:autotests}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{|l|c|l|}
+\hline
+\textbf{Test class} & \textbf{Tests} & \textbf{Verifies} \\ \hline
+FefoAllocationTest & 2 & FEFO query order; earliest-expiry lot consumed first \\ \hline
+ReservationTest & 3 & reserve raises reserved and lowers available; over-reserve rejected \\ \hline
+ConcurrencyLotTest & 1 & two concurrent issues serialised; no lost update at lot level \\ \hline
+AccountingServiceTest & 2 & running ledger balance; zero-amount postings skipped \\ \hline
+CreditLimitRuleTest & 3 & credit-limit rule evaluated at the boundary \\ \hline
+RbacSecurityTest & 1 & protected endpoint without a token is rejected \\ \hline
+CoreFlowTest & 1 & application context loads with all beans wired \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Critical-function test cases}
+Table~\ref{tab:tests} lists the three most important functional cases together
+with their observed results. TC01 is the most important case because it checks
+both the aggregate inventory and the lot-level FEFO deduction: with two lots of
+different expiry dates, the earliest-expiry lot is fully consumed before any
+quantity is taken from the later lot. TC02 checks that reserving stock raises the
+reserved quantity and lowers the available quantity while the on-hand quantity is
+unchanged, which prevents overselling before goods leave the warehouse. TC03
+checks the credit-limit rule, which rejects a purchase when the resulting balance
+would exceed the customer credit limit.
+
+\begin{table}[H]\centering
+\caption{Critical-function test cases and results}
 \label{tab:tests}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{|c|l|l|l|c|}
 \hline
 \textbf{ID} & \textbf{Function} & \textbf{Input} & \textbf{Expected} & \textbf{Result} \\ \hline
-TC01 & Confirm GI (FEFO) & stock with 2 lots & earliest-expiry lot consumed first & To execute \\ \hline
-TC02 & Approve SO & qty $\leq$ available & reservation increases & To execute \\ \hline
-TC03 & Credit limit & balance+amt $>$ limit & order blocked & To execute \\ \hline
+TC01 & Confirm GI (FEFO) & two lots, near/far expiry & earliest-expiry lot consumed first & Pass \\ \hline
+TC02 & Approve SO (reserve) & qty $\leq$ available & reserved up, available down, on-hand same & Pass \\ \hline
+TC03 & Credit-limit rule & balance+amt $>$ limit & purchase rejected by the rule & Pass \\ \hline
 \end{tabular}%
 }
 \end{table}
-The testing strategy combines service-level business-rule tests and manual
-end-to-end scenario tests. Service-level tests should focus on functions with
-high consistency risk: approving a sales order, confirming a goods receipt,
-confirming a goods issue with FEFO lots, cancelling an approved sales order, and
-recovering from failed delivery. Manual scenario tests should run the full
-workflow PO $\to$ GR $\to$ SO approval $\to$ GI $\to$ delivery $\to$ invoice and
-verify the database state after each step.
 
-The sample cases in Table~\ref{tab:tests} are prepared for final verification.
-The most important case is TC01 because it checks both aggregate inventory and
-lot-level FEFO deduction. TC02 checks reservation behavior and available stock.
-TC03 represents the financial-control rule and should be executed after the
-credit-limit function is finalized. Detailed final results should be filled in
-after running the completed backend and frontend with a stable test database.
+The three cases are backed by \texttt{FefoAllocationTest}, \texttt{ReservationTest},
+and \texttt{CreditLimitRuleTest} respectively, so they are reproducible rather than
+one-off manual checks. One limitation is recorded for transparency: the
+credit-limit rule is implemented and tested as a domain method, but it is not yet
+invoked in the sales-order approval path, which currently enforces only stock
+availability; connecting the rule to order approval is left as future work. In
+addition to the automated suite, the full business workflow PO $\to$ GR $\to$ SO
+approval $\to$ GI $\to$ delivery $\to$ invoice $\to$ payment was exercised
+manually through the web interface against a seeded database, and the resulting
+screens are presented earlier in this chapter as the illustration of the main
+functions.
 
 \section{Deployment}
 % GUIDE: deployment model, server/equipment specs, configuration, and any test
