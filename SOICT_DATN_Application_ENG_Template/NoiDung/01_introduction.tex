@@ -1,5 +1,10 @@
 % ============================ CHAPTER 1 — INTRODUCTION ============================
 % Length: 3-6 pages. Present ONLY the problem & objectives, NOT the solution detail.
+% Document body uses ragged bottom: the thesis is figure/table-dense, so vertical
+% glue must not be stretched to force a flush bottom (this is what produced large
+% gaps between a top table/figure and the following paragraph). Leftover space is
+% allowed to fall naturally to the bottom of the page instead.
+\raggedbottom
 
 % GUIDE (chapter opening): 1-2 sentences stating what this chapter covers.
 This chapter introduces the context and motivation of the project, defines its
