@@ -123,12 +123,16 @@ confirmation, cancellation, and deletion require confirmation dialogs. Fourth,
 validation errors are displayed close to the relevant form field, while
 operation-level errors are displayed as notifications.
 
-The final thesis version should include prototype mockups for the main screens:
-login, dashboard, purchase order detail, goods receipt confirmation, sales order
-approval, goods issue with FEFO lot display, inventory lots, delivery trip, and
-invoice detail. These mockups should be produced in Figma or a similar design
-tool and inserted here as design figures. Production screenshots are presented
-later in Section~\ref{sec:main-functions} after implementation.
+Because the system has been fully implemented and deployed, these design standards
+are not illustrated through separate prototype mockups but through the realized
+screens of the running application, which are presented and explained in
+Section~\ref{sec:main-functions}. Presenting the delivered interface rather than a
+prototype keeps the design description consistent with the system that was actually
+built: the left-navigation layout, the consistent document header, the color-coded
+status tags, and the confirmation dialogs described above can be observed directly
+in those screenshots, for example the document layout and status tag in
+Figure~\ref{fig:ui-po} and the color-coded inventory status in
+Figure~\ref{fig:ui-inventory}.
 
 \subsection{Layer Design}
 % GUIDE (3-4 pages): detailed design (attributes + methods) of 2-4 key classes,
@@ -259,18 +263,149 @@ were measured with the \texttt{cloc} tool and exclude blank and comment lines.
 
 \subsection{Illustration of Main Functions}
 \label{sec:main-functions}
-% GUIDE: real SCREENSHOTS of the running app (login, dashboard, PO/SO, goods issue
-% with FEFO, inventory lots with expiry alerts, delivery plan, invoice). Annotate +
-% explain each. Run the app, capture, save under Figure/ and \includegraphics them.
-This section should contain screenshots captured from the running application.
-The required screenshots are: login page, dashboard, purchase order approval,
-goods receipt confirmation with batch and expiry fields, inventory lot list with
-expiry information, sales order approval, goods issue confirmation with FEFO lot
-information, delivery plan/trip execution, and sales invoice detail. Each
-screenshot should be saved under the \texttt{Figure/} directory, inserted with
-\texttt{\textbackslash includegraphics}, and explained in the surrounding
-paragraph. The screenshots are not inserted in this draft because they must be
-captured from the final running version of the application.
+This section illustrates the principal functions of the deployed system through
+screenshots captured from the running application. The figures are ordered to
+follow one complete distribution cycle, from authentication through inbound
+logistics, outbound fulfilment with lot allocation, delivery, and financial
+settlement, so that the behaviour of the design presented in the previous
+sections can be traced in practice.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.62\linewidth]{Figure/screenshots/01-login.png}
+\caption{Authentication screen}\label{fig:ui-login}
+\end{figure}
+
+Figure~\ref{fig:ui-login} shows the single sign-in screen through which every
+user enters the system. Credentials submitted here are verified by the backend,
+which returns a signed JSON Web Token that the browser then attaches to every
+subsequent request; the routing and authorisation consequences of this token are
+discussed in Section~\ref{sec:deployment}. Because all functional pages are
+guarded, this screen is the only one reachable without a valid session.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.95\linewidth]{Figure/screenshots/02-dashboard.png}
+\caption{Management dashboard with aggregate indicators}\label{fig:ui-dashboard}
+\end{figure}
+
+Figure~\ref{fig:ui-dashboard} presents the management dashboard. Four
+key-performance-indicator cards summarise (i) current-month revenue, (ii) the
+number of sales orders, (iii) the total monetary value of stock on hand, and
+(iv) outstanding accounts receivable, while a revenue chart and a
+best-selling-product ranking give a quick operational overview. These figures are
+aggregated on the server from the transactional tables rather than computed in
+the browser, so the dashboard reflects the same data that drives the rest of the
+application.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.95\linewidth]{Figure/screenshots/03-approve-po.png}
+\caption{Purchase-order approval}\label{fig:ui-po}
+\end{figure}
+
+Figure~\ref{fig:ui-po} shows the detail of purchase order PO-2026-158 in the
+pending-approval state, together with its supplier and three ordered lines. The
+Approve action visible at the top transitions the order into an approved state
+that authorises a subsequent goods receipt; rejecting or editing the order is
+only permitted while it remains pending. This screen is the entry point of the
+inbound flow.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.95\linewidth]{Figure/screenshots/04-goods-receipt.png}
+\caption{Goods-receipt confirmation with per-line lot numbers}\label{fig:ui-gr}
+\end{figure}
+
+Figure~\ref{fig:ui-gr} shows the confirmation of goods receipt GR-2026-139 against
+purchase order PO-2026-147. Each received line is recorded against a distinct lot
+number (for example LTE260430-4), and the accepted quantity is what is finally
+added to stock. It is at this point that batch identity enters the system, which
+is the precondition for the first-expired-first-out issuing illustrated later in
+Figure~\ref{fig:ui-gi} and detailed in the sequence diagram of
+Figure~\ref{fig:seq-fefo}.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.95\linewidth]{Figure/screenshots/05-inventory-by-lot.png}
+\caption{Inventory overview: on-hand, reserved, available and expiry-pending
+quantities per product and warehouse}\label{fig:ui-inventory}
+\end{figure}
+
+Figure~\ref{fig:ui-inventory} shows the inventory overview. For each
+product-warehouse pair the table separates quantity on hand, reserved quantity,
+quantity pending disposal because of expiry, and available quantity, and assigns
+a status tag such as in-stock, low-stock, or out-of-stock. This separation is the
+on-screen manifestation of the reservation mechanism: the available quantity is
+computed as the quantity on hand minus the reserved quantity, and it is this
+available figure, not the raw on-hand figure, that is checked when a sales order
+is approved. Confirming a goods issue is what finally lowers the on-hand quantity.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.95\linewidth]{Figure/screenshots/06-approve-so.png}
+\caption{Sales-order approval, the point at which available stock is checked and
+reserved}\label{fig:ui-so}
+\end{figure}
+
+Figure~\ref{fig:ui-so} shows sales order SO-2026-254 in the pending-approval
+state, with its customer, two ordered lines, and the computed subtotal, value-added
+tax, and total. Approval is the decisive step in the outbound flow: when the
+Approve action is invoked, the server checks that sufficient available stock
+exists for every line and, if so, reserves exactly the ordered quantity before
+moving the order to the approved state. This is where the available-quantity logic
+visible in Figure~\ref{fig:ui-inventory} is enforced, so that two orders competing
+for the same stock cannot both be approved beyond what is physically on hand. The
+delivery-progress indicator remains at zero per cent until the corresponding goods
+issue is confirmed.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.95\linewidth]{Figure/screenshots/07-goods-issue-fefo.png}
+\caption{Goods-issue confirmation with FEFO lot allocation}\label{fig:ui-gi}
+\end{figure}
+
+Figure~\ref{fig:ui-gi} shows the confirmation of goods issue GI-2026-246, which
+fulfils sales order SO-2026-252. Each issued line is annotated with the specific
+lot consumed (for example PVM260406-9), and these lots are the earliest-expiring
+ones available, selected automatically by the FEFO allocation query rather than
+chosen by the operator. The same panel shows that sales invoice INV-2026-245 is
+generated automatically once the issue is confirmed, linking the warehouse and
+accounting subsystems in a single transaction.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.95\linewidth]{Figure/screenshots/08-delivery-waybill.png}
+\caption{Delivery waybill in the delivered state}\label{fig:ui-waybill}
+\end{figure}
+
+Figure~\ref{fig:ui-waybill} shows the waybill associated with issue GI-2026-216
+after the trip has been completed, with its status set to delivered and the two
+product lines to be handed to the customer. A printable version of this document
+accompanies the driver; when a delivery fails instead of completing, the
+corresponding stock is returned to inventory through the failed-delivery recovery
+path discussed in Chapter~\ref{chapter:Contribution}.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.95\linewidth]{Figure/screenshots/09-invoice.png}
+\caption{Sales-invoice detail with partial settlement}\label{fig:ui-invoice}
+\end{figure}
+
+Figure~\ref{fig:ui-invoice} shows sales invoice INV-2026-202, issued to customer
+Minimart~79 from sales order SO-2026-205. The invoice is only partially settled:
+of a total of 31{,}951{,}800~VND, 10{,}580{,}229~VND has been received, leaving
+21{,}371{,}571~VND outstanding, and the invoice is consequently flagged as
+overdue. This partial-payment state is what the receivables ledger in
+Figure~\ref{fig:ui-ledger} reconciles.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.95\linewidth]{Figure/screenshots/10-payment-ledger.png}
+\caption{Accounts-receivable ledger with running balance}\label{fig:ui-ledger}
+\end{figure}
+
+Figure~\ref{fig:ui-ledger} shows the ledger of the accounts-receivable account.
+Every sales invoice posts a debit entry and every payment receipt posts a credit
+entry, and the running-balance column on the right is recomputed after each
+posting. Because the same posting that debits this account credits the
+corresponding revenue or cash account, the ledger is the user-facing evidence of
+the double-entry accounting model described in Chapter~\ref{chapter:Contribution}.
+
+Taken together, these screenshots confirm that the implemented system realises the
+full inbound-to-settlement workflow on real data. The next section reports how the
+business rules underlying these functions are verified by automated and manual
+tests.
 
 \section{Testing}
 The system was verified with two complementary techniques: automated tests that
@@ -343,6 +478,7 @@ screens are presented earlier in this chapter as the illustration of the main
 functions.
 
 \section{Deployment}
+\label{sec:deployment}
 % GUIDE: deployment model, server/equipment specs, configuration, and any test
 % deployment results (users, response time, load).
 \thesisfig{deployment}{Deployment diagram}{fig:deploy}
