@@ -45,14 +45,18 @@ time.
 % GUIDE: first, work needed to complete existing features; then new directions
 % (e.g. route optimisation for delivery, demand forecasting, barcode/QR scanning,
 % mobile shipper app, multi-warehouse transfer, reporting/BI).
-Future work should first complete and harden the existing functions. The testing
-set should be expanded with automated service tests for FEFO allocation,
-inventory reservation, goods receipt confirmation, sales order cancellation, and
-failed-delivery recovery. The failed-delivery mechanism should add an explicit
-database-level recovery marker so repeated calls cannot restore the same goods
-issue twice. The reporting module should be validated with larger sample data,
-and the final thesis should include production screenshots for all main
-functions.
+Future work should first complete and harden the existing functions. Although the
+rules with the highest consistency risk are already covered by automated tests
+(Chapter~\ref{chapter:Design}), the test set should be extended to the flows that
+are currently exercised only through manual end-to-end scenarios, namely
+goods-receipt confirmation, sales-order cancellation, and failed-delivery
+recovery. The credit-limit rule, which is presently implemented and unit-tested as
+a domain method but not yet invoked during sales-order approval, should be wired
+into the approval path so that orders exceeding a customer's available credit are
+rejected automatically. The failed-delivery mechanism should add an explicit
+database-level recovery marker so that repeated calls cannot restore the same
+goods issue twice. The reporting module should be validated with larger sample
+data.
 
 The next development direction is to improve warehouse and delivery efficiency.
 Barcode or QR scanning can reduce manual input errors during goods receipt,
