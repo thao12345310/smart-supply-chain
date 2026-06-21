@@ -226,9 +226,10 @@ privilege~\cite{sandhu2000nist}.
 The system defines nine roles and applies access control at three levels. At the
 endpoint level, Spring Security restricts URL patterns and HTTP methods, for
 example allowing only purchase managers, accountants, or administrators to
-approve purchase orders. At the method level, reusable authorization annotations
-express common policies such as manager access, warehouse access, delivery
-access, and accountant access. At the data level, services enforce contextual
+approve purchase orders. At the method level, \texttt{@PreAuthorize} annotations on individual
+controller endpoints restrict sensitive operations, such as approving and
+rejecting orders, recording payments, and managing user accounts, to the roles
+permitted to perform them. At the data level, services enforce contextual
 constraints, such as preventing warehouse staff from seeing unapproved orders
 and limiting shippers to assigned trips. Table~\ref{tab:rbac-matrix} summarises
 the main permission groups.
