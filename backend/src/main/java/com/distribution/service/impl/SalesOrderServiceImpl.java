@@ -17,6 +17,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -255,7 +256,19 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         if (!salesOrder.getStatus().canApprove()) {
             throw new BusinessException("Sales Order cannot be approved from status: " + salesOrder.getStatus());
         }
-        
+
+        // Enforce customer credit limit: outstanding debt + this order must not exceed the limit
+        Customer customer = salesOrder.getCustomer();
+        if (customer != null) {
+            BigDecimal orderAmount = salesOrder.getGrandTotal() != null
+                ? salesOrder.getGrandTotal()
+                : (salesOrder.getTotalAmount() != null ? salesOrder.getTotalAmount() : BigDecimal.ZERO);
+            if (!customer.hasAvailableCredit(orderAmount)) {
+                throw new BusinessException("Sales Order exceeds available credit limit for customer: "
+                    + customer.getName());
+            }
+        }
+
         // Validate inventory availability
         Long warehouseId = salesOrder.getWarehouse() != null ? salesOrder.getWarehouse().getId() : null;
         for (SalesOrderItem item : salesOrder.getItems()) {
