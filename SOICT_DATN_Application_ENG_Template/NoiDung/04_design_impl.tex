@@ -434,6 +434,7 @@ ReservationTest & 3 & reserve raises reserved and lowers available; over-reserve
 ConcurrencyLotTest & 1 & two concurrent issues serialised; no lost update at lot level \\ \hline
 AccountingServiceTest & 2 & running ledger balance; zero-amount postings skipped \\ \hline
 CreditLimitRuleTest & 3 & credit-limit rule evaluated at the boundary \\ \hline
+SalesOrderApprovalCreditTest & 2 & credit limit enforced at approval; over-limit order rejected and not reserved \\ \hline
 RbacSecurityTest & 1 & protected endpoint without a token is rejected \\ \hline
 CoreFlowTest & 1 & application context loads with all beans wired \\ \hline
 \end{tabular}%
@@ -467,10 +468,14 @@ TC03 & Credit-limit rule & balance+amt $>$ limit & purchase rejected by the rule
 
 The three cases are backed by \texttt{FefoAllocationTest}, \texttt{ReservationTest},
 and \texttt{CreditLimitRuleTest} respectively, so they are reproducible rather than
-one-off manual checks. One limitation is recorded for transparency: the
-credit-limit rule is implemented and tested as a domain method, but it is not yet
-invoked in the sales-order approval path, which currently enforces only stock
-availability; connecting the rule to order approval is left as future work. In
+one-off manual checks. The credit-limit rule is enforced in two layers: it is
+defined and boundary-tested as a domain method on the customer
+(\texttt{CreditLimitRuleTest}), and it is invoked during sales-order approval so
+that an order whose value would push the customer's outstanding balance beyond the
+credit limit is rejected before any stock is reserved. This approval-level
+enforcement is covered by \texttt{SalesOrderApprovalCreditTest}, which verifies
+both that an over-limit order is rejected and that no inventory is reserved for it.
+In
 addition to the automated suite, the full business workflow PO $\to$ GR $\to$ SO
 approval $\to$ GI $\to$ delivery $\to$ invoice $\to$ payment was exercised
 manually through the web interface against a seeded database, and the resulting

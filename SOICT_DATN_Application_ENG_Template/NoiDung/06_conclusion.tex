@@ -50,10 +50,7 @@ rules with the highest consistency risk are already covered by automated tests
 (Chapter~\ref{chapter:Design}), the test set should be extended to the flows that
 are currently exercised only through manual end-to-end scenarios, namely
 goods-receipt confirmation, sales-order cancellation, and failed-delivery
-recovery. The credit-limit rule, which is presently implemented and unit-tested as
-a domain method but not yet invoked during sales-order approval, should be wired
-into the approval path so that orders exceeding a customer's available credit are
-rejected automatically. The failed-delivery mechanism should add an explicit
+recovery. The failed-delivery mechanism should add an explicit
 database-level recovery marker so that repeated calls cannot restore the same
 goods issue twice. The reporting module should be validated with larger sample
 data.
