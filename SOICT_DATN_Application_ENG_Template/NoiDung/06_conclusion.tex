@@ -13,13 +13,21 @@ KiotViet, Sapo, and MISA, the prototype emphasizes distributor workflow
 integration rather than point-of-sale operation.
 
 The main achieved result is a working application structure that connects the
-procure-to-stock and order-to-cash processes. The backend contains 176 Java
-classes with 11,821 lines of source code, while the frontend contains 10,575
-lines of JavaScript/JSX source code, measured with the \texttt{cloc} tool
-excluding blank and comment lines. The system implements the core modules
-required by the project scope: master data, purchasing, goods receipt,
-inventory, lot management, sales, goods issue, invoice, accounting, customer
-payment, delivery, dashboard, authentication, and user management.
+procure-to-stock and order-to-cash processes. In terms of scale, the
+requirements were modelled as nine actors and seven fully specified use cases
+(Chapter~\ref{chapter:Survey}) realised over a relational schema of thirty-two
+tables; the backend contains 176 Java classes with 11,821 lines of source code
+and the frontend 10,575 lines of JavaScript/JSX, both measured with the
+\texttt{cloc} tool excluding blank and comment lines, and the business rules
+with the highest consistency risk are pinned by fifteen automated tests. The
+system implements the core modules required by the project scope: master data,
+purchasing, goods receipt, inventory, lot management, sales, goods issue,
+invoice, accounting, customer payment, delivery, dashboard, authentication, and
+user management. Measured on a realistic dataset of approximately eight thousand
+transactional rows, the principal read endpoints respond in under sixty
+milliseconds on average, and a targeted optimisation of the delivery-listing
+endpoint reduced its response time from about 2{,}380~ms to 47~ms
+(Section~\ref{sec:perf}).
 
 The key contributions are the FEFO lot-allocation mechanism, the inventory
 reservation mechanism at sales order approval, the failed-delivery recovery
@@ -28,18 +36,19 @@ the most important risks of a distributor: expired stock, overselling,
 inconsistent recovery after delivery failure, and uncontrolled access to
 approval and warehouse operations.
 
-Several limitations remain. The project is still a prototype. Although it
-includes an accounting module that records simplified double-entry journal
-entries (each with a debit and a credit account) automatically from source
-documents and tracks customer payments, it has not yet implemented full
-financial reporting such as balance sheets and income statements, period-end
-closing, or integration with external accounting software, and it does not yet
-support automatic route optimization, barcode scanning, or demand forecasting. Some verification results should be completed with a
-stable test database and final screenshots of the running application. Through
-the project, an important lesson is that inventory systems require careful
-transaction design: a single business event often changes order status,
-inventory quantity, lot quantity, invoice state, and delivery state at the same
-time.
+Several limitations remain, and stating them precisely is more useful than
+overstating the result. The system is a prototype validated in a
+single-organisation, single-instance setting. Its performance was measured only
+under sequential requests against one backend instance
+(Section~\ref{sec:perf}); behaviour under high concurrent load has not been
+load-tested, and the system has not been evaluated through long-term operation
+in a real production environment. On the functional side, although the
+accounting module records simplified double-entry journal entries (each with a
+debit and a credit account) automatically from source documents and tracks
+customer payments, it does not yet produce full financial statements such as
+balance sheets and income statements, perform period-end closing, or integrate
+with external accounting software, and the system does not yet support automatic
+route optimisation, barcode scanning, or demand forecasting.
 
 \section{Future Work}
 % GUIDE: first, work needed to complete existing features; then new directions
@@ -52,8 +61,24 @@ are currently exercised only through manual end-to-end scenarios, namely
 goods-receipt confirmation, sales-order cancellation, and failed-delivery
 recovery. The failed-delivery mechanism should add an explicit
 database-level recovery marker so that repeated calls cannot restore the same
-goods issue twice. The reporting module should be validated with larger sample
-data.
+goods issue twice. The performance evaluation should also be extended from
+sequential measurement to a concurrent load test that establishes the
+throughput and tail latency the system sustains as the number of simultaneous
+users grows. The reporting module should be validated with larger sample data.
+
+At the architectural level, the goods-issue path currently serialises concurrent
+deductions with pessimistic write locks taken on the affected \texttt{Inventory}
+rows, acquired in ascending product-identifier order to prevent deadlock
+(Chapter~\ref{chapter:Design}). This guarantees that lot quantities cannot be
+lost-updated, but it also turns those rows into a serialisation point that could
+become a throughput bottleneck if transaction volume rises sharply. A natural
+evolution is to move toward an event-driven architecture in which stock-issue
+requests are placed on a message broker such as Apache Kafka or RabbitMQ and
+consumed asynchronously \cite{hohpe2003eip, kleppmann2017ddia}. Processing the
+issue commands through a queue would relieve the direct lock contention on the
+relational database and decouple request acceptance from stock settlement, at
+the cost of an eventual-consistency model that the user interface and the
+reservation logic would have to accommodate.
 
 The next development direction is to improve warehouse and delivery efficiency.
 Barcode or QR scanning can reduce manual input errors during goods receipt,
@@ -69,3 +94,16 @@ provide deeper analysis of revenue, stock turnover, expired stock, customer
 debt, and supplier performance. Finally, the accounting module can be extended
 with financial statements, period-end closing, payment reconciliation, and
 integration with external accounting software.
+
+A further refinement concerns the integrity of accounting records during
+failed-delivery recovery. At present the system cancels the sales invoice
+attached to a failed delivery only while that invoice is still in a cancellable
+state and no payment has been recorded against it; once a payment exists,
+cancellation is withheld and the case is escalated for manual settlement
+(Chapter~\ref{chapter:Design}). A more rigorous approach, consistent with
+accounting practice, is to treat an issued document as immutable and never
+delete it: rather than cancelling the invoice, the system would automatically
+generate a credit note that offsets the customer's receivable. This would
+preserve a complete audit trail for every issued document, unify the paid and
+unpaid cases under a single rule, and align the recovery procedure with the
+controls expected of an accounting information system \cite{romney2021ais}.

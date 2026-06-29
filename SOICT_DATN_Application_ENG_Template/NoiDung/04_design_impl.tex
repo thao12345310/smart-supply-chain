@@ -37,42 +37,100 @@ application and non-trivial business rules without mixing responsibilities.
 % GUIDE: UML package diagram organised by layers; explain each package's responsibility
 % and the dependency rules (upper depends on lower only).
 \thesisfig{package_diagram}{Package diagram (layered backend)}{fig:packages}
-Figure~\ref{fig:packages} presents the main backend packages. The
-\texttt{controller} package contains REST controllers for authentication,
-master data, purchase orders, goods receipts, sales orders, goods issues,
-delivery, inventory, invoices, accounting, payments, dashboard, and user
-management. Controllers
-convert HTTP requests into DTOs and delegate processing to services. The
-\texttt{dto} package contains request and response objects used between the
-frontend and backend, preventing entity classes from being exposed directly.
+Figure~\ref{fig:packages} presents the main backend packages, organized by
+layer. Concretely, the server-side packages are as follows:
+\begin{enumerate}[label=(\roman*)]
+  \item The \texttt{controller} package contains the REST controllers that
+  receive and respond to HTTP requests from the client, covering authentication,
+  master data, purchase orders, goods receipts, sales orders, goods issues,
+  delivery, inventory, invoices, accounting, payments, dashboard, and user
+  management; each controller converts a request into DTOs and delegates the
+  processing to a service.
 
-The \texttt{service} package defines business interfaces and the
-\texttt{service.impl} package implements them. This is the main location of
-workflow logic such as purchase approval, sales approval, inventory reservation,
-FEFO goods issue, failed-delivery recovery, and dashboard aggregation. The
-\texttt{repository} package contains Spring Data repositories and custom queries
-for persistence. The \texttt{model} package contains JPA entities, while
-\texttt{model.enums} contains lifecycle states such as purchase order status,
-sales order status, goods receipt status, goods issue status, invoice status,
-payment status, and role type.
+  \item The \texttt{dto} package contains the data-transfer objects exchanged
+  between the frontend and backend, with separate \texttt{request} objects for
+  input data and \texttt{response} objects for returned data, so that JPA
+  entities are never exposed directly to the client.
 
-Supporting packages are separated from domain packages. The \texttt{security}
-package implements JWT token generation, authentication filtering, custom user
-details, and role annotations. The \texttt{config} package defines security,
-CORS, and API documentation configuration. The \texttt{exception} package
-provides domain exceptions and a global exception handler. The
-\texttt{scheduler} package contains scheduled background jobs; currently it
-holds the overdue-invoice job, which runs daily and marks unpaid invoices past
-their due date as overdue. The dependency
-direction follows the layered rule: controllers depend on services and DTOs,
-services depend on repositories and models, and repositories depend on models.
-Lower layers do not call upper layers.
+  \item The \texttt{service} package defines the business interfaces and the
+  \texttt{service.impl} package implements them; this is the main location of
+  workflow logic, performing functions such as purchase approval, sales-order
+  approval, inventory reservation, FEFO goods issue, failed-delivery recovery,
+  and dashboard aggregation.
+
+  \item The \texttt{repository} package contains the Spring Data JPA
+  repositories and custom queries for persistence, including filter-based list
+  queries and the FEFO lot lookup used during goods issue.
+
+  \item The \texttt{model} package defines the JPA entities mapped directly to
+  the database tables, while \texttt{model.enums} defines the lifecycle states
+  used across the system, such as purchase-order, sales-order, goods-receipt,
+  goods-issue, invoice, and payment status, together with payment type and role
+  type.
+
+  \item The \texttt{security} package implements JWT token generation and
+  validation, the authentication filter, custom user details, role-based
+  annotations, and a data-filtering aspect that enforces data-level access
+  rules.
+
+  \item The \texttt{config} package holds the global configuration classes,
+  including Spring Security, CORS and MVC, the OpenAPI documentation, and a
+  request-timing interceptor.
+
+  \item The \texttt{exception} package provides the domain exceptions and a
+  global exception handler that maps them to consistent HTTP error responses.
+
+  \item The \texttt{scheduler} package contains the scheduled background jobs;
+  currently it holds the overdue-invoice job, which runs daily and marks unpaid
+  invoices past their due date as overdue.
+\end{enumerate}
+The dependency direction follows the layered rule: controllers depend on
+services and DTOs, services depend on repositories and models, and repositories
+depend on models. Lower layers do not call upper layers.
+
+The frontend is organized as a layered React single-page application whose
+package structure follows the same separation-of-concerns principle. Its main
+packages are shown in Figure~\ref{fig:pkg-frontend}. Starting from the
+\texttt{main.jsx} entry point, the client-side packages are as follows:
+\thesisfig{package_diagram_frontend}{Frontend package structure (React SPA)}{fig:pkg-frontend}
+\begin{enumerate}[label=(\roman*)]
+  \item The \texttt{app} package is the application shell: the route table built
+  with React Router together with the two route guards, \texttt{ProtectedRoute}
+  (which redirects unauthenticated users to the login page) and
+  \texttt{RoleProtectedRoute} (which enforces role-based access on each route).
+
+  \item The \texttt{layouts} package contains \texttt{MainLayout}, the fixed
+  sidebar-and-content shell that renders the role-filtered navigation menu and
+  wraps every authenticated page.
+
+  \item The \texttt{components} package contains reusable presentation widgets
+  shared by the layout, such as the brand header and the user-information panel.
+
+  \item The \texttt{api} package centralizes communication with the backend: a
+  single Axios client attaches the JWT access token to every request and applies
+  uniform response and error handling, on top of which the per-domain endpoint
+  groups (purchase orders, sales orders, inventory, delivery, and so on) are
+  defined.
+
+  \item The \texttt{services} package contains client-side domain helpers that are
+  not HTTP calls, namely the role-checking utilities used for menu filtering and
+  route guarding, and the delivery-status presentation helpers.
+
+  \item The \texttt{features} package groups the screens by business domain, with
+  one sub-package per module --- \texttt{purchasing}, \texttt{sales},
+  \texttt{inventory}, \texttt{delivery}, \texttt{accounting}, \texttt{dashboard},
+  \texttt{auth}, and \texttt{admin} --- each containing the list, detail, and form
+  pages of its domain.
+\end{enumerate}
+The dependency direction is acyclic and points toward the shared layers: the
+entry point renders \texttt{app}; \texttt{app} depends on \texttt{features},
+\texttt{layouts}, and \texttt{services}; the feature screens depend on
+\texttt{api} for data and on \texttt{services} for client-side rules; and only the
+\texttt{api} package communicates with the Spring Boot REST backend.
 
 \subsection{Detailed Package Design}
 % GUIDE: class diagrams (names + relationships only) per related package group.
 \thesisfig{class_inbound}{Class diagram — inbound (purchasing) flow}{fig:class-in}
-\thesisfig{class_outbound}{Class diagram — outbound (sales) flow}{fig:class-out}
-\thesisfig{class_delivery}{Class diagram — delivery flow}{fig:class-dlv}
 The inbound package group in Figure~\ref{fig:class-in} models the
 procure-to-stock process. A supplier is associated with purchase orders, and
 each purchase order contains multiple purchase order items. A goods receipt is
@@ -82,6 +140,7 @@ purchase order items, aggregate inventory, inventory transactions, and lot
 records. This design keeps the original purchase document, the warehouse
 receipt, and the resulting inventory movement traceable.
 
+\thesisfig{class_outbound}{Class diagram — outbound (sales) flow}{fig:class-out}
 The outbound package group in Figure~\ref{fig:class-out} models the
 order-to-cash process. A customer places a sales order with sales order items.
 After approval, stock is reserved in the selected warehouse. A goods issue is
@@ -91,6 +150,7 @@ FEFO, delivered quantities are updated, and a sales invoice is generated. This
 group is the core of the inventory-reservation and FEFO contribution described
 in Chapter~\ref{chapter:Contribution}.
 
+\thesisfig{class_delivery}{Class diagram — delivery flow}{fig:class-dlv}
 The delivery package group in Figure~\ref{fig:class-dlv} models planning and
 execution after goods issue. Delivery plans group delivery orders and assign
 shipper users through delivery plan shipper records. Delivery trip routes and
@@ -138,9 +198,6 @@ Figure~\ref{fig:ui-inventory}.
 % GUIDE (3-4 pages): detailed design (attributes + methods) of 2-4 key classes,
 % plus sequence diagrams for 2-3 important use cases.
 \thesisfig{class_detail_key}{Detailed design of key classes}{fig:class-detail}
-\thesisfig{seq_so_gi_fefo}{Sequence — confirm Goods Issue with FEFO allocation}{fig:seq-fefo}
-\thesisfig{seq_po_gr}{Sequence — approve PO and confirm Goods Receipt}{fig:seq-pogr}
-\thesisfig{seq_delivery_trip}{Sequence — assign and execute delivery trip}{fig:seq-trip}
 Figure~\ref{fig:class-detail} focuses on the key classes that carry the most
 important business rules. \texttt{Inventory} stores aggregate stock quantities,
 including on-hand, reserved, and available quantities. \texttt{InventoryLot}
@@ -151,6 +208,7 @@ document and record the batch information used during FEFO allocation.
 \texttt{GoodsReceipt} and \texttt{GoodsReceiptItem} represent inbound warehouse
 confirmation and are the source for lot creation.
 
+\thesisfig{seq_so_gi_fefo}{Sequence — confirm Goods Issue with FEFO allocation}{fig:seq-fefo}
 The sequence in Figure~\ref{fig:seq-fefo} starts when a warehouse staff member
 confirms a goods issue. The controller calls the goods issue service, which
 loads the goods issue with its items, validates the document status, acquires a
@@ -163,11 +221,15 @@ confirmations of the same product, as analysed in
 Chapter~\ref{chapter:Contribution}. The sequence shows why this operation must be
 transactional: every change belongs to one business event.
 
+\thesisfig{seq_po_gr}{Sequence — approve PO and confirm Goods Receipt}{fig:seq-pogr}
 The sequence in Figure~\ref{fig:seq-pogr} shows the inbound flow. A purchase
 order is approved first. A warehouse staff member then creates and confirms a
 goods receipt. Confirmation validates the remaining ordered quantity, increases
 aggregate inventory, creates an inventory transaction, creates inventory lots
-from accepted quantities, and updates the purchase order receiving status. The
+from accepted quantities, and updates the purchase order receiving status.
+
+\thesisfig{seq_delivery_trip}{Sequence — assign and execute delivery trip}{fig:seq-trip}
+The
 sequence in Figure~\ref{fig:seq-trip} shows delivery assignment and execution:
 delivery administrators build a plan and assign shippers, while shippers update
 trip status. Failed delivery triggers the recovery mechanism described in
@@ -244,10 +306,10 @@ IDE                     & IntelliJ IDEA / VS Code & -- \\ \hline
 \begin{tabular}{|l|r|}
 \hline
 \textbf{Metric} & \textbf{Value} \\ \hline
-Lines of code (backend, Java) & 11,821 \\ \hline
-Lines of code (frontend, JS/JSX) & 10,575 \\ \hline
+Lines of code (backend, Java) & 11,847 \\ \hline
+Lines of code (frontend, JS/JSX) & 10,923 \\ \hline
 Number of Java classes & 176 \\ \hline
-Number of backend packages & 12 \\ \hline
+Number of backend packages & 9 \\ \hline
 Database migration scripts & V1--V10 \\ \hline
 \end{tabular}
 \end{table}
@@ -256,9 +318,9 @@ purchasing, goods receipt, inventory and lot management, sales order processing,
 goods issue, sales invoice, accounting and customer payment, delivery planning,
 shipper trip execution, dashboard reporting, authentication, and user-role
 management. Table~\ref{tab:loc} summarises the source-code statistics. The
-backend source code has 11,821 lines of Java in 176 classes under
-\texttt{backend/src/main/java}, organised into 12 packages. The frontend source
-code has 10,575 lines of JavaScript/JSX under \texttt{frontend/src}. These values
+backend source code has 11,847 lines of Java in 176 classes under
+\texttt{backend/src/main/java}, organised into nine packages. The frontend source
+code has 10,923 lines of JavaScript/JSX under \texttt{frontend/src}. These values
 were measured with the \texttt{cloc} tool and exclude blank and comment lines.
 
 \subsection{Illustration of Main Functions}
@@ -301,8 +363,8 @@ application.
 \caption{Purchase-order approval}\label{fig:ui-po}
 \end{figure}
 
-Figure~\ref{fig:ui-po} shows the detail of purchase order PO-2026-158 in the
-pending-approval state, together with its supplier and three ordered lines. The
+Figure~\ref{fig:ui-po} shows the detail of purchase order PO-1781803185353 in the
+pending-approval state, together with its supplier and six ordered lines. The
 Approve action visible at the top transitions the order into an approved state
 that authorises a subsequent goods receipt; rejecting or editing the order is
 only permitted while it remains pending. This screen is the entry point of the
@@ -313,9 +375,9 @@ inbound flow.
 \caption{Goods-receipt confirmation with per-line lot numbers}\label{fig:ui-gr}
 \end{figure}
 
-Figure~\ref{fig:ui-gr} shows the confirmation of goods receipt GR-2026-139 against
-purchase order PO-2026-147. Each received line is recorded against a distinct lot
-number (for example LTE260430-4), and the accepted quantity is what is finally
+Figure~\ref{fig:ui-gr} shows the confirmation of goods receipt GR-1781257744475 against
+purchase order PO-2026-159. Each received line is recorded against its own lot
+number, and the accepted quantity is what is finally
 added to stock. It is at this point that batch identity enters the system, which
 is the precondition for the first-expired-first-out issuing illustrated later in
 Figure~\ref{fig:ui-gi} and detailed in the sequence diagram of
@@ -380,14 +442,14 @@ path discussed in Chapter~\ref{chapter:Contribution}.
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.95\linewidth]{Figure/screenshots/09-invoice.png}
-\caption{Sales-invoice detail with partial settlement}\label{fig:ui-invoice}
+\caption{Sales-invoice detail with an outstanding overdue balance}\label{fig:ui-invoice}
 \end{figure}
 
-Figure~\ref{fig:ui-invoice} shows sales invoice INV-2026-202, issued to customer
-Minimart~79 from sales order SO-2026-205. The invoice is only partially settled:
-of a total of 31{,}951{,}800~VND, 10{,}580{,}229~VND has been received, leaving
-21{,}371{,}571~VND outstanding, and the invoice is consequently flagged as
-overdue. This partial-payment state is what the receivables ledger in
+Figure~\ref{fig:ui-invoice} shows sales invoice INV-2026-219, issued to a retail
+customer from sales order SO-2026-222. The invoice is unpaid and past its due
+date: of a total of 26{,}584{,}200~VND, none has yet been received, so the entire
+amount remains outstanding and the invoice is consequently flagged as overdue.
+This outstanding balance is what the receivables ledger in
 Figure~\ref{fig:ui-ledger} reconciles.
 
 \begin{figure}[H]\centering
@@ -408,16 +470,17 @@ business rules underlying these functions are verified by automated and manual
 tests.
 
 \section{Testing}
-The system was verified with two complementary techniques: automated tests that
-pin down the business rules with the highest consistency risk, and manual
+The system was verified with three complementary techniques: automated tests
+that pin down the business rules with the highest consistency risk, manual
 end-to-end scenario tests that exercise the full workflow through the user
-interface.
+interface, and a quantitative performance evaluation that measures the response
+time of the principal endpoints under a realistic data volume.
 
 \subsection{Automated tests}
-The automated suite contains thirteen tests grouped into seven classes. It runs
+The automated suite contains fifteen tests grouped into eight classes. It runs
 on an in-memory H2 database under the \texttt{test} Spring profile, so it is
 self-contained and repeatable without an external database. Table~\ref{tab:autotests}
-summarises the suite; all thirteen tests pass. The tests deliberately target the
+summarises the suite; all fifteen tests pass. The tests deliberately target the
 points where correctness is hardest to guarantee: first-expired-first-out (FEFO)
 lot allocation, stock reservation, concurrent stock deduction, double-entry
 ledger balances, the credit-limit rule, and endpoint authorisation.
@@ -481,6 +544,96 @@ approval $\to$ GI $\to$ delivery $\to$ invoice $\to$ payment was exercised
 manually through the web interface against a seeded database, and the resulting
 screens are presented earlier in this chapter as the illustration of the main
 functions.
+
+\subsection{Performance evaluation}
+\label{sec:perf}
+Functional correctness alone does not show that the system behaves acceptably
+under a realistic data volume, so the response time of the principal read
+endpoints was measured quantitatively rather than asserted. To make the
+measurement meaningful, the PostgreSQL database was first populated with a
+deterministic dataset that models a mid-sized Vietnamese confectionery
+distributor trading from December~2025 to June~2026, including the Tết peak.
+Table~\ref{tab:dataset} summarises its volume: the operational core comprises
+185 purchase orders, 275 sales orders, 261 goods issues and 260 delivery orders,
+which together generate 652 inventory lots and 1{,}734 inventory transactions
+across 59 products, 48 customers and 3 warehouses, on the order of eight thousand
+transactional rows rather than a handful of placeholder records. The list
+endpoints evaluated below therefore each scan and join hundreds to thousands of
+rows, so the figures reflect a realistic working set.
+
+\begin{table}[H]\centering
+\caption{Seeded dataset volume (principal tables)}
+\label{tab:dataset}
+\begin{tabular}{|l|r|l|r|}
+\hline
+\textbf{Entity} & \textbf{Rows} & \textbf{Entity} & \textbf{Rows} \\ \hline
+Inventory transactions & 1{,}734 & Sales orders (lines)  & 275 (967) \\ \hline
+Goods-issue lines      & 1{,}085 & Goods issues          & 261 \\ \hline
+Sales-invoice lines    & 1{,}082 & Delivery orders       & 260 \\ \hline
+Purchase-order lines   & 723     & Purchase orders       & 185 \\ \hline
+Inventory lots         & 652     & Products              & 59 \\ \hline
+Goods-receipt lines    & 652     & Customers / Suppliers & 48 / 12 \\ \hline
+\end{tabular}
+\end{table}
+
+The measurement followed two independent paths so that they cross-check each
+other. On the client side, a script issues fifty sequential requests to each
+endpoint and records the total round-trip time reported by \texttt{curl}, from
+which the average and maximum are computed. On the server side, a
+\texttt{RequestTimingInterceptor} records the processing time of every
+\texttt{/api/**} request into a Micrometer timer named \texttt{http.api.timing},
+tagged by URI and method, which an administrator-only endpoint
+\texttt{GET /api/metrics/summary} aggregates. The two paths agree closely, for
+example the server-side average for \texttt{/api/sales-orders} is 47.5~ms against
+a client-side 46.0~ms, which confirms that the measured latency is dominated by
+server processing rather than by the measurement tool.
+Table~\ref{tab:resptime} reports the client-side results from a warmed-up run of
+fifty requests per endpoint.
+
+\begin{table}[H]\centering
+\caption{Response time of the principal read endpoints (50 requests each)}
+\label{tab:resptime}
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Endpoint} & \textbf{Avg (ms)} & \textbf{Max (ms)} \\ \hline
+GET /api/dashboard/summary & 10.04 & 17.44 \\ \hline
+GET /api/inventory         & 23.16 & 36.62 \\ \hline
+GET /api/purchase-orders   & 27.53 & 50.42 \\ \hline
+GET /api/sales-orders      & 46.00 & 88.79 \\ \hline
+GET /api/delivery-orders   & 53.64 & 84.67 \\ \hline
+\end{tabular}
+\end{table}
+
+Every endpoint answers in well under one hundred milliseconds on average, which
+is comfortable for an interactive management application. The most informative
+case is \texttt{GET /api/delivery-orders}, served by the
+\texttt{DeliveryOrderService.listAvailable} method, because it was also the
+subject of a deliberate optimisation. In its first implementation the method
+loaded the candidate orders and then, for each one, issued a separate
+\texttt{findByCode} lookup and an \texttt{existsByDeliveryOrderId} check and
+traversed lazy associations to the sales order, customer and delivery address;
+the number of SQL statements therefore grew linearly with the number of rows
+returned, the classic N+1 query problem~\cite{bauer2015hibernate}, and the
+endpoint took about 2{,}380~ms. Rewriting it to use three bulk queries, namely
+the delivery orders mapped by code, the set of already-planned order
+identifiers, and the confirmed goods issues with their sales order, customer and
+delivery address join-fetched in a single statement, made the statement count
+constant. As recorded in Table~\ref{tab:n1}, the same endpoint then returned in
+about 47~ms, removing roughly 98\% of the response time, a fifty-fold speed-up
+preserved in the repository as commit \texttt{20d711f0}. The live re-measurement
+of 53.6~ms in Table~\ref{tab:resptime} confirms that the optimised behaviour
+holds on the full seeded dataset.
+
+\begin{table}[H]\centering
+\caption{Effect of the N+1 query fix on \texttt{GET /api/delivery-orders}}
+\label{tab:n1}
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Version} & \textbf{Time (ms)} & \textbf{Reduction} & \textbf{Speed-up} \\ \hline
+Before (per-row queries) & 2{,}380 & --- & --- \\ \hline
+After (3 bulk queries)   & 47      & 98.0\% & 50.6$\times$ \\ \hline
+\end{tabular}
+\end{table}
 
 \section{Deployment}
 \label{sec:deployment}
